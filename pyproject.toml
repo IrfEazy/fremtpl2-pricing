@@ -5,6 +5,7 @@ description = "Reproducible motor insurance pricing study on freMTPL2 (frequency
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "glum>=3.4.1",
     "numpy",
     "pandas",
     "pyarrow",
@@ -17,7 +18,11 @@ dependencies = [
 fremtpl2 = "fremtpl2_pricing.cli:main"
 
 [dependency-groups]
-dev = ["pytest", "ruff"]
+dev = [
+    "pytest",
+    "ruff",
+    "statsmodels>=0.15.0",
+]
 
 [build-system]
 requires = ["hatchling"]
