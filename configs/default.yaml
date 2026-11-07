@@ -1,0 +1,21 @@
+seed: 20260101
+paths:
+  raw: data/raw
+  processed: data/processed
+  results: results
+  reports: reports
+download:
+  timeout_seconds: 120
+  # {id} is the OpenML dataset id; file URLs come from the description it returns.
+  description_url: "https://www.openml.org/api/v1/json/data/{id}"
+  datasets:
+    - key: freq
+      openml_id: 41214
+      expected_name: freMTPL2freq
+      expected_version: "1"
+      int_columns: [IDpol]
+    - key: sev
+      openml_id: 41215
+      expected_name: freMTPL2sev
+      expected_version: "1"
+      int_columns: [IDpol]
