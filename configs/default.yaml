@@ -91,3 +91,25 @@ split:
   test_folds: 5                    # test = one of this many folds (20% of policies)
   test_fold: 0
   cv_folds: 5                      # CV folds inside train
+
+# Pricing feature engineering for the GLMs (fremtpl2_pricing.features). The definitions are fixed
+# before any model is run; only the level sets and reference levels are learned, from the fitting
+# rows alone. Exposure (capped by clean) is used for rare-level thresholds and reference choice only.
+features:
+  definitions:
+    DrivAge: {kind: band, lower_edges: [18, 21, 26, 31, 41, 51, 61, 71, 81]}  # last band open; values below the first edge join the first band; bands without fitting exposure are dropped (a value in one raises)
+    VehAge: {kind: band, lower_edges: [0, 1, 3, 6, 11, 16]}                   # last band open
+    BonusMalus: {kind: numeric_cap, cap: 150}                                 # numeric, min(BonusMalus, cap)
+    VehPower: {kind: categorical, cap: 12}                                    # cap at 12, then treated as categorical
+    Density: {kind: log}                                                      # natural log; Density <= 0 raises (data minimum is 1)
+    Area: {kind: categorical}
+    VehGas: {kind: categorical}
+    VehBrand: {kind: categorical, group_rare: true}                           # rare levels are merged into other_label; unseen levels map to it (raise if none was created)
+    Region: {kind: categorical, group_rare: true}
+  rare_levels:
+    min_exposure_years: 1500       # a level with less exposure in the fitting data is rare (data-driven)
+    other_label: OTHER             # label of the merged level; created only if a rare level was grouped in the fitting data
+  reference_level: max_exposure    # reference = level with the largest exposure in the fitting data (never the other label); stored as the first category. Unseen levels of Area/VehGas/VehPower raise
+  feature_sets:
+    full: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehBrand, VehGas, Density, Region]
+    bonus_malus_only: [BonusMalus]  # one-variable baseline
