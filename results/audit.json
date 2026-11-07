@@ -1,0 +1,573 @@
+{
+  "dataset": {
+    "freq_rows": 678013,
+    "sev_rows": 26639
+  },
+  "exposure": {
+    "min": 0.00273224043715847,
+    "max": 2.01,
+    "mean": 0.5287501057693346,
+    "total": 358499.4454629838,
+    "gt1": {
+      "rows": 1224,
+      "share": 0.0018052751200935675,
+      "claims": 54,
+      "claims_per_policy": 0.04411764705882353,
+      "exposure_above_1": 139.34
+    },
+    "quantiles": {
+      "0.001": 0.00273224043715847,
+      "0.005": 0.00546448087431694,
+      "0.01": 0.00821917808219178,
+      "0.05": 0.04,
+      "0.1": 0.07,
+      "0.25": 0.18,
+      "0.5": 0.49,
+      "0.75": 0.99,
+      "0.9": 1.0,
+      "0.99": 1.0,
+      "0.999": 1.03
+    },
+    "small": [
+      {
+        "threshold": 0.00274,
+        "rows": 3105,
+        "share": 0.0045795582090608885,
+        "claims": 50,
+        "exposure": 8.498914589415374,
+        "exposure_share": 2.3706911396862717e-05,
+        "claims_per_exposure_year": 5.883104186300502,
+        "share_with_claim": 0.015136876006441223
+      },
+      {
+        "threshold": 0.01,
+        "rows": 13603,
+        "share": 0.02006303713940588,
+        "claims": 362,
+        "exposure": 101.24546298375625,
+        "exposure_share": 0.0002824145595344029,
+        "claims_per_exposure_year": 3.575468858867078,
+        "share_with_claim": 0.025215026097184446
+      },
+      {
+        "threshold": 0.02,
+        "rows": 19259,
+        "share": 0.02840506007996897,
+        "claims": 535,
+        "exposure": 214.3654629837563,
+        "exposure_share": 0.0005979520071695346,
+        "claims_per_exposure_year": 2.4957378513932538,
+        "share_with_claim": 0.026481125707461448
+      },
+      {
+        "threshold": 0.05,
+        "rows": 49342,
+        "share": 0.07277441582978497,
+        "claims": 1455,
+        "exposure": 1367.2854629837564,
+        "exposure_share": 0.003813912351295207,
+        "claims_per_exposure_year": 1.06415232180179,
+        "share_with_claim": 0.028170726764217096
+      }
+    ],
+    "portfolio_claims_per_policy": 0.05324676665491664,
+    "portfolio_claims_per_exposure_year": 0.10070308464041305,
+    "portfolio_share_with_claim": 0.05023502499214617
+  },
+  "claim_nb": {
+    "distribution": {
+      "0": {
+        "policies": 643953,
+        "exposure": 336616.05977019237
+      },
+      "1": {
+        "policies": 32178,
+        "exposure": 20670.757403997304
+      },
+      "2": {
+        "policies": 1784,
+        "exposure": 1153.4182887940715
+      },
+      "3": {
+        "policies": 82,
+        "exposure": 52.760000000000005
+      },
+      "4": {
+        "policies": 7,
+        "exposure": 3.07
+      },
+      "5": {
+        "policies": 2,
+        "exposure": 1.08
+      },
+      "6": {
+        "policies": 1,
+        "exposure": 0.33
+      },
+      "8": {
+        "policies": 1,
+        "exposure": 0.41
+      },
+      "9": {
+        "policies": 1,
+        "exposure": 0.08
+      },
+      "11": {
+        "policies": 3,
+        "exposure": 1.1500000000000001
+      },
+      "16": {
+        "policies": 1,
+        "exposure": 0.33
+      }
+    },
+    "max": 16,
+    "extreme_threshold": 4,
+    "extreme_policies": 9,
+    "extreme_claims": 82,
+    "extreme_exposure": 3.3800000000000003,
+    "extreme_values": [
+      5,
+      5,
+      6,
+      8,
+      9,
+      11,
+      11,
+      11,
+      16
+    ],
+    "extreme_exposures": [
+      1.0,
+      0.08,
+      0.33,
+      0.41,
+      0.08,
+      1.0,
+      0.08,
+      0.07,
+      0.33
+    ],
+    "extreme_claims_per_exposure_year": 24.260355029585796
+  },
+  "severity": {
+    "rows": 26639,
+    "distinct_idpol": 24950,
+    "total": 60697930.68000001,
+    "min": 1.0,
+    "mean": 2278.5363819963213,
+    "small_amount_threshold": 100,
+    "rows_below_small_amount": 1906,
+    "quantiles": {
+      "0.5": 1172.0,
+      "0.75": 1228.08,
+      "0.9": 2799.072,
+      "0.95": 4861.684999999999,
+      "0.99": 16793.704399999988,
+      "0.995": 34386.98710000053,
+      "0.999": 162784.44236002857
+    },
+    "top": [
+      {
+        "amount": 4075400.56,
+        "share": 0.06714233111974682
+      },
+      {
+        "amount": 1403057.4,
+        "share": 0.023115407465815106
+      },
+      {
+        "amount": 1301172.6,
+        "share": 0.02143685271347705
+      },
+      {
+        "amount": 774411.5,
+        "share": 0.012758449774551687
+      },
+      {
+        "amount": 390742.27,
+        "share": 0.0064374891470352835
+      },
+      {
+        "amount": 369131.88,
+        "share": 0.006081457404966017
+      },
+      {
+        "amount": 307096.42,
+        "share": 0.005059421574336938
+      },
+      {
+        "amount": 301635.49,
+        "share": 0.0049694526093521174
+      },
+      {
+        "amount": 287423.0,
+        "share": 0.004735301463822489
+      },
+      {
+        "amount": 281897.49,
+        "share": 0.004644268541643798
+      }
+    ],
+    "top_share": 0.15638043181474734,
+    "cap_candidates": [
+      {
+        "cap": 25000,
+        "claims_above": 179,
+        "share_of_claims": 0.006719471451631067,
+        "excess_share_of_cost": 0.2766433564024755
+      },
+      {
+        "cap": 50000,
+        "claims_above": 89,
+        "share_of_claims": 0.0033409662524869553,
+        "excess_share_of_cost": 0.2256062148509475
+      },
+      {
+        "cap": 100000,
+        "claims_above": 42,
+        "share_of_claims": 0.0015766357596005856,
+        "excess_share_of_cost": 0.17683504939545983
+      },
+      {
+        "cap": 200000,
+        "claims_above": 21,
+        "share_of_claims": 0.0007883178798002928,
+        "excess_share_of_cost": 0.12743911288805737
+      },
+      {
+        "cap": 500000,
+        "claims_above": 4,
+        "share_of_claims": 0.0001501557866286272,
+        "excess_share_of_cost": 0.09150298861555851
+      },
+      {
+        "cap": 1000000,
+        "claims_above": 3,
+        "share_of_claims": 0.0001126168399714704,
+        "excess_share_of_cost": 0.06226951261199074
+      }
+    ]
+  },
+  "linkage": {
+    "duplicate_idpol_freq": 0,
+    "sev_without_freq": {
+      "rows": 195,
+      "distinct_idpol": 6,
+      "amount": 788714.1800000002,
+      "amount_share": 0.012994086802696913
+    },
+    "status": {
+      "no_claims": {
+        "policies": 643953,
+        "claims": 0,
+        "sev_rows": 0,
+        "exposure": 336616.05977019237
+      },
+      "ok": {
+        "policies": 24943,
+        "claims": 26443,
+        "sev_rows": 26443,
+        "exposure": 17277.10826109739
+      },
+      "claims_without_sev": {
+        "policies": 9116,
+        "claims": 9657,
+        "sev_rows": 0,
+        "exposure": 4605.457431693989
+      },
+      "sev_without_claims": {
+        "policies": 0,
+        "claims": 0,
+        "sev_rows": 0,
+        "exposure": 0.0
+      },
+      "count_mismatch": {
+        "policies": 1,
+        "claims": 2,
+        "sev_rows": 1,
+        "exposure": 0.82,
+        "sev_more_than_claimnb": 0,
+        "sev_fewer_than_claimnb": 1
+      }
+    },
+    "claims_without_sev_share_of_claims": 0.2674921057005152,
+    "claims_without_sev_share_of_claim_policies": 0.2676453317674692
+  },
+  "factors": {
+    "Area": {
+      "kind": "categorical",
+      "levels": 6,
+      "smallest_level": {
+        "name": "F",
+        "policies": 17954
+      },
+      "largest_level": {
+        "name": "C",
+        "policies": 191880
+      }
+    },
+    "VehPower": {
+      "kind": "numeric",
+      "min": 4.0,
+      "max": 15.0,
+      "mean": 6.454631400872844,
+      "levels": 12
+    },
+    "VehAge": {
+      "kind": "numeric",
+      "min": 0.0,
+      "max": 100.0,
+      "mean": 7.044264637993667,
+      "levels": 78
+    },
+    "DrivAge": {
+      "kind": "numeric",
+      "min": 18.0,
+      "max": 100.0,
+      "mean": 45.49912169825652,
+      "levels": 83
+    },
+    "BonusMalus": {
+      "kind": "numeric",
+      "min": 50.0,
+      "max": 230.0,
+      "mean": 59.76150162312522,
+      "levels": 115
+    },
+    "VehBrand": {
+      "kind": "categorical",
+      "levels": 11,
+      "smallest_level": {
+        "name": "B14",
+        "policies": 4047
+      },
+      "largest_level": {
+        "name": "B12",
+        "policies": 166024
+      }
+    },
+    "VehGas": {
+      "kind": "categorical",
+      "levels": 2,
+      "smallest_level": {
+        "name": "Diesel",
+        "policies": 332136
+      },
+      "largest_level": {
+        "name": "Regular",
+        "policies": 345877
+      }
+    },
+    "Density": {
+      "kind": "numeric",
+      "min": 1.0,
+      "max": 27000.0,
+      "mean": 1792.4224048801425,
+      "levels": 1607
+    },
+    "Region": {
+      "kind": "categorical",
+      "levels": 22,
+      "smallest_level": {
+        "name": "R43",
+        "policies": 1326
+      },
+      "largest_level": {
+        "name": "R24",
+        "policies": 160601
+      }
+    }
+  },
+  "leakage": {
+    "group_key": [
+      "Area",
+      "VehPower",
+      "VehAge",
+      "DrivAge",
+      "BonusMalus",
+      "VehBrand",
+      "VehGas",
+      "Density",
+      "Region"
+    ],
+    "policies": 678013,
+    "distinct_groups": 528765,
+    "policies_in_multi_groups": 257911,
+    "share_policies_in_multi_groups": 0.3803924113549445,
+    "multi_groups": 108663,
+    "largest_group": 22,
+    "fold_count": 5,
+    "largest_group_share_of_fold_policies": 0.00016223877713259185,
+    "most_claims_in_one_group": 48,
+    "most_claims_group_share_of_fold_claims": 0.006647831145088915,
+    "size_distribution": [
+      {
+        "size": "1",
+        "groups": 420102,
+        "policies": 420102
+      },
+      {
+        "size": "2",
+        "groups": 87628,
+        "policies": 175256
+      },
+      {
+        "size": "3",
+        "groups": 14516,
+        "policies": 43548
+      },
+      {
+        "size": "4",
+        "groups": 2535,
+        "policies": 10140
+      },
+      {
+        "size": "5-9",
+        "groups": 3352,
+        "policies": 22059
+      },
+      {
+        "size": ">=10",
+        "groups": 632,
+        "policies": 6908
+      }
+    ],
+    "claims_in_multi_groups": 10051,
+    "share_claims_in_multi_groups": 0.27840562849703615,
+    "share_with_claim_multi": 0.03652422734974468,
+    "share_with_claim_single": 0.058652422506914985
+  },
+  "cleaning": {
+    "rules": {
+      "duplicate_idpol": "error",
+      "exposure_cap": 1.0,
+      "exposure_min": null,
+      "claim_nb": {
+        "max": 4,
+        "action": "cap"
+      },
+      "sev_without_policy": "drop",
+      "sev_consistency": {
+        "claims_without_sev": "flag",
+        "sev_without_claims": "flag",
+        "count_mismatch": "flag"
+      },
+      "large_loss": {
+        "cap": 100000,
+        "keep_uncapped_column": true
+      },
+      "epsilon": 1e-12,
+      "targets": {
+        "frequency_count": "claim_nb",
+        "severity_weight": "sev_rows",
+        "pure_premium_claims_without_sev": "zero_cost"
+      }
+    },
+    "impact": {
+      "duplicate_idpol": {
+        "action": "error",
+        "rows": 0
+      },
+      "sev_without_policy": {
+        "action": "drop",
+        "rows": 195,
+        "amount": 788714.1800000002,
+        "amount_share": 0.012994086802696913
+      },
+      "sev_consistency": {
+        "claims_without_sev": {
+          "action": "flag",
+          "policies": 9116,
+          "exposure": 4605.457431693989,
+          "claims": 9657,
+          "sev_rows": 0
+        },
+        "sev_without_claims": {
+          "action": "flag",
+          "policies": 0,
+          "exposure": 0.0,
+          "claims": 0,
+          "sev_rows": 0
+        },
+        "count_mismatch": {
+          "action": "flag",
+          "policies": 1,
+          "exposure": 0.82,
+          "claims": 2,
+          "sev_rows": 1
+        }
+      },
+      "exposure_min": {
+        "threshold": null,
+        "policies": 0,
+        "exposure": 0.0,
+        "claims": 0
+      },
+      "claim_nb": {
+        "max": 4,
+        "action": "cap",
+        "policies": 9,
+        "exposure": 3.3800000000000003,
+        "claims": 82,
+        "excess_claims": 46,
+        "sev_rows": 71,
+        "sev_amount": 167225.7,
+        "sev_rows_kept": true
+      },
+      "policies_excluded": {
+        "policies": 0,
+        "exposure": 0.0,
+        "claims": 0
+      },
+      "exposure_cap": {
+        "cap": 1.0,
+        "policies": 1224,
+        "exposure": 1363.34,
+        "claims": 54,
+        "exposure_removed": 139.34
+      },
+      "large_loss": {
+        "cap": 100000,
+        "claims_capped": 41,
+        "amount_removed": 10607020.45,
+        "amount_removed_share": 0.17705156351026555
+      },
+      "targets": {
+        "frequency_count": "claim_nb",
+        "severity_weight": "sev_rows",
+        "pure_premium_claims_without_sev": "zero_cost",
+        "severity_sample_policies": 24944,
+        "severity_sample_sev_rows": 26444,
+        "severity_weight_total": 26444,
+        "frequency_count_total": 36056,
+        "claims_total": 36056,
+        "claims_without_sev_rows": 9651,
+        "claims_without_sev_rows_share": 0.26766696250277344,
+        "pure_premium_sample_policies": 678013,
+        "cost_total": 49302196.05,
+        "cost_per_sev_row": 1864.4000926486158,
+        "cost_per_claim_if_all_claims_valued": 1367.3784127468382,
+        "implied_cost_at_mean_severity": 17993325.29415179,
+        "implied_cost_share_of_total": 0.267377753151406
+      }
+    },
+    "before": {
+      "policies": 678013,
+      "exposure": 358499.4454629838,
+      "claims": 36102,
+      "policies_with_claim": 34060,
+      "sev_rows": 26639,
+      "claim_amount": 60697930.68000001
+    },
+    "after": {
+      "policies": 678013,
+      "exposure": 358360.1054629838,
+      "claims": 36056,
+      "policies_with_claim": 34060,
+      "sev_rows": 26444,
+      "claim_amount": 49302196.05
+    }
+  },
+  "split_primary": "grouped"
+}

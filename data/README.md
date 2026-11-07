@@ -36,3 +36,16 @@ make setup
 make download            # fetches, writes data/raw/manifest.json; re-runs verify hashes only
 uv run fremtpl2 download --force   # re-download
 ```
+
+## Cleaning
+
+The raw files are never modified. Cleaning rules (exposure cap, ClaimNb cap, severity rows without a
+policy, ClaimNb/severity mismatches, per-claim cap) are defined in the `clean:` section of
+`configs/default.yaml`, implemented in `src/fremtpl2_pricing/clean.py`, and justified with measured
+counts in `reports/data_audit.md` (`make audit`). `make split` writes `data/processed/split.parquet`
+(git-ignored).
+Target definitions (`clean.targets` in the same config; judgement calls, section R5 of the audit): the
+severity sample is the policies with severity rows, weighted by the number of severity rows (not
+ClaimNb); the pure-premium observed cost is the sum of capped severity amounts, so claims without
+severity rows have zero cost. Frequency x severity and Tweedie are therefore not on the same target
+unless frequency uses `frequency_count: sev_rows`; this is marked for human review.

@@ -1,0 +1,135 @@
+{
+  "primary": "grouped",
+  "seed": 20260101,
+  "settings": {
+    "primary": "grouped",
+    "test_folds": 5,
+    "test_fold": 0,
+    "cv_folds": 5
+  },
+  "policies": 678013,
+  "primary_sets": {
+    "train": {
+      "policies": 542411,
+      "exposure": 286622.89576989296,
+      "claims": 28796,
+      "policies_with_claim": 27248,
+      "claim_rate": 0.10046650293812553,
+      "share_with_claim": 0.0502349694235552,
+      "largest_group_policies": 18,
+      "largest_group_share_of_policies": 3.318516770493224e-05,
+      "largest_group_share_of_claims": 0.0003472704542297541
+    },
+    "test": {
+      "policies": 135602,
+      "exposure": 71737.2096930908,
+      "claims": 7260,
+      "policies_with_claim": 6812,
+      "claim_rate": 0.10120270959882664,
+      "share_with_claim": 0.05023524726773941,
+      "largest_group_policies": 22,
+      "largest_group_share_of_policies": 0.00016223949499269923,
+      "largest_group_share_of_claims": 0.003305785123966942
+    }
+  },
+  "test_share_of_policies": 0.19999911506121565,
+  "cv_folds": {
+    "0": {
+      "policies": 108483,
+      "exposure": 57408.96996107493,
+      "claims": 5763,
+      "policies_with_claim": 5450,
+      "claim_rate": 0.10038500958835342,
+      "share_with_claim": 0.05023828618308859,
+      "largest_group_policies": 18,
+      "largest_group_share_of_policies": 0.00016592461491662288,
+      "largest_group_share_of_claims": 0.001041124414367517
+    },
+    "1": {
+      "policies": 108483,
+      "exposure": 57390.2765364174,
+      "claims": 5760,
+      "policies_with_claim": 5450,
+      "claim_rate": 0.10036543379164503,
+      "share_with_claim": 0.05023828618308859,
+      "largest_group_policies": 15,
+      "largest_group_share_of_policies": 0.00013827051243051907,
+      "largest_group_share_of_claims": 0.0008680555555555555
+    },
+    "2": {
+      "policies": 108481,
+      "exposure": 57168.06822741224,
+      "claims": 5752,
+      "policies_with_claim": 5449,
+      "claim_rate": 0.10061560899904434,
+      "share_with_claim": 0.050229994192531414,
+      "largest_group_policies": 15,
+      "largest_group_share_of_policies": 0.0001382730616421309,
+      "largest_group_share_of_claims": 0.0008692628650904034
+    },
+    "3": {
+      "policies": 108482,
+      "exposure": 57359.99254360357,
+      "claims": 5761,
+      "policies_with_claim": 5449,
+      "claim_rate": 0.10043585684953912,
+      "share_with_claim": 0.0502295311664608,
+      "largest_group_policies": 14,
+      "largest_group_share_of_policies": 0.0001290536678896038,
+      "largest_group_share_of_claims": 0.0017358097552508246
+    },
+    "4": {
+      "policies": 108482,
+      "exposure": 57295.58850138483,
+      "claims": 5760,
+      "policies_with_claim": 5450,
+      "claim_rate": 0.10053130006441563,
+      "share_with_claim": 0.05023874928559577,
+      "largest_group_policies": 13,
+      "largest_group_share_of_policies": 0.0001198355487546321,
+      "largest_group_share_of_claims": 0.0010416666666666667
+    }
+  },
+  "random_sets": {
+    "train": {
+      "policies": 542410,
+      "exposure": 286786.34306310356,
+      "claims": 28883,
+      "policies_with_claim": 27248,
+      "claim_rate": 0.10071260608684102,
+      "share_with_claim": 0.05023506203794178,
+      "largest_group_policies": 16,
+      "largest_group_share_of_policies": 2.949798123190944e-05,
+      "largest_group_share_of_claims": 0.0006924488453415504
+    },
+    "test": {
+      "policies": 135603,
+      "exposure": 71573.76239988023,
+      "claims": 7173,
+      "policies_with_claim": 6812,
+      "claim_rate": 0.10021828893002281,
+      "share_with_claim": 0.050234876809510116,
+      "largest_group_policies": 8,
+      "largest_group_share_of_policies": 5.899574493189679e-05,
+      "largest_group_share_of_claims": 0.0011152934615920815
+    }
+  },
+  "random_test_share_of_policies": 0.20000058995918957,
+  "overlap_primary_train_test": {
+    "idpol": 0,
+    "group_id": 0
+  },
+  "overlap_random_train_test": {
+    "idpol": 0,
+    "group_id": 39319
+  },
+  "groups_spanning_multiple_cv_folds": 0,
+  "policies_without_cv_fold_in_train": 0,
+  "test_policies_with_cv_fold": 0,
+  "severity_rows_by_primary_set": {
+    "train": 21123,
+    "test": 5321,
+    "excluded_without_policy": 0
+  },
+  "group_sizes_largest": 22
+}

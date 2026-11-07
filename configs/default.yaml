@@ -19,3 +19,51 @@ download:
       expected_name: freMTPL2sev
       expected_version: "1"
       int_columns: [IDpol]
+
+# Rating factors: the grouping key for the leakage check and the grouped split (excludes IDpol,
+# Exposure, ClaimNb). Pre-registered (PM-1) before the audit was run.
+rating_factors: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehBrand, VehGas, Density, Region]
+
+audit:
+  exposure_small_thresholds: [0.00274, 0.01, 0.02, 0.05]  # ~1 day, then fractions of a year
+  exposure_quantiles: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99, 0.999]
+  claim_nb_extreme_above: 4        # ClaimNb values above this are listed as extreme
+  amount_quantiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.995, 0.999]
+  top_n: 10
+  large_loss_candidates: [25000, 50000, 100000, 200000, 500000, 1000000]  # evidence for clean.large_loss.cap
+  small_amount_threshold: 100      # ClaimAmount rows below this are counted
+  group_size_bins: [1, 2, 3, 4, 5, 10]  # lower edges of the group-size bins; the last bin is open-ended
+  epsilon: 1.0e-12                 # guard against division by zero in ratios
+
+# Cleaning rules, applied by one function (fremtpl2_pricing.clean.clean) to the full dataset
+# before splitting. Each rule is justified with measured numbers in reports/data_audit.md;
+# judgement calls are marked "for human review" there.
+clean:
+  duplicate_idpol: error           # error | keep (audit measured 0 duplicates)
+  exposure_cap: 1.0                # cap Exposure at this many years; null disables
+  exposure_min: null               # drop policies with Exposure below this; null = keep all
+  claim_nb:
+    max: 4                         # null disables
+    action: cap                    # cap | exclude (policy dropped)
+  sev_without_policy: drop         # severity rows whose IDpol is not in freq: drop | keep
+  sev_consistency:                 # per category: flag (keep, mark in sev_status) | drop (policy)
+    claims_without_sev: flag       # ClaimNb > 0 but no severity rows
+    sev_without_claims: flag       # severity rows but ClaimNb = 0
+    count_mismatch: flag           # both > 0 but counts differ
+  large_loss:
+    cap: 100000                    # per-claim ClaimAmount cap; null disables
+    keep_uncapped_column: true
+  epsilon: 1.0e-12                 # guard against division by zero in ratios
+  # Modelling targets derived per policy (columns added by clean). The severity sample is always
+  # the policies with severity rows. These keys are judgement calls: FOR HUMAN REVIEW (see
+  # reports/data_audit.md, R5). Severity rows of policies whose ClaimNb is capped are NOT capped.
+  targets:
+    frequency_count: claim_nb      # claim_nb (a: ClaimNb as recorded, after claim_nb cap) | sev_rows (b: number of severity rows)
+    severity_weight: sev_rows      # sev_rows (one per severity row) | claim_nb (ClaimNb after cap)
+    pure_premium_claims_without_sev: zero_cost  # zero_cost (keep, observed cost 0) | exclude (policy leaves the pure-premium sample)
+
+split:
+  primary: grouped                 # grouped | random
+  test_folds: 5                    # test = one of this many folds (20% of policies)
+  test_fold: 0
+  cv_folds: 5                      # CV folds inside train

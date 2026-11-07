@@ -6,16 +6,19 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from .audit import run_audit
 from .config import DEFAULT_CONFIG, ConfigError, load_config
+from .data import DataError
 from .download import DownloadError, run_download
+from .split import run_split
 
-STUBS = ("audit", "split", "train", "evaluate", "report")
+STUBS = ("train", "evaluate", "report")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fremtpl2", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("download", *STUBS):
+    for name in ("download", "audit", "split", *STUBS):
         p = sub.add_parser(name, help=f"{name} step")
         p.add_argument(
             "--config", default=DEFAULT_CONFIG, help="YAML config (default: %(default)s)"
@@ -36,8 +39,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"{args.command}: not implemented yet", file=sys.stderr)
         return 2
     try:
-        run_download(cfg, force=args.force)
-    except (DownloadError, OSError) as exc:
+        if args.command == "audit":
+            run_audit(cfg)
+        elif args.command == "split":
+            run_split(cfg)
+        else:
+            run_download(cfg, force=args.force)
+    except (DownloadError, DataError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     except Exception as exc:  # network errors from requests
