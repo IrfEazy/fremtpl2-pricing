@@ -1,8 +1,9 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
-  `split`), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
+  `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
+  `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
   `data/raw` and `data/processed` (git-ignored, regenerated), `results/` and `reports/` (tracked
   pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`).
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
@@ -30,6 +31,16 @@
 - Config, not code: paths, dataset ids, seeds and thresholds come from `configs/*.yaml`; never hardcode them.
 - Results only from pipeline files: every number in README or reports must come from a file
   written by a pipeline command; no hand-typed metrics.
-- Commands: `make setup`, `make test` (`uv run pytest -q`), `make lint` (ruff check + format --check).
+- Milestone 2 (`fremtpl2 train`, config `models:`): CV only until the final evaluation. It loads
+  the TRAIN rows of the frozen split (never a test row in any fit, preprocessing or metric; CV/fit functions raise
+  on `cv_fold < 0`), runs grouped 5-fold CV of frequency/severity/Tweedie GLMs and baselines (features refitted
+  per training part; severity has its own claims-only feature map; Tweedie power chosen by inner CV on the held-out
+  Tweedie log-likelihood (dispersion by ML on the fitting part; Poisson deviance per power is a diagnostic, power 1.5 a
+  fixed-power sensitivity; grid-edge/flatness and solver-convergence diagnostics are reported; `metrics.tweedie_logpdf`
+  is the Dunn & Smyth series, scipy is a declared dependency), then refits on full train.
+  Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
+  `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
+  reported (separate block), never part of a CV target. The bootstrap block is recorded, not applied, until milestone 3.
+- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make lint` (ruff check + format --check).
   Tests are offline; only `fremtpl2 download` touches the network.
 - Commits: small and focused, one line `type(scope): summary`, no footer. Do not push unless explicitly asked.

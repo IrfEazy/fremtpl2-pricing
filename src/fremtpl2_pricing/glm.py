@@ -14,6 +14,7 @@ Exposure handling (applied exactly once):
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,8 +22,11 @@ import numpy as np
 import pandas as pd
 from glum import GeneralizedLinearRegressor, TweedieDistribution
 from scipy import stats
+from sklearn.exceptions import ConvergenceWarning
 
 INTERCEPT = "(Intercept)"
+# Solver settings used when the caller passes none (the pipeline passes models.glm.solver).
+DEFAULT_SOLVER = {"max_iter": 1000, "gradient_tol": 1e-10}
 
 
 def _feature_specs(X: pd.DataFrame) -> list[dict[str, Any]]:
@@ -48,7 +52,10 @@ def _design(
     for spec in specs:
         values = X[spec["name"]]
         if spec["kind"] == "num":
-            cols.append(values.to_numpy(dtype=float))
+            arr = values.to_numpy(dtype=float)
+            if not np.isfinite(arr).all():
+                raise ValueError(f"{spec['name']}: non-finite numeric values")
+            cols.append(arr)
             terms.append((spec["name"], ""))
             continue
         cats = spec["categories"]
@@ -78,6 +85,8 @@ class GLMModel:
     coef: list[float]
     features: list[dict[str, Any]]
     estimator: Any = field(default=None, repr=False, compare=False)
+    converged: bool | None = field(default=None, compare=False)  # False if glum warned
+    n_iter: int | None = field(default=None, compare=False)
 
     def _eta(self, X: pd.DataFrame) -> np.ndarray:
         D, _ = _design(X, self.features)
@@ -123,23 +132,41 @@ class GLMModel:
         )
 
 
-def _fit(kind, X, y, weight, offset, family, power) -> GLMModel:
+def _fit(kind, X, y, weight, offset, family, power, solver=None) -> GLMModel:
     y = np.asarray(y, dtype=float)
     weight = np.asarray(weight, dtype=float)
     if not (len(X) == len(y) == len(weight)):
         raise ValueError("X, y and weights must have the same length")
     specs = _feature_specs(X)
     D, _ = _design(X, specs)
-    est = _estimator(family, power, fit_intercept=bool(specs))
-    est.fit(D, y, sample_weight=weight, offset=offset)
+    empty = [
+        f"{s['name']}[{lev}]"
+        for s in specs
+        if s["kind"] == "cat"
+        for lev in s["categories"]
+        if not (X[s["name"]].astype(object) == lev).any()
+    ]
+    if empty:
+        raise ValueError(f"categories without training rows (empty levels): {empty}")
+    est = _estimator(family, power, fit_intercept=bool(specs), solver=solver)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        est.fit(D, y, sample_weight=weight, offset=offset)
+    for w in caught:  # re-emit everything except the convergence warning, which is recorded
+        if not issubclass(w.category, ConvergenceWarning):
+            warnings.warn_explicit(w.message, w.category, w.filename, w.lineno)
+    converged = not any(issubclass(w.category, ConvergenceWarning) for w in caught)
     if specs:
         intercept, coef = float(est.intercept_), [float(c) for c in est.coef_]
     else:  # ones column carries the intercept
         intercept, coef = float(est.coef_[0]), []
-    return GLMModel(kind, family, power, "log", intercept, coef, specs, estimator=est)
+    return GLMModel(
+        kind, family, power, "log", intercept, coef, specs, est, converged, int(est.n_iter_)
+    )
 
 
-def _estimator(family, power, fit_intercept) -> GeneralizedLinearRegressor:
+def _estimator(family, power, fit_intercept, solver=None) -> GeneralizedLinearRegressor:
+    opts = {**DEFAULT_SOLVER, **(solver or {})}
     if power is not None:
         family = TweedieDistribution(power)
     return GeneralizedLinearRegressor(
@@ -147,36 +174,38 @@ def _estimator(family, power, fit_intercept) -> GeneralizedLinearRegressor:
         link="log",
         alpha=0,
         fit_intercept=fit_intercept,
-        max_iter=1000,
-        gradient_tol=1e-10,
+        max_iter=int(opts["max_iter"]),
+        gradient_tol=float(opts["gradient_tol"]),
     )
 
 
-def fit_frequency(X: pd.DataFrame, count, exposure) -> GLMModel:
+def fit_frequency(X: pd.DataFrame, count, exposure, solver=None) -> GLMModel:
     """Poisson log link, offset log(exposure), unit weight."""
     exposure = np.asarray(exposure, dtype=float)
     if (exposure <= 0).any():
         raise ValueError("exposure must be > 0")
-    return _fit("frequency", X, count, np.ones(len(exposure)), np.log(exposure), "poisson", None)
+    return _fit(
+        "frequency", X, count, np.ones(len(exposure)), np.log(exposure), "poisson", None, solver
+    )
 
 
-def fit_severity(X: pd.DataFrame, avg_cost, n_claims) -> GLMModel:
+def fit_severity(X: pd.DataFrame, avg_cost, n_claims, solver=None) -> GLMModel:
     """Gamma log link, weight = number of claims; rows with n_claims <= 0 or cost <= 0 rejected."""
     avg_cost = np.asarray(avg_cost, dtype=float)
     n_claims = np.asarray(n_claims, dtype=float)
     if (n_claims <= 0).any() or (avg_cost <= 0).any():
         raise ValueError("severity needs n_claims > 0 and avg_cost > 0 on every row")
-    return _fit("severity", X, avg_cost, n_claims, None, "gamma", None)
+    return _fit("severity", X, avg_cost, n_claims, None, "gamma", None, solver)
 
 
-def fit_tweedie(X: pd.DataFrame, pure_premium, exposure, power: float) -> GLMModel:
+def fit_tweedie(X: pd.DataFrame, pure_premium, exposure, power: float, solver=None) -> GLMModel:
     """Tweedie log link on pure premium per exposure-year, weight = exposure."""
     if not 1 < power < 2:
         raise ValueError("Tweedie power must be in (1, 2)")
     exposure = np.asarray(exposure, dtype=float)
     if (exposure <= 0).any():
         raise ValueError("exposure must be > 0")
-    return _fit("tweedie", X, pure_premium, exposure, None, "tweedie", float(power))
+    return _fit("tweedie", X, pure_premium, exposure, None, "tweedie", float(power), solver)
 
 
 def _dispersion(model: GLMModel, X, y, weights) -> float:
@@ -204,6 +233,10 @@ def coefficient_table(
     est = model.estimator
     y = np.asarray(y, dtype=float)
     weights = np.asarray(weights, dtype=float)
+    if not (len(y) == len(weights) == len(X)) or (
+        offset is not None and len(np.asarray(offset)) != len(X)
+    ):
+        raise ValueError("X, y, weights and offset must have the same length")
     kwargs: dict[str, Any] = {"robust": robust}
     if not robust:
         kwargs["dispersion"] = _dispersion(model, X, y, weights)

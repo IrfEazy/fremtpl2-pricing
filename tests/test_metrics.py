@@ -198,3 +198,64 @@ def test_bootstrap_weights_policy_and_group_units():
         assert np.all(w == np.round(w))
     with pytest.raises(ValueError):
         m.paired_bootstrap(fn, n, groups[:-1], 5, seed=1)
+
+
+# --------------------------------------------------------------------------- Tweedie log-likelihood
+
+TW_CASES = [(2.0, 1.5, 1.5), (50.0, 300.0, 1.2), (1.0, 0.5, 1.8), (5.0, 10.0, 1.1)]
+
+
+@pytest.mark.parametrize(("mu", "phi", "power"), TW_CASES)
+def test_tweedie_density_integrates_to_one(mu, phi, power):
+    from scipy import integrate
+
+    def f(y):
+        return float(np.exp(m.tweedie_logpdf([y], [mu], phi, power)[0]))
+
+    zero = float(np.exp(m.tweedie_logpdf([0.0], [mu], phi, power)[0]))
+    total = zero + integrate.quad(f, 0, mu, limit=500)[0] + integrate.quad(f, mu, np.inf)[0]
+    assert total == pytest.approx(1.0, abs=1e-6)
+
+
+@pytest.mark.parametrize(("mu", "phi", "power"), TW_CASES)
+def test_tweedie_logpdf_matches_statsmodels_with_weights(mu, phi, power):
+    sm = pytest.importorskip("statsmodels.api")
+    y = np.array([0.0, 0.5, 3.0, mu, 10 * mu])
+    w = np.array([1.0, 2.0, 0.5, 3.0, 1.0])
+    fam = sm.families.Tweedie(var_power=power, link=sm.families.links.Log())
+    ref = fam.loglike_obs(y, np.full(5, mu), var_weights=w, scale=phi)
+    got = m.tweedie_logpdf(y, np.full(5, mu), phi, power, w)
+    assert got == pytest.approx(ref, abs=1e-8)
+
+
+def test_tweedie_zero_mass_and_zero_weight():
+    mu, phi, power, w = 3.0, 2.0, 1.5, 4.0
+    got = m.tweedie_logpdf([0.0], [mu], phi, power, [w])[0]
+    assert got == pytest.approx(-w * mu ** (2 - power) / (phi * (2 - power)))
+    assert m.tweedie_logpdf([7.0, 0.0], [mu, mu], phi, power, [0.0, 0.0]).tolist() == [0, 0]
+
+
+def test_tweedie_weight_equals_scaled_dispersion():
+    y, mu = np.array([0.0, 4.0]), np.array([2.0, 2.5])
+    a = m.tweedie_logpdf(y, mu, 3.0, 1.4, [2.0, 2.0])
+    b = m.tweedie_logpdf(y, mu, 1.5, 1.4)
+    assert a == pytest.approx(b)
+
+
+def test_tweedie_logpdf_rejects_bad_arguments():
+    with pytest.raises(ValueError, match="power"):
+        m.tweedie_logpdf([1.0], [1.0], 1.0, 2.0)
+    with pytest.raises(ValueError, match="phi"):
+        m.tweedie_logpdf([1.0], [1.0], 0.0, 1.5)
+
+
+def test_tweedie_mle_dispersion_recovers_known_phi():
+    rng = np.random.default_rng(3)
+    mu, phi, power, n = 4.0, 6.0, 1.5, 40000
+    lam = mu ** (2 - power) / (phi * (2 - power))
+    shape = (2 - power) / (power - 1)
+    scale = phi * (power - 1) * mu ** (power - 1)
+    k = rng.poisson(lam, n)
+    y = np.where(k > 0, rng.gamma(np.maximum(k, 1) * shape, scale), 0.0)
+    est = m.tweedie_mle_dispersion(y, np.full(n, y.mean()), power)
+    assert est == pytest.approx(phi, rel=0.05)

@@ -6,8 +6,10 @@ evaluating the results with actuarial criteria.
 
 Status: milestone 1 (scaffold, download, data audit, cleaning rules, pre-registered split) is
 complete, with the post-audit, pre-model amendments of 2026-11-07 applied (matched-row targets,
-per-claim cap 100000, no ClaimNb clipping; see section 8 of `reports/data_audit.md`). No models or
-results yet.
+per-claim cap 100000, no ClaimNb clipping; see section 8 of `reports/data_audit.md`). Milestone 2
+(grouped cross-validation of the frequency, severity and Tweedie GLMs on the training set only, with
+baselines and final refits) is implemented as `fremtpl2 train`; its outputs are `results/cv_glm.json`,
+`results/glm_relativities_*.csv` and `reports/glm_cv.md`. The test set is not touched yet.
 
 ## Reproduce
 
@@ -17,6 +19,7 @@ make download   # fetch freMTPL2freq / freMTPL2sev from OpenML into data/raw/
 make audit      # results/audit.json + reports/data_audit.md + results/orphan_ledger.csv
 make split      # verifies the frozen data/processed/split.parquet (never overwritten); results/split_summary.json,
                 # results/targets_summary.json (about 2.5 minutes)
+make train      # CV of the GLMs on train only: results/cv_glm.json, glm_relativities_*.csv, reports/glm_cv.md
 make test lint
 ```
 

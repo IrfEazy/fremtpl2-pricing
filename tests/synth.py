@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import copy
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import yaml
+
+_DEFAULTS = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
 
 FACTORS = [
     "Area",
@@ -18,8 +24,20 @@ FACTORS = [
 ]
 
 
+def model_cfg() -> dict:
+    """features + models sections of the default config, shrunk for small synthetic data."""
+    feats = copy.deepcopy(_DEFAULTS["features"])
+    feats["rare_levels"]["min_exposure_years"] = 20
+    models = copy.deepcopy(_DEFAULTS["models"])
+    models["tweedie"]["power_grid"] = [1.4, 1.5, 1.6]
+    models["severity_features"]["min_claims"] = 5
+    models["parallel"]["n_jobs"] = 1
+    return {"features": feats, "models": models}
+
+
 def make_cfg(seed: int = 7, primary: str = "grouped") -> dict:
     return {
+        **model_cfg(),
         "seed": seed,
         "rating_factors": FACTORS,
         "audit": {

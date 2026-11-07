@@ -113,3 +113,45 @@ features:
   feature_sets:
     full: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehBrand, VehGas, Density, Region]
     bonus_malus_only: [BonusMalus]  # one-variable baseline
+
+# Milestone 2: GLM cross-validation on the TRAIN set only (fremtpl2_pricing.train). The test set is
+# never loaded into a fit, a preprocessing step or a metric. Decisions fixed before any model run.
+models:
+  glm:
+    robust_se: true                # robust (sandwich) covariance in the coefficient tables; false = model-based
+    ci_level: 0.95                 # level of the relativity confidence intervals
+    solver:                        # glum IRLS settings of every fit; a fit that warns of non-convergence is recorded in cv_glm.json
+      max_iter: 1000
+      gradient_tol: 1.0e-5
+  severity_features:
+    min_claims: 100                # severity map: a level with fewer claims (N) in the claims-only fitting rows is rare; reference = most claims
+  tweedie:
+    power_grid: [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]
+    selection_loss: tweedie_loglik  # held-out Tweedie log-likelihood of S_cap / Exposure (prior weight = exposure), dispersion by maximum likelihood on the fitting part only; the exposure-weighted Poisson deviance per power is kept as a labelled diagnostic
+    dispersion_log_range: 3.0      # the dispersion search covers the Pearson estimate times exp(+-range)
+    weak_identification_nats: 10.0 # a power is called weakly identified when the held-out log-likelihood spread over the grid is below this many nats
+    reference_power: 1.5           # fixed power: common Tweedie deviance used to compare models, and the fixed-power Tweedie sensitivity in the pure premium comparison
+  evaluation:
+    n_bins: 10                     # lift / double-lift / calibration bins of ~equal exposure
+    calibration_factors:
+      BonusMalus: {kind: edges, lower_edges: [50, 60, 70, 80, 100, 125]}  # last band open; values below the first edge join the first band
+      DrivAge: {kind: feature_band}  # the bands of features.definitions
+      VehAge: {kind: feature_band}
+      Region: {kind: raw}            # raw levels
+  bootstrap:                       # recorded only: applied to the test set in milestone 3, not here
+    applied: false
+    unit: group                    # rating-profile groups (primary), paired across models
+    sensitivity_unit: policy
+    replicates: 1000
+    seed: 20260102
+    level: 0.95
+  parallel:
+    n_jobs: 6                      # worker processes for the independent CV fits (results do not depend on it)
+  outputs:                         # file names under paths.results / paths.reports
+    cv_json: cv_glm.json
+    relativities_frequency: glm_relativities_frequency.csv
+    relativities_severity: glm_relativities_severity.csv
+    relativities_tweedie: glm_relativities_tweedie.csv
+    feature_map: feature_map.json
+    models: glm_models.json
+    report: glm_cv.md

@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split all
+.PHONY: setup lint test download audit split train all
 
 setup:
 	uv sync
@@ -19,4 +19,7 @@ audit:
 split:
 	uv run fremtpl2 split
 
-all: download audit split
+train:
+	uv run fremtpl2 train
+
+all: download audit split train

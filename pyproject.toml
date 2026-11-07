@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml",
     "requests",
     "scikit-learn",
+    "scipy>=1.17.1",
 ]
 
 [project.scripts]

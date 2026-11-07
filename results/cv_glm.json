@@ -1,0 +1,4700 @@
+{
+  "config": {
+    "config_sha256": "65b0ba08bf46d1d0d9188890a7ae39fdd457c4a439a5742fbd73a43001099d5d",
+    "seed": 20260101,
+    "split_primary": "grouped",
+    "cv_folds": 5,
+    "clean_targets": {
+      "frequency_count": "sev_rows"
+    },
+    "large_loss_cap": 100000,
+    "excess_loading_mode": "flat_per_exposure_year",
+    "models": {
+      "glm": {
+        "robust_se": true,
+        "ci_level": 0.95,
+        "solver": {
+          "max_iter": 1000,
+          "gradient_tol": 1e-05
+        }
+      },
+      "severity_features": {
+        "min_claims": 100
+      },
+      "tweedie": {
+        "power_grid": [
+          1.1,
+          1.2,
+          1.3,
+          1.4,
+          1.5,
+          1.6,
+          1.7,
+          1.8,
+          1.9
+        ],
+        "selection_loss": "tweedie_loglik",
+        "dispersion_log_range": 3.0,
+        "weak_identification_nats": 10.0,
+        "reference_power": 1.5
+      },
+      "evaluation": {
+        "n_bins": 10,
+        "calibration_factors": {
+          "BonusMalus": {
+            "kind": "edges",
+            "lower_edges": [
+              50,
+              60,
+              70,
+              80,
+              100,
+              125
+            ]
+          },
+          "DrivAge": {
+            "kind": "feature_band"
+          },
+          "VehAge": {
+            "kind": "feature_band"
+          },
+          "Region": {
+            "kind": "raw"
+          }
+        }
+      },
+      "bootstrap": {
+        "applied": false,
+        "unit": "group",
+        "sensitivity_unit": "policy",
+        "replicates": 1000,
+        "seed": 20260102,
+        "level": 0.95
+      },
+      "parallel": {
+        "n_jobs": 6
+      },
+      "outputs": {
+        "cv_json": "cv_glm.json",
+        "relativities_frequency": "glm_relativities_frequency.csv",
+        "relativities_severity": "glm_relativities_severity.csv",
+        "relativities_tweedie": "glm_relativities_tweedie.csv",
+        "feature_map": "feature_map.json",
+        "models": "glm_models.json",
+        "report": "glm_cv.md"
+      }
+    },
+    "test_set_used": false,
+    "bootstrap_applied": false
+  },
+  "rows": {
+    "train_policies": 542411,
+    "train_exposure": 286622.89576989296,
+    "train_claims": 21123,
+    "train_claim_policies": 19966,
+    "per_fold": [
+      {
+        "cv_fold": 0,
+        "policies": 108483,
+        "exposure": 57408.96996107493,
+        "claims": 4215
+      },
+      {
+        "cv_fold": 1,
+        "policies": 108483,
+        "exposure": 57390.2765364174,
+        "claims": 4218
+      },
+      {
+        "cv_fold": 2,
+        "policies": 108481,
+        "exposure": 57168.06822741223,
+        "claims": 4273
+      },
+      {
+        "cv_fold": 3,
+        "policies": 108482,
+        "exposure": 57359.99254360356,
+        "claims": 4230
+      },
+      {
+        "cv_fold": 4,
+        "policies": 108482,
+        "exposure": 57295.58850138483,
+        "claims": 4187
+      }
+    ]
+  },
+  "cv": {
+    "selected_powers": [
+      {
+        "fold": 0,
+        "power": 1.5,
+        "at_grid_edge": false,
+        "loglik_spread_nats": 53623.48231964087,
+        "best_minus_next_nats": 441.9885832648433,
+        "weakly_identified": false,
+        "inner_loglik": {
+          "1.1": -265626.208656723,
+          "1.2": -228586.96706559978,
+          "1.3": -217691.49771796053,
+          "1.4": -213408.23271382606,
+          "1.5": -212002.72633708216,
+          "1.6": -212444.714920347,
+          "1.7": -214477.81905167518,
+          "1.8": -218544.88264244335,
+          "1.9": -226953.13786068285
+        },
+        "inner_loglik_per_policy": {
+          "1.1": -0.612143509192131,
+          "1.2": -0.5267854737781378,
+          "1.3": -0.501676540158645,
+          "1.4": -0.4918056283849534,
+          "1.5": -0.48856659707850647,
+          "1.6": -0.48958517293271464,
+          "1.7": -0.4942705219568112,
+          "1.8": -0.5036431911341129,
+          "1.9": -0.5230202657138577
+        },
+        "inner_dispersion": {
+          "1.1": 1500.004709800154,
+          "1.2": 916.9477998165877,
+          "1.3": 594.3086922900613,
+          "1.4": 423.55257981112345,
+          "1.5": 312.1250012590326,
+          "1.6": 239.04302480329062,
+          "1.7": 195.5212440022825,
+          "1.8": 180.30439561674467,
+          "1.9": 222.12380659170321
+        },
+        "diagnostic_inner_poisson_deviance_per_exposure": {
+          "1.1": 1137.224633206664,
+          "1.2": 1137.375957406708,
+          "1.3": 1137.6142911140605,
+          "1.4": 1137.943941304153,
+          "1.5": 1138.3747292058142,
+          "1.6": 1138.9228941556032,
+          "1.7": 1139.612576796044,
+          "1.8": 1140.478123133378,
+          "1.9": 1141.5673017769043
+        }
+      },
+      {
+        "fold": 1,
+        "power": 1.5,
+        "at_grid_edge": false,
+        "loglik_spread_nats": 49534.97022015939,
+        "best_minus_next_nats": 362.5753269265115,
+        "weakly_identified": false,
+        "inner_loglik": {
+          "1.1": -261677.6392179192,
+          "1.2": -228691.56788033567,
+          "1.3": -218164.19276861945,
+          "1.4": -213670.98548233087,
+          "1.5": -212142.6689977598,
+          "1.6": -212505.24432468633,
+          "1.7": -214486.96732493857,
+          "1.8": -218520.86654679244,
+          "1.9": -226907.19690971283
+        },
+        "inner_loglik_per_policy": {
+          "1.1": -0.6030439133172305,
+          "1.2": -0.5270265294711004,
+          "1.3": -0.5027658799815165,
+          "1.4": -0.49241114996573365,
+          "1.5": -0.4888890991080544,
+          "1.6": -0.48972466474780685,
+          "1.7": -0.4942916044250165,
+          "1.8": -0.5035878453263962,
+          "1.9": -0.5229143934240539
+        },
+        "inner_dispersion": {
+          "1.1": 1319.2374101872197,
+          "1.2": 828.6440983508845,
+          "1.3": 592.3524565698182,
+          "1.4": 428.26020478965575,
+          "1.5": 314.8791896438594,
+          "1.6": 240.61259222974272,
+          "1.7": 196.43124772548992,
+          "1.8": 180.80864129467145,
+          "1.9": 222.42665677817212
+        },
+        "diagnostic_inner_poisson_deviance_per_exposure": {
+          "1.1": 1166.6899151222865,
+          "1.2": 1166.777908947594,
+          "1.3": 1166.9787386538483,
+          "1.4": 1167.300025450072,
+          "1.5": 1167.7549950488847,
+          "1.6": 1168.3633650908932,
+          "1.7": 1169.152694696577,
+          "1.8": 1170.1602575559184,
+          "1.9": 1171.4353914657268
+        }
+      },
+      {
+        "fold": 2,
+        "power": 1.5,
+        "at_grid_edge": false,
+        "loglik_spread_nats": 50323.18377031223,
+        "best_minus_next_nats": 391.04836189796333,
+        "weakly_identified": false,
+        "inner_loglik": {
+          "1.1": -261926.7165866074,
+          "1.2": -228054.35880512075,
+          "1.3": -217502.92648191683,
+          "1.4": -213083.80645098354,
+          "1.5": -211603.53281629516,
+          "1.6": -211994.58117819313,
+          "1.7": -213989.48208870483,
+          "1.8": -218023.45312137308,
+          "1.9": -226392.67265260586
+        },
+        "inner_loglik_per_policy": {
+          "1.1": -0.6036151374337045,
+          "1.2": -0.5255556398615462,
+          "1.3": -0.501239661885366,
+          "1.4": -0.4910557150945626,
+          "1.5": -0.48764439613830607,
+          "1.6": -0.4885455745815987,
+          "1.7": -0.49314286195631746,
+          "1.8": -0.5024392255003644,
+          "1.9": -0.521726252281718
+        },
+        "inner_dispersion": {
+          "1.1": 1363.4653988599189,
+          "1.2": 868.122710676867,
+          "1.3": 590.7081165165856,
+          "1.4": 427.31996076169867,
+          "1.5": 314.5175087365076,
+          "1.6": 240.59831568866733,
+          "1.7": 196.64692299565675,
+          "1.8": 181.23321881279492,
+          "1.9": 223.16102535635014
+        },
+        "diagnostic_inner_poisson_deviance_per_exposure": {
+          "1.1": 1153.1390059213072,
+          "1.2": 1153.2914677615709,
+          "1.3": 1153.5559691210026,
+          "1.4": 1153.9396564460542,
+          "1.5": 1154.4566407172633,
+          "1.6": 1155.1293573438502,
+          "1.7": 1155.990709616331,
+          "1.8": 1157.0871926006205,
+          "1.9": 1158.4831338740828
+        }
+      },
+      {
+        "fold": 3,
+        "power": 1.5,
+        "at_grid_edge": false,
+        "loglik_spread_nats": 55320.53954503621,
+        "best_minus_next_nats": 400.43026111094514,
+        "weakly_identified": false,
+        "inner_loglik": {
+          "1.1": -267245.6848560865,
+          "1.2": -228991.39341526225,
+          "1.3": -217827.50702718104,
+          "1.4": -213405.2061567455,
+          "1.5": -211925.1453110503,
+          "1.6": -212325.57557216124,
+          "1.7": -214338.58030222176,
+          "1.8": -218401.18364516553,
+          "1.9": -226817.2158304412
+        },
+        "inner_loglik_per_policy": {
+          "1.1": -0.6158742210271415,
+          "1.2": -0.5277162702084034,
+          "1.3": -0.5019888208144213,
+          "1.4": -0.4917975202319861,
+          "1.5": -0.4883866837917039,
+          "1.6": -0.4893094851281229,
+          "1.7": -0.4939485037926061,
+          "1.8": -0.5033108726200958,
+          "1.9": -0.5227058247557577
+        },
+        "inner_dispersion": {
+          "1.1": 1530.7411312829709,
+          "1.2": 928.5682820739178,
+          "1.3": 597.8173672871254,
+          "1.4": 424.829238651893,
+          "1.5": 312.6596510461174,
+          "1.6": 239.2340140140937,
+          "1.7": 195.56494142351013,
+          "1.8": 180.27789355849373,
+          "1.9": 222.08117949402117
+        },
+        "diagnostic_inner_poisson_deviance_per_exposure": {
+          "1.1": 1151.2477878323332,
+          "1.2": 1151.3018268583094,
+          "1.3": 1151.4593270219716,
+          "1.4": 1151.7302150350968,
+          "1.5": 1152.131359258497,
+          "1.6": 1152.688319817504,
+          "1.7": 1153.437934643669,
+          "1.8": 1154.432105913554,
+          "1.9": 1155.7429899977783
+        }
+      },
+      {
+        "fold": 4,
+        "power": 1.5,
+        "at_grid_edge": false,
+        "loglik_spread_nats": 55542.20716746565,
+        "best_minus_next_nats": 427.6206740976777,
+        "weakly_identified": false,
+        "inner_loglik": {
+          "1.1": -267569.98646473326,
+          "1.2": -229072.27881112756,
+          "1.3": -217811.9547103124,
+          "1.4": -213460.60413418923,
+          "1.5": -212027.7792972676,
+          "1.6": -212455.3999713653,
+          "1.7": -214483.6225251855,
+          "1.8": -218554.75713660353,
+          "1.9": -226977.76206148643
+        },
+        "inner_loglik_per_policy": {
+          "1.1": -0.616621582020868,
+          "1.2": -0.527902672582675,
+          "1.3": -0.5019529801195873,
+          "1.4": -0.4919251862267542,
+          "1.5": -0.48862320632469275,
+          "1.6": -0.48960866863326785,
+          "1.7": -0.49428275714502945,
+          "1.8": -0.503664786489503,
+          "1.9": -0.523075807474233
+        },
+        "inner_dispersion": {
+          "1.1": 1541.889683652033,
+          "1.2": 939.7836703444232,
+          "1.3": 603.584014112429,
+          "1.4": 422.75028214244406,
+          "1.5": 311.53412914776084,
+          "1.6": 238.58651372534575,
+          "1.7": 195.20413407147723,
+          "1.8": 180.04316294448563,
+          "1.9": 221.87285571452608
+        },
+        "diagnostic_inner_poisson_deviance_per_exposure": {
+          "1.1": 1134.155248907703,
+          "1.2": 1134.2210787618735,
+          "1.3": 1134.3709659896635,
+          "1.4": 1134.6146973916202,
+          "1.5": 1134.9680021413913,
+          "1.6": 1135.454175845016,
+          "1.7": 1136.1064556301055,
+          "1.8": 1136.9714410734648,
+          "1.9": 1138.1139154637108
+        }
+      }
+    ],
+    "folds": [
+      {
+        "fold": 0,
+        "frequency": {
+          "null": {
+            "deviance_per_exposure": 0.47601769031909835,
+            "deviance_explained": 0.0,
+            "gini": -3.2106114058239044e-05,
+            "gini_normalized": -3.3272321970510186e-05
+          },
+          "bonus_malus_only": {
+            "deviance_per_exposure": 0.46107933549110797,
+            "deviance_explained": 0.031381932083188846,
+            "gini": 0.23053018931720493,
+            "gini_normalized": 0.23890386326327684
+          },
+          "full": {
+            "deviance_per_exposure": 0.45574667628197457,
+            "deviance_explained": 0.04258458130733567,
+            "gini": 0.2765270611874946,
+            "gini_normalized": 0.28657150462680225
+          }
+        },
+        "severity": {
+          "null": {
+            "deviance_per_claim": 1.3769864671762142,
+            "deviance_explained": 0.0
+          },
+          "full": {
+            "deviance_per_claim": 1.3919103268606812,
+            "deviance_explained": -0.010838058354394331
+          }
+        },
+        "pure_premium": {
+          "null": {
+            "poisson_deviance_per_exposure": 1246.0358028524797,
+            "poisson_deviance_explained": 0.0,
+            "tweedie_ref_deviance_per_exposure": 79.21746907088948,
+            "tweedie_ref_deviance_explained": 0.0,
+            "gini": -0.002810207758651595,
+            "gini_normalized": -0.002857366570155788,
+            "totals": {
+              "observed": 8142442.99,
+              "predicted": 7811408.105475677,
+              "ratio": 1.0423783881285467
+            }
+          },
+          "bonus_malus_only": {
+            "poisson_deviance_per_exposure": 1204.4493133610129,
+            "poisson_deviance_explained": 0.0333750357704532,
+            "tweedie_ref_deviance_per_exposure": 76.09593007801463,
+            "tweedie_ref_deviance_explained": 0.039404679668337717,
+            "gini": 0.26392944979623056,
+            "gini_normalized": 0.2683585170547019,
+            "totals": {
+              "observed": 8142442.99,
+              "predicted": 7803839.710781304,
+              "ratio": 1.0433893175369686
+            }
+          },
+          "freq_x_sev": {
+            "poisson_deviance_per_exposure": 1190.9410134003722,
+            "poisson_deviance_explained": 0.044216056493707634,
+            "tweedie_ref_deviance_per_exposure": 74.82732530074189,
+            "tweedie_ref_deviance_explained": 0.05541888451673427,
+            "gini": 0.3468189510419213,
+            "gini_normalized": 0.3526390081134724,
+            "totals": {
+              "observed": 8142442.99,
+              "predicted": 7799772.775528887,
+              "ratio": 1.0439333586160626
+            }
+          },
+          "tweedie": {
+            "poisson_deviance_per_exposure": 1191.2195834159234,
+            "poisson_deviance_explained": 0.04399249147662421,
+            "tweedie_ref_deviance_per_exposure": 74.80336053634697,
+            "tweedie_ref_deviance_explained": 0.05572140319949437,
+            "gini": 0.345110721945166,
+            "gini_normalized": 0.35090211278955585,
+            "totals": {
+              "observed": 8142442.99,
+              "predicted": 7853701.367195532,
+              "ratio": 1.0367650371849542
+            }
+          },
+          "tweedie_ref": {
+            "poisson_deviance_per_exposure": 1191.2195834159234,
+            "poisson_deviance_explained": 0.04399249147662421,
+            "tweedie_ref_deviance_per_exposure": 74.80336053634697,
+            "tweedie_ref_deviance_explained": 0.05572140319949437,
+            "gini": 0.345110721945166,
+            "gini_normalized": 0.35090211278955585,
+            "totals": {
+              "observed": 8142442.99,
+              "predicted": 7853701.367195532,
+              "ratio": 1.0367650371849542
+            }
+          }
+        }
+      },
+      {
+        "fold": 1,
+        "frequency": {
+          "null": {
+            "deviance_per_exposure": 0.47777218401396215,
+            "deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0
+          },
+          "bonus_malus_only": {
+            "deviance_per_exposure": 0.46223781760861016,
+            "deviance_explained": 0.03251417082267394,
+            "gini": 0.23804477857596984,
+            "gini_normalized": 0.246620450867476
+          },
+          "full": {
+            "deviance_per_exposure": 0.45645789491756744,
+            "deviance_explained": 0.04461182506969019,
+            "gini": 0.2875489468543262,
+            "gini_normalized": 0.2979080295056747
+          }
+        },
+        "severity": {
+          "null": {
+            "deviance_per_claim": 1.2216660254878984,
+            "deviance_explained": 0.0
+          },
+          "full": {
+            "deviance_per_claim": 1.218449837176648,
+            "deviance_explained": 0.002632624828840635
+          }
+        },
+        "pure_premium": {
+          "null": {
+            "poisson_deviance_per_exposure": 1108.781690339832,
+            "poisson_deviance_explained": 0.0,
+            "tweedie_ref_deviance_per_exposure": 74.91627624277977,
+            "tweedie_ref_deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0,
+            "totals": {
+              "observed": 7319388.16,
+              "predicted": 8014286.334002029,
+              "ratio": 0.9132925696635269
+            }
+          },
+          "bonus_malus_only": {
+            "poisson_deviance_per_exposure": 1084.171839966384,
+            "poisson_deviance_explained": 0.022195397514099824,
+            "tweedie_ref_deviance_per_exposure": 72.94535104642281,
+            "tweedie_ref_deviance_explained": 0.026308371093750282,
+            "gini": 0.23093401816289294,
+            "gini_normalized": 0.23506169865786197,
+            "totals": {
+              "observed": 7319388.16,
+              "predicted": 8024873.1630855985,
+              "ratio": 0.9120877067153126
+            }
+          },
+          "freq_x_sev": {
+            "poisson_deviance_per_exposure": 1076.431489301349,
+            "poisson_deviance_explained": 0.029176348527696128,
+            "tweedie_ref_deviance_per_exposure": 72.1996354438078,
+            "tweedie_ref_deviance_explained": 0.03626235759727581,
+            "gini": 0.26454423395822424,
+            "gini_normalized": 0.2692726584807459,
+            "totals": {
+              "observed": 7319388.16,
+              "predicted": 8036087.130200673,
+              "ratio": 0.9108149328661179
+            }
+          },
+          "tweedie": {
+            "poisson_deviance_per_exposure": 1077.8553280196852,
+            "poisson_deviance_explained": 0.02789220149429794,
+            "tweedie_ref_deviance_per_exposure": 72.19767702922098,
+            "tweedie_ref_deviance_explained": 0.03628849897382347,
+            "gini": 0.26692585404607216,
+            "gini_normalized": 0.27169684729390003,
+            "totals": {
+              "observed": 7319388.16,
+              "predicted": 8112523.812165203,
+              "ratio": 0.9022331803851411
+            }
+          },
+          "tweedie_ref": {
+            "poisson_deviance_per_exposure": 1077.8553280196852,
+            "poisson_deviance_explained": 0.02789220149429794,
+            "tweedie_ref_deviance_per_exposure": 72.19767702922098,
+            "tweedie_ref_deviance_explained": 0.03628849897382347,
+            "gini": 0.26692585404607216,
+            "gini_normalized": 0.27169684729390003,
+            "totals": {
+              "observed": 7319388.16,
+              "predicted": 8112523.812165203,
+              "ratio": 0.9022331803851411
+            }
+          }
+        }
+      },
+      {
+        "fold": 2,
+        "frequency": {
+          "null": {
+            "deviance_per_exposure": 0.48089197030339564,
+            "deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0
+          },
+          "bonus_malus_only": {
+            "deviance_per_exposure": 0.46527375114966957,
+            "deviance_explained": 0.032477604364806734,
+            "gini": 0.2238980336635078,
+            "gini_normalized": 0.2322046745727399
+          },
+          "full": {
+            "deviance_per_exposure": 0.46044415898519236,
+            "deviance_explained": 0.042520592109913435,
+            "gini": 0.2760549082089234,
+            "gini_normalized": 0.2862965747220327
+          }
+        },
+        "severity": {
+          "null": {
+            "deviance_per_claim": 1.2924733507197101,
+            "deviance_explained": 0.0
+          },
+          "full": {
+            "deviance_per_claim": 1.302058317536811,
+            "deviance_explained": -0.007415987967383186
+          }
+        },
+        "pure_premium": {
+          "null": {
+            "poisson_deviance_per_exposure": 1175.587288588331,
+            "poisson_deviance_explained": 0.0,
+            "tweedie_ref_deviance_per_exposure": 77.15919163255931,
+            "tweedie_ref_deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0,
+            "totals": {
+              "observed": 7779029.27,
+              "predicted": 7861006.46311614,
+              "ratio": 0.9895716669995404
+            }
+          },
+          "bonus_malus_only": {
+            "poisson_deviance_per_exposure": 1137.0137548208652,
+            "poisson_deviance_explained": 0.0328121392106796,
+            "tweedie_ref_deviance_per_exposure": 74.2204473302329,
+            "tweedie_ref_deviance_explained": 0.03808676892729823,
+            "gini": 0.2745950946158153,
+            "gini_normalized": 0.27950454454066476,
+            "totals": {
+              "observed": 7779029.27,
+              "predicted": 7854383.151632735,
+              "ratio": 0.9904061362709214
+            }
+          },
+          "freq_x_sev": {
+            "poisson_deviance_per_exposure": 1129.5511537945642,
+            "poisson_deviance_explained": 0.03916011617397441,
+            "tweedie_ref_deviance_per_exposure": 73.54267505956064,
+            "tweedie_ref_deviance_explained": 0.04687084579917489,
+            "gini": 0.31002443553311265,
+            "gini_normalized": 0.3155673220288056,
+            "totals": {
+              "observed": 7779029.27,
+              "predicted": 7828089.606900148,
+              "ratio": 0.9937327829184653
+            }
+          },
+          "tweedie": {
+            "poisson_deviance_per_exposure": 1130.9456429839472,
+            "poisson_deviance_explained": 0.03797390975364345,
+            "tweedie_ref_deviance_per_exposure": 73.58143695050816,
+            "tweedie_ref_deviance_explained": 0.0463684832144019,
+            "gini": 0.31282466666607,
+            "gini_normalized": 0.31841761812940006,
+            "totals": {
+              "observed": 7779029.27,
+              "predicted": 7896106.850372794,
+              "ratio": 0.9851727461910844
+            }
+          },
+          "tweedie_ref": {
+            "poisson_deviance_per_exposure": 1130.9456429839472,
+            "poisson_deviance_explained": 0.03797390975364345,
+            "tweedie_ref_deviance_per_exposure": 73.58143695050816,
+            "tweedie_ref_deviance_explained": 0.0463684832144019,
+            "gini": 0.31282466666607,
+            "gini_normalized": 0.31841761812940006,
+            "totals": {
+              "observed": 7779029.27,
+              "predicted": 7896106.850372794,
+              "ratio": 0.9851727461910844
+            }
+          }
+        }
+      },
+      {
+        "fold": 3,
+        "frequency": {
+          "null": {
+            "deviance_per_exposure": 0.4818778920745436,
+            "deviance_explained": 0.0,
+            "gini": 0.0025761242468408385,
+            "gini_normalized": 0.002668584210233901
+          },
+          "bonus_malus_only": {
+            "deviance_per_exposure": 0.4659857624355949,
+            "deviance_explained": 0.03297957822993525,
+            "gini": 0.22385091578161886,
+            "gini_normalized": 0.2318851740298588
+          },
+          "full": {
+            "deviance_per_exposure": 0.46026924484901305,
+            "deviance_explained": 0.04484257854723883,
+            "gini": 0.28615229453865154,
+            "gini_normalized": 0.29642261853809765
+          }
+        },
+        "severity": {
+          "null": {
+            "deviance_per_claim": 1.2953460049551018,
+            "deviance_explained": 0.0
+          },
+          "full": {
+            "deviance_per_claim": 1.313625056316309,
+            "deviance_explained": -0.014111327237112059
+          }
+        },
+        "pure_premium": {
+          "null": {
+            "poisson_deviance_per_exposure": 1179.695442594881,
+            "poisson_deviance_explained": 0.0,
+            "tweedie_ref_deviance_per_exposure": 77.57095479522154,
+            "tweedie_ref_deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0,
+            "totals": {
+              "observed": 7842506.79,
+              "predicted": 7878118.580527171,
+              "ratio": 0.9954796579712326
+            }
+          },
+          "bonus_malus_only": {
+            "poisson_deviance_per_exposure": 1143.1158177746695,
+            "poisson_deviance_explained": 0.03100768511892371,
+            "tweedie_ref_deviance_per_exposure": 74.9702400952136,
+            "tweedie_ref_deviance_explained": 0.033526913609269515,
+            "gini": 0.23058237172985074,
+            "gini_normalized": 0.2345841262865923,
+            "totals": {
+              "observed": 7842506.79,
+              "predicted": 7879260.874482957,
+              "ratio": 0.9953353385465399
+            }
+          },
+          "freq_x_sev": {
+            "poisson_deviance_per_exposure": 1135.685273005035,
+            "poisson_deviance_explained": 0.03730638264825392,
+            "tweedie_ref_deviance_per_exposure": 74.35382347598473,
+            "tweedie_ref_deviance_explained": 0.04147340106525277,
+            "gini": 0.2769940997355016,
+            "gini_normalized": 0.2818013293276482,
+            "totals": {
+              "observed": 7842506.79,
+              "predicted": 7893180.003607508,
+              "ratio": 0.9935801269470166
+            }
+          },
+          "tweedie": {
+            "poisson_deviance_per_exposure": 1137.1740586125998,
+            "poisson_deviance_explained": 0.036044374206236074,
+            "tweedie_ref_deviance_per_exposure": 74.43480321476609,
+            "tweedie_ref_deviance_explained": 0.04042945698856648,
+            "gini": 0.27772546103601636,
+            "gini_normalized": 0.28254538339558916,
+            "totals": {
+              "observed": 7842506.79,
+              "predicted": 7969928.809649725,
+              "ratio": 0.9840121508368498
+            }
+          },
+          "tweedie_ref": {
+            "poisson_deviance_per_exposure": 1137.1740586125998,
+            "poisson_deviance_explained": 0.036044374206236074,
+            "tweedie_ref_deviance_per_exposure": 74.43480321476609,
+            "tweedie_ref_deviance_explained": 0.04042945698856648,
+            "gini": 0.27772546103601636,
+            "gini_normalized": 0.28254538339558916,
+            "totals": {
+              "observed": 7842506.79,
+              "predicted": 7969928.809649725,
+              "ratio": 0.9840121508368498
+            }
+          }
+        }
+      },
+      {
+        "fold": 4,
+        "frequency": {
+          "null": {
+            "deviance_per_exposure": 0.47560613288852077,
+            "deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0
+          },
+          "bonus_malus_only": {
+            "deviance_per_exposure": 0.4593953330477745,
+            "deviance_explained": 0.03408450547576514,
+            "gini": 0.23151610498323183,
+            "gini_normalized": 0.23979261590396228
+          },
+          "full": {
+            "deviance_per_exposure": 0.4533770409418303,
+            "deviance_explained": 0.04673844681456374,
+            "gini": 0.29311301360517905,
+            "gini_normalized": 0.3035915635025488
+          }
+        },
+        "severity": {
+          "null": {
+            "deviance_per_claim": 1.390328247264506,
+            "deviance_explained": 0.0
+          },
+          "full": {
+            "deviance_per_claim": 1.3767330277781882,
+            "deviance_explained": 0.009778424277192554
+          }
+        },
+        "pure_premium": {
+          "null": {
+            "poisson_deviance_per_exposure": 1265.1129829928689,
+            "poisson_deviance_explained": 0.0,
+            "tweedie_ref_deviance_per_exposure": 79.88821667125553,
+            "tweedie_ref_deviance_explained": 0.0,
+            "gini": 0.0,
+            "gini_normalized": 0.0,
+            "totals": {
+              "observed": 8247294.609999999,
+              "predicted": 7765930.006828114,
+              "ratio": 1.061984154215741
+            }
+          },
+          "bonus_malus_only": {
+            "poisson_deviance_per_exposure": 1221.096949233179,
+            "poisson_deviance_explained": 0.03479217615454511,
+            "tweedie_ref_deviance_per_exposure": 76.69539257663872,
+            "tweedie_ref_deviance_explained": 0.03996614554253297,
+            "gini": 0.27645446205576396,
+            "gini_normalized": 0.28103537345129453,
+            "totals": {
+              "observed": 8247294.609999999,
+              "predicted": 7769396.831366925,
+              "ratio": 1.0615102805283012
+            }
+          },
+          "freq_x_sev": {
+            "poisson_deviance_per_exposure": 1202.3912848801472,
+            "poisson_deviance_explained": 0.049577942014587095,
+            "tweedie_ref_deviance_per_exposure": 75.32359520426404,
+            "tweedie_ref_deviance_explained": 0.05713760623516195,
+            "gini": 0.32162277183851684,
+            "gini_normalized": 0.32695213208693275,
+            "totals": {
+              "observed": 8247294.609999999,
+              "predicted": 7767347.556639272,
+              "ratio": 1.061790340893203
+            }
+          },
+          "tweedie": {
+            "poisson_deviance_per_exposure": 1204.850314081182,
+            "poisson_deviance_explained": 0.04763421901585729,
+            "tweedie_ref_deviance_per_exposure": 75.46800089288685,
+            "tweedie_ref_deviance_explained": 0.05533000938746846,
+            "gini": 0.31719457081472857,
+            "gini_normalized": 0.322450554795745,
+            "totals": {
+              "observed": 8247294.609999999,
+              "predicted": 7836291.023906082,
+              "ratio": 1.0524487394406452
+            }
+          },
+          "tweedie_ref": {
+            "poisson_deviance_per_exposure": 1204.850314081182,
+            "poisson_deviance_explained": 0.04763421901585729,
+            "tweedie_ref_deviance_per_exposure": 75.46800089288685,
+            "tweedie_ref_deviance_explained": 0.05533000938746846,
+            "gini": 0.31719457081472857,
+            "gini_normalized": 0.322450554795745,
+            "totals": {
+              "observed": 8247294.609999999,
+              "predicted": 7836291.023906082,
+              "ratio": 1.0524487394406452
+            }
+          }
+        }
+      }
+    ],
+    "fold_summary": {
+      "frequency": {
+        "null": {
+          "deviance_per_exposure": {
+            "mean": 0.47843317391990414,
+            "sd": 0.0028361678588818473
+          },
+          "deviance_explained": {
+            "mean": 0.0,
+            "sd": 0.0
+          },
+          "gini": {
+            "mean": 0.0005088036265565199,
+            "sd": 0.0011557509772584951
+          },
+          "gini_normalized": {
+            "mean": 0.0005270623776526781,
+            "sd": 0.0011972337892862165
+          }
+        },
+        "bonus_malus_only": {
+          "deviance_per_exposure": {
+            "mean": 0.46279439994655147,
+            "sd": 0.0027900207298724423
+          },
+          "deviance_explained": {
+            "mean": 0.03268755819527398,
+            "sd": 0.000976670458954652
+          },
+          "gini": {
+            "mean": 0.22956800446430664,
+            "sd": 0.005945802438501783
+          },
+          "gini_normalized": {
+            "mean": 0.23788135572746277,
+            "sd": 0.006108377953113631
+          }
+        },
+        "full": {
+          "deviance_per_exposure": {
+            "mean": 0.45725900319511553,
+            "sd": 0.003049807794042831
+          },
+          "deviance_explained": {
+            "mean": 0.04425960476974837,
+            "sd": 0.0017634089201583574
+          },
+          "gini": {
+            "mean": 0.28387924487891497,
+            "sd": 0.00740220915659407
+          },
+          "gini_normalized": {
+            "mean": 0.2941580581790312,
+            "sd": 0.007542218808229399
+          }
+        }
+      },
+      "severity": {
+        "null": {
+          "deviance_per_claim": {
+            "mean": 1.315360019120686,
+            "sd": 0.06913931429971995
+          },
+          "deviance_explained": {
+            "mean": 0.0,
+            "sd": 0.0
+          }
+        },
+        "full": {
+          "deviance_per_claim": {
+            "mean": 1.3205553131337275,
+            "sd": 0.06903471795542024
+          },
+          "deviance_explained": {
+            "mean": -0.0039908648905712775,
+            "sd": 0.009931052622692296
+          }
+        }
+      },
+      "pure_premium": {
+        "null": {
+          "poisson_deviance_per_exposure": {
+            "mean": 1195.0426414736785,
+            "sd": 62.38019362717435
+          },
+          "poisson_deviance_explained": {
+            "mean": 0.0,
+            "sd": 0.0
+          },
+          "tweedie_ref_deviance_per_exposure": {
+            "mean": 77.75042168254113,
+            "sd": 1.9452851438026968
+          },
+          "tweedie_ref_deviance_explained": {
+            "mean": 0.0,
+            "sd": 0.0
+          },
+          "gini": {
+            "mean": -0.000562041551730319,
+            "sd": 0.0012567631158484575
+          },
+          "gini_normalized": {
+            "mean": -0.0005714733140311576,
+            "sd": 0.0012778531775007526
+          },
+          "totals": {
+            "observed": {
+              "mean": 7866132.364,
+              "sd": 363561.0544169548
+            },
+            "predicted": {
+              "mean": 7866149.897989827,
+              "sd": 93748.06450069328
+            },
+            "ratio": {
+              "mean": 1.0005412873957176,
+              "sd": 0.0576278150955998
+            }
+          }
+        },
+        "bonus_malus_only": {
+          "poisson_deviance_per_exposure": {
+            "mean": 1157.969535031222,
+            "sd": 55.34283525185792
+          },
+          "poisson_deviance_explained": {
+            "mean": 0.03083648675374029,
+            "sd": 0.005017286231225395
+          },
+          "tweedie_ref_deviance_per_exposure": {
+            "mean": 74.98547222530453,
+            "sd": 1.4920232725179399
+          },
+          "tweedie_ref_deviance_explained": {
+            "mean": 0.03545857576823774,
+            "sd": 0.005706463108249682
+          },
+          "gini": {
+            "mean": 0.2552990792721107,
+            "sd": 0.02290710347706853
+          },
+          "gini_normalized": {
+            "mean": 0.2597088519982231,
+            "sd": 0.023239194671827713
+          },
+          "totals": {
+            "observed": {
+              "mean": 7866132.364,
+              "sd": 363561.0544169548
+            },
+            "predicted": {
+              "mean": 7866350.746269904,
+              "sd": 98421.21536772067
+            },
+            "ratio": {
+              "mean": 1.000545755919609,
+              "sd": 0.058109876177969276
+            }
+          }
+        },
+        "freq_x_sev": {
+          "poisson_deviance_per_exposure": {
+            "mean": 1147.0000428762937,
+            "sd": 51.01815138363322
+          },
+          "poisson_deviance_explained": {
+            "mean": 0.03988736917164384,
+            "sd": 0.007657693640192829
+          },
+          "tweedie_ref_deviance_per_exposure": {
+            "mean": 74.04941089687182,
+            "sd": 1.224725879824642
+          },
+          "tweedie_ref_deviance_explained": {
+            "mean": 0.047432619042719934,
+            "sd": 0.008924262174916807
+          },
+          "gini": {
+            "mean": 0.3040008984214553,
+            "sd": 0.03341554502809688
+          },
+          "gini_normalized": {
+            "mean": 0.30924649000752097,
+            "sd": 0.03386553320906038
+          },
+          "totals": {
+            "observed": {
+              "mean": 7866132.364,
+              "sd": 363561.0544169548
+            },
+            "predicted": {
+              "mean": 7864895.414575298,
+              "sd": 106322.42432617002
+            },
+            "ratio": {
+              "mean": 1.0007703084481732,
+              "sd": 0.05869345860293488
+            }
+          }
+        },
+        "tweedie": {
+          "poisson_deviance_per_exposure": {
+            "mean": 1148.4089854226675,
+            "sd": 51.057275103004656
+          },
+          "poisson_deviance_explained": {
+            "mean": 0.038707439189331797,
+            "sd": 0.007619358941012859
+          },
+          "tweedie_ref_deviance_per_exposure": {
+            "mean": 74.09705572474581,
+            "sd": 1.2615399971181196
+          },
+          "tweedie_ref_deviance_explained": {
+            "mean": 0.04682757035275094,
+            "sd": 0.008712209441303938
+          },
+          "gini": {
+            "mean": 0.30395625490161066,
+            "sd": 0.03165002775441027
+          },
+          "gini_normalized": {
+            "mean": 0.309202503280838,
+            "sd": 0.032080223329102764
+          },
+          "totals": {
+            "observed": {
+              "mean": 7866132.364,
+              "sd": 363561.0544169548
+            },
+            "predicted": {
+              "mean": 7933710.372657867,
+              "sd": 112463.34589669059
+            },
+            "ratio": {
+              "mean": 0.9921263708077348,
+              "sd": 0.05879280959186105
+            }
+          }
+        },
+        "tweedie_ref": {
+          "poisson_deviance_per_exposure": {
+            "mean": 1148.4089854226675,
+            "sd": 51.057275103004656
+          },
+          "poisson_deviance_explained": {
+            "mean": 0.038707439189331797,
+            "sd": 0.007619358941012859
+          },
+          "tweedie_ref_deviance_per_exposure": {
+            "mean": 74.09705572474581,
+            "sd": 1.2615399971181196
+          },
+          "tweedie_ref_deviance_explained": {
+            "mean": 0.04682757035275094,
+            "sd": 0.008712209441303938
+          },
+          "gini": {
+            "mean": 0.30395625490161066,
+            "sd": 0.03165002775441027
+          },
+          "gini_normalized": {
+            "mean": 0.309202503280838,
+            "sd": 0.032080223329102764
+          },
+          "totals": {
+            "observed": {
+              "mean": 7866132.364,
+              "sd": 363561.0544169548
+            },
+            "predicted": {
+              "mean": 7933710.372657867,
+              "sd": 112463.34589669059
+            },
+            "ratio": {
+              "mean": 0.9921263708077348,
+              "sd": 0.05879280959186105
+            }
+          }
+        }
+      }
+    },
+    "pooled": {
+      "frequency": {
+        "null": {
+          "deviance_per_exposure": 0.4784316801400519,
+          "deviance_explained": 0.0,
+          "gini": -0.003864926905062571,
+          "gini_normalized": -0.004004898655194765
+        },
+        "bonus_malus_only": {
+          "deviance_per_exposure": 0.4627931516544407,
+          "deviance_explained": 0.03268706721309367,
+          "gini": 0.22832190857967416,
+          "gini_normalized": 0.23659078867040964
+        },
+        "full": {
+          "deviance_per_exposure": 0.4572573996058113,
+          "deviance_explained": 0.0442576890561307,
+          "gini": 0.28375971955757073,
+          "gini_normalized": 0.2940363290612247
+        }
+      },
+      "severity": {
+        "null": {
+          "deviance_per_claim": 1.315170281424873,
+          "deviance_explained": 0.0
+        },
+        "full": {
+          "deviance_per_claim": 1.3204106333044041,
+          "deviance_explained": -0.0039845424988267375
+        }
+      },
+      "pure_premium": {
+        "null": {
+          "poisson_deviance_per_exposure": 1195.0395235420021,
+          "poisson_deviance_explained": 0.0,
+          "tweedie_ref_deviance_per_exposure": 77.75028844732525,
+          "tweedie_ref_deviance_explained": 0.0,
+          "gini": -0.022612207203319912,
+          "gini_normalized": -0.023002609590873843,
+          "totals": {
+            "observed": 39330661.81999999,
+            "predicted": 39330749.48994913,
+            "ratio": 0.9999977709565601
+          }
+        },
+        "bonus_malus_only": {
+          "poisson_deviance_per_exposure": 1157.9695274734795,
+          "poisson_deviance_explained": 0.031019891257362042,
+          "tweedie_ref_deviance_per_exposure": 74.9855744691954,
+          "tweedie_ref_deviance_explained": 0.03555889030563408,
+          "gini": 0.25012005268994675,
+          "gini_normalized": 0.2544384044929027,
+          "totals": {
+            "observed": 39330661.81999999,
+            "predicted": 39331753.73134951,
+            "ratio": 0.9999722384270741
+          }
+        },
+        "freq_x_sev": {
+          "poisson_deviance_per_exposure": 1146.999332758232,
+          "poisson_deviance_explained": 0.040199666904223275,
+          "tweedie_ref_deviance_per_exposure": 74.04940138598167,
+          "tweedie_ref_deviance_explained": 0.047599656994853246,
+          "gini": 0.30448481744201916,
+          "gini_normalized": 0.3097417832319768,
+          "totals": {
+            "observed": 39330661.81999999,
+            "predicted": 39324477.07287649,
+            "ratio": 1.0001572747454985
+          }
+        },
+        "tweedie": {
+          "poisson_deviance_per_exposure": 1148.4078574472467,
+          "poisson_deviance_explained": 0.03902102413863506,
+          "tweedie_ref_deviance_per_exposure": 74.09701294234722,
+          "tweedie_ref_deviance_explained": 0.046987291982242274,
+          "gini": 0.30428015753320437,
+          "gini_normalized": 0.3095335898460309,
+          "totals": {
+            "observed": 39330661.81999999,
+            "predicted": 39668551.863289334,
+            "ratio": 0.9914821684327217
+          }
+        },
+        "tweedie_ref": {
+          "poisson_deviance_per_exposure": 1148.4078574472467,
+          "poisson_deviance_explained": 0.03902102413863506,
+          "tweedie_ref_deviance_per_exposure": 74.09701294234722,
+          "tweedie_ref_deviance_explained": 0.046987291982242274,
+          "gini": 0.30428015753320437,
+          "gini_normalized": 0.3095335898460309,
+          "totals": {
+            "observed": 39330661.81999999,
+            "predicted": 39668551.863289334,
+            "ratio": 0.9914821684327217
+          }
+        }
+      }
+    },
+    "lift": {
+      "frequency": {
+        "null": [
+          {
+            "bin": 0,
+            "exposure": 28662.15141777079,
+            "observed": 2366.0,
+            "predicted": 2104.803183101581,
+            "observed_rate": 0.0825478857296476,
+            "predicted_rate": 0.07343493349199824,
+            "ratio": 1.1240956014298336
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.51680964144,
+            "observed": 1915.0,
+            "predicted": 2104.8690141430134,
+            "observed_rate": 0.06681199745012747,
+            "predicted_rate": 0.07343629410223255,
+            "ratio": 0.9097953303187764
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.43017516281,
+            "observed": 2310.0,
+            "predicted": 2111.9615347063404,
+            "observed_rate": 0.08059330579727714,
+            "predicted_rate": 0.07368396614661248,
+            "ratio": 1.093769920540336
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.305100681187,
+            "observed": 1920.0,
+            "predicted": 2111.9598520412,
+            "observed_rate": 0.06698693609099741,
+            "predicted_rate": 0.07368422897678971,
+            "ratio": 0.9091081907377777
+          },
+          {
+            "bin": 4,
+            "exposure": 28661.9076525189,
+            "observed": 2317.0,
+            "predicted": 2113.702449878366,
+            "observed_rate": 0.08083900164950725,
+            "predicted_rate": 0.07374604912916909,
+            "ratio": 1.0961807799074712
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.206151658058,
+            "observed": 1897.0,
+            "predicted": 2113.72551708823,
+            "observed_rate": 0.06618471690429391,
+            "predicted_rate": 0.0737460859050431,
+            "ratio": 0.8974675210493835
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.34291488884,
+            "observed": 2298.0,
+            "predicted": 2114.2820720637765,
+            "observed_rate": 0.0801748833591091,
+            "predicted_rate": 0.07376515166056083,
+            "ratio": 1.0868937642539314
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.522251665545,
+            "observed": 1908.0,
+            "predicted": 2114.2953008683085,
+            "observed_rate": 0.06656776341060244,
+            "predicted_rate": 0.07376515166056083,
+            "ratio": 0.9024283406468405
+          },
+          {
+            "bin": 8,
+            "exposure": 28661.88193876787,
+            "observed": 2289.0,
+            "predicted": 2116.6997961032307,
+            "observed_rate": 0.07986216693272725,
+            "predicted_rate": 0.07385069133371165,
+            "ratio": 1.0814003970775488
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.63135713751,
+            "observed": 1903.0,
+            "predicted": 2116.7576179495895,
+            "observed_rate": 0.06639306685727997,
+            "predicted_rate": 0.07385077774523584,
+            "ratio": 0.8990164881718261
+          }
+        ],
+        "bonus_malus_only": [
+          {
+            "bin": 0,
+            "exposure": 28661.888484167976,
+            "observed": 1504.0,
+            "predicted": 1589.870965111331,
+            "observed_rate": 0.052473862663682036,
+            "predicted_rate": 0.05546986082195984,
+            "ratio": 0.9459887204712126
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.56621902837,
+            "observed": 1457.0,
+            "predicted": 1594.8057141243362,
+            "observed_rate": 0.050832852469181,
+            "predicted_rate": 0.05564071625469404,
+            "ratio": 0.9135909077175576
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.261804027246,
+            "observed": 1505.0,
+            "predicted": 1596.9408238158235,
+            "observed_rate": 0.05250806828470658,
+            "predicted_rate": 0.0557157992183102,
+            "ratio": 0.942426906216766
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.783330339098,
+            "observed": 1482.0,
+            "predicted": 1597.49565588538,
+            "observed_rate": 0.05170467860430451,
+            "predicted_rate": 0.05573414268510541,
+            "ratio": 0.9277020532357135
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.027105322253,
+            "observed": 1402.0,
+            "predicted": 1597.4911300059941,
+            "observed_rate": 0.04891489338308743,
+            "predicted_rate": 0.05573545528150575,
+            "ratio": 0.8776261562057871
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.219680365295,
+            "observed": 1466.0,
+            "predicted": 1602.67466914935,
+            "observed_rate": 0.05114746925913297,
+            "predicted_rate": 0.055915929995025565,
+            "ratio": 0.9147208901592657
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.476981810014,
+            "observed": 1837.0,
+            "predicted": 1688.3719712650739,
+            "observed_rate": 0.06409076232894352,
+            "predicted_rate": 0.05890530578835041,
+            "ratio": 1.0880303814944057
+          },
+          {
+            "bin": 7,
+            "exposure": 28661.84950145969,
+            "observed": 2931.0,
+            "predicted": 2066.770964255048,
+            "observed_rate": 0.10226137011328353,
+            "predicted_rate": 0.07210877874959855,
+            "ratio": 1.4181542370644136
+          },
+          {
+            "bin": 8,
+            "exposure": 28662.42241485141,
+            "observed": 2972.0,
+            "predicted": 2816.7197737476663,
+            "observed_rate": 0.10368977042429116,
+            "predicted_rate": 0.09827221624813488,
+            "ratio": 1.0551280349928926
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.400248521597,
+            "observed": 4567.0,
+            "predicted": 4972.367090101782,
+            "observed_rate": 0.15933766748078138,
+            "predicted_rate": 0.1734804847810419,
+            "ratio": 0.9184760330932276
+          }
+        ],
+        "full": [
+          {
+            "bin": 0,
+            "exposure": 28662.26245452504,
+            "observed": 937.0,
+            "predicted": 1018.6534771843922,
+            "observed_rate": 0.032691069014060735,
+            "predicted_rate": 0.035539883803679735,
+            "ratio": 0.919841752849962
+          },
+          {
+            "bin": 1,
+            "exposure": 28661.854795269108,
+            "observed": 1168.0,
+            "predicted": 1257.4434340463704,
+            "observed_rate": 0.04075102634993422,
+            "predicted_rate": 0.04387166996093786,
+            "ratio": 0.9288688209547945
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.718519350252,
+            "observed": 1355.0,
+            "predicted": 1408.1958789813402,
+            "observed_rate": 0.047273952716147184,
+            "predicted_rate": 0.049129878522536675,
+            "ratio": 0.9622240912820871
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.60308256606,
+            "observed": 1404.0,
+            "predicted": 1538.1729286529742,
+            "observed_rate": 0.04898368776749306,
+            "predicted_rate": 0.05366480232873765,
+            "ratio": 0.9127712325749527
+          },
+          {
+            "bin": 4,
+            "exposure": 28661.572210494796,
+            "observed": 1690.0,
+            "predicted": 1675.5367947961379,
+            "observed_rate": 0.058963967070207866,
+            "predicted_rate": 0.05845934697827285,
+            "ratio": 1.0086319830449453
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.81484691968,
+            "observed": 1852.0,
+            "predicted": 1824.704973184485,
+            "observed_rate": 0.06461333298529924,
+            "predicted_rate": 0.06366105293320769,
+            "ratio": 1.0149585972618245
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.008830002247,
+            "observed": 2058.0,
+            "predicted": 2011.715774551588,
+            "observed_rate": 0.07180236431459638,
+            "predicted_rate": 0.07018753592894732,
+            "ratio": 1.0230073383297542
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.831931282282,
+            "observed": 2406.0,
+            "predicted": 2286.581535874087,
+            "observed_rate": 0.0839414613939148,
+            "predicted_rate": 0.07977514368978099,
+            "ratio": 1.0522257624547218
+          },
+          {
+            "bin": 8,
+            "exposure": 28661.838609177335,
+            "observed": 3209.0,
+            "predicted": 2817.5780244312846,
+            "observed_rate": 0.11196071695737268,
+            "predicted_rate": 0.09830416195034726,
+            "ratio": 1.1389214325831216
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.39049030616,
+            "observed": 5044.0,
+            "predicted": 5283.5239074301035,
+            "observed_rate": 0.17597973908372783,
+            "predicted_rate": 0.1843364707914726,
+            "ratio": 0.9546658798887488
+          }
+        ]
+      },
+      "pure_premium": {
+        "null": [
+          {
+            "bin": 0,
+            "exposure": 28661.917144247323,
+            "observed": 4801510.1,
+            "predicted": 3884879.241590329,
+            "observed_rate": 167.52229363567542,
+            "predicted_rate": 135.5414999645289,
+            "ratio": 1.2359483529363027
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.845947301445,
+            "observed": 3458600.35,
+            "predicted": 3885020.4346158467,
+            "observed_rate": 120.66493175028285,
+            "predicted_rate": 135.54203381474107,
+            "ratio": 0.8902399377834904
+          },
+          {
+            "bin": 2,
+            "exposure": 28661.928324724904,
+            "observed": 4109289.42,
+            "predicted": 3899913.5394020025,
+            "observed_rate": 143.37100328504994,
+            "predicted_rate": 136.0659860431576,
+            "ratio": 1.053687313444929
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.577046186092,
+            "observed": 4017929.73,
+            "predicted": 3900001.8083272865,
+            "observed_rate": 140.1803377109329,
+            "predicted_rate": 136.0659860431576,
+            "ratio": 1.0302379146135046
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.11291488884,
+            "observed": 4057612.95,
+            "predicted": 3936532.370653664,
+            "observed_rate": 141.5671259843593,
+            "predicted_rate": 137.34271378886345,
+            "ratio": 1.0307581820611906
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.532094468148,
+            "observed": 3781659.48,
+            "predicted": 3936660.669659841,
+            "observed_rate": 131.93738318499285,
+            "predicted_rate": 137.34518139168918,
+            "ratio": 0.9606262254569088
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.188952017368,
+            "observed": 3875402.83,
+            "predicted": 3941235.402745798,
+            "observed_rate": 135.20959046385858,
+            "predicted_rate": 137.50643432515636,
+            "ratio": 0.9832964626523111
+          },
+          {
+            "bin": 7,
+            "exposure": 28661.819541881876,
+            "observed": 3918553.99,
+            "predicted": 3941338.9130814495,
+            "observed_rate": 136.7168607099086,
+            "predicted_rate": 137.511818024051,
+            "ratio": 0.994218989134422
+          },
+          {
+            "bin": 8,
+            "exposure": 28663.182173066845,
+            "observed": 4013478.32,
+            "predicted": 4002680.6463086656,
+            "observed_rate": 140.02207765232836,
+            "predicted_rate": 139.64536882683444,
+            "ratio": 1.0026976105878673
+          },
+          {
+            "bin": 9,
+            "exposure": 28661.791631110114,
+            "observed": 3296624.65,
+            "predicted": 4002486.4635642483,
+            "observed_rate": 115.01809420810156,
+            "predicted_rate": 139.64536882683444,
+            "ratio": 0.8236441721939836
+          }
+        ],
+        "bonus_malus_only": [
+          {
+            "bin": 0,
+            "exposure": 28661.991279287373,
+            "observed": 2618272.72,
+            "predicted": 2941694.526070951,
+            "observed_rate": 91.34999360257633,
+            "predicted_rate": 102.6339899906665,
+            "ratio": 0.890055951355722
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.645754921774,
+            "observed": 2753188.96,
+            "predicted": 2944036.287357452,
+            "observed_rate": 96.05494843501107,
+            "predicted_rate": 102.71334727890289,
+            "ratio": 0.935174940547776
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.136867280486,
+            "observed": 2687381.73,
+            "predicted": 2960526.8777549206,
+            "observed_rate": 93.76069001567724,
+            "predicted_rate": 103.29051499068571,
+            "ratio": 0.9077376564937465
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.19789355491,
+            "observed": 2558159.64,
+            "predicted": 2977194.7678873693,
+            "observed_rate": 89.25204024828946,
+            "predicted_rate": 103.8718237500144,
+            "ratio": 0.8592516914220166
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.362425331237,
+            "observed": 2693039.79,
+            "predicted": 2977629.535660401,
+            "observed_rate": 93.9573559930965,
+            "predicted_rate": 103.88639608537048,
+            "ratio": 0.9044240587178074
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.01024702448,
+            "observed": 2591306.12,
+            "predicted": 3023262.4616666404,
+            "observed_rate": 90.40908497578303,
+            "predicted_rate": 105.47977743398154,
+            "ratio": 0.8571224473086221
+          },
+          {
+            "bin": 6,
+            "exposure": 28663.021877386032,
+            "observed": 3561173.46,
+            "predicted": 3155472.377695317,
+            "observed_rate": 124.242777863196,
+            "predicted_rate": 110.08861491275131,
+            "ratio": 1.1285706334089343
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.152295830525,
+            "observed": 4940091.84,
+            "predicted": 3846474.5485442383,
+            "observed_rate": 172.35592739204841,
+            "predicted_rate": 134.2004783466238,
+            "ratio": 1.2843167886993192
+          },
+          {
+            "bin": 8,
+            "exposure": 28662.350457369565,
+            "observed": 5481131.82,
+            "predicted": 5242284.024916683,
+            "observed_rate": 191.23106558034254,
+            "predicted_rate": 182.89791106677384,
+            "ratio": 1.04556178069484
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.02667190658,
+            "observed": 9446915.74,
+            "predicted": 9263178.323795544,
+            "observed_rate": 329.59692097626527,
+            "predicted_rate": 323.18643862246336,
+            "ratio": 1.019835245504501
+          }
+        ],
+        "freq_x_sev": [
+          {
+            "bin": 0,
+            "exposure": 28662.226245227936,
+            "observed": 1730787.36,
+            "predicted": 1636135.754554474,
+            "observed_rate": 60.385656898796,
+            "predicted_rate": 57.08334518596159,
+            "ratio": 1.057850704125282
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.667019986526,
+            "observed": 2033721.88,
+            "predicted": 2111344.0893682023,
+            "observed_rate": 70.95368615146253,
+            "predicted_rate": 73.66181548618482,
+            "ratio": 0.9632356422815809
+          },
+          {
+            "bin": 2,
+            "exposure": 28661.90473837862,
+            "observed": 2542189.88,
+            "predicted": 2415627.9047026653,
+            "observed_rate": 88.6957759159662,
+            "predicted_rate": 84.28008978301123,
+            "ratio": 1.0523929927498137
+          },
+          {
+            "bin": 3,
+            "exposure": 28662.42629463283,
+            "observed": 2421214.96,
+            "predicted": 2689334.7795605613,
+            "observed_rate": 84.47348229041529,
+            "predicted_rate": 93.82788295435238,
+            "ratio": 0.9003025500587278
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.278767871845,
+            "observed": 3193997.87,
+            "predicted": 2968525.472129337,
+            "observed_rate": 111.43558737486777,
+            "predicted_rate": 103.56906707141583,
+            "ratio": 1.0759543416378134
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.213126731043,
+            "observed": 2966081.65,
+            "predicted": 3277393.3885432435,
+            "observed_rate": 103.48404140620124,
+            "predicted_rate": 114.3454405998632,
+            "ratio": 0.9050123980747952
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.384267534995,
+            "observed": 3610086.87,
+            "predicted": 3666580.3385595153,
+            "observed_rate": 125.95207838620163,
+            "predicted_rate": 127.92307521717719,
+            "ratio": 0.984592327634171
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.298821768098,
+            "observed": 5040698.08,
+            "predicted": 4243066.207627248,
+            "observed_rate": 175.8651010983024,
+            "predicted_rate": 148.0364933047441,
+            "ratio": 1.1879847811327915
+          },
+          {
+            "bin": 8,
+            "exposure": 28662.031591436484,
+            "observed": 5295681.65,
+            "predicted": 5348558.73837576,
+            "observed_rate": 184.76295489054658,
+            "predicted_rate": 186.6078027760523,
+            "ratio": 0.9901137687810423
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.464896324575,
+            "observed": 10496201.62,
+            "predicted": 10967910.39945548,
+            "observed_rate": 366.20024334843373,
+            "predicted_rate": 382.65761298365896,
+            "ratio": 0.9569919189457547
+          }
+        ],
+        "tweedie": [
+          {
+            "bin": 0,
+            "exposure": 28662.370118272327,
+            "observed": 1689226.89,
+            "predicted": 1553138.819036344,
+            "observed_rate": 58.93535262539625,
+            "predicted_rate": 54.187382712158005,
+            "ratio": 1.0876213183880707
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.47268433266,
+            "observed": 2229723.44,
+            "predicted": 2033696.888236166,
+            "observed_rate": 77.7924313982443,
+            "predicted_rate": 70.95329529429662,
+            "ratio": 1.096389266708201
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.353587094844,
+            "observed": 2410676.85,
+            "predicted": 2346265.465242499,
+            "observed_rate": 84.10603276785342,
+            "predicted_rate": 81.85878588487232,
+            "ratio": 1.027452726774395
+          },
+          {
+            "bin": 3,
+            "exposure": 28661.92349726776,
+            "observed": 2527504.21,
+            "predicted": 2629698.586147413,
+            "observed_rate": 88.18334227432217,
+            "predicted_rate": 91.7488523196321,
+            "ratio": 0.9611383689804804
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.168853207575,
+            "observed": 2874407.12,
+            "predicted": 2917683.0878249723,
+            "observed_rate": 100.28575069532206,
+            "predicted_rate": 101.79561437823486,
+            "ratio": 0.9851676941866798
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.220526236993,
+            "observed": 3166972.67,
+            "predicted": 3238011.1547424314,
+            "observed_rate": 110.49292803748396,
+            "predicted_rate": 112.97139912026012,
+            "ratio": 0.9780610747315099
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.410257504303,
+            "observed": 3695488.25,
+            "predicted": 3639758.7342827283,
+            "observed_rate": 128.9315244879819,
+            "predicted_rate": 126.98718291947475,
+            "ratio": 1.015311321377529
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.856841829478,
+            "observed": 4812144.72,
+            "predicted": 4234993.868771066,
+            "observed_rate": 167.8878259258979,
+            "predicted_rate": 147.75198062569527,
+            "ratio": 1.1362813900357345
+          },
+          {
+            "bin": 8,
+            "exposure": 28661.700074107343,
+            "observed": 5587578.2,
+            "predicted": 5395742.470282619,
+            "observed_rate": 194.94929419932615,
+            "predicted_rate": 188.25619053759732,
+            "ratio": 1.0355531663666175
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.419330039673,
+            "observed": 10336939.47,
+            "predicted": 11679562.788723094,
+            "observed_rate": 360.6443458583541,
+            "predicted_rate": 407.4869833643917,
+            "ratio": 0.8850450703497712
+          }
+        ],
+        "tweedie_ref": [
+          {
+            "bin": 0,
+            "exposure": 28662.370118272327,
+            "observed": 1689226.89,
+            "predicted": 1553138.819036344,
+            "observed_rate": 58.93535262539625,
+            "predicted_rate": 54.187382712158005,
+            "ratio": 1.0876213183880707
+          },
+          {
+            "bin": 1,
+            "exposure": 28662.47268433266,
+            "observed": 2229723.44,
+            "predicted": 2033696.888236166,
+            "observed_rate": 77.7924313982443,
+            "predicted_rate": 70.95329529429662,
+            "ratio": 1.096389266708201
+          },
+          {
+            "bin": 2,
+            "exposure": 28662.353587094844,
+            "observed": 2410676.85,
+            "predicted": 2346265.465242499,
+            "observed_rate": 84.10603276785342,
+            "predicted_rate": 81.85878588487232,
+            "ratio": 1.027452726774395
+          },
+          {
+            "bin": 3,
+            "exposure": 28661.92349726776,
+            "observed": 2527504.21,
+            "predicted": 2629698.586147413,
+            "observed_rate": 88.18334227432217,
+            "predicted_rate": 91.7488523196321,
+            "ratio": 0.9611383689804804
+          },
+          {
+            "bin": 4,
+            "exposure": 28662.168853207575,
+            "observed": 2874407.12,
+            "predicted": 2917683.0878249723,
+            "observed_rate": 100.28575069532206,
+            "predicted_rate": 101.79561437823486,
+            "ratio": 0.9851676941866798
+          },
+          {
+            "bin": 5,
+            "exposure": 28662.220526236993,
+            "observed": 3166972.67,
+            "predicted": 3238011.1547424314,
+            "observed_rate": 110.49292803748396,
+            "predicted_rate": 112.97139912026012,
+            "ratio": 0.9780610747315099
+          },
+          {
+            "bin": 6,
+            "exposure": 28662.410257504303,
+            "observed": 3695488.25,
+            "predicted": 3639758.7342827283,
+            "observed_rate": 128.9315244879819,
+            "predicted_rate": 126.98718291947475,
+            "ratio": 1.015311321377529
+          },
+          {
+            "bin": 7,
+            "exposure": 28662.856841829478,
+            "observed": 4812144.72,
+            "predicted": 4234993.868771066,
+            "observed_rate": 167.8878259258979,
+            "predicted_rate": 147.75198062569527,
+            "ratio": 1.1362813900357345
+          },
+          {
+            "bin": 8,
+            "exposure": 28661.700074107343,
+            "observed": 5587578.2,
+            "predicted": 5395742.470282619,
+            "observed_rate": 194.94929419932615,
+            "predicted_rate": 188.25619053759732,
+            "ratio": 1.0355531663666175
+          },
+          {
+            "bin": 9,
+            "exposure": 28662.419330039673,
+            "observed": 10336939.47,
+            "predicted": 11679562.788723094,
+            "observed_rate": 360.6443458583541,
+            "predicted_rate": 407.4869833643917,
+            "ratio": 0.8850450703497712
+          }
+        ]
+      }
+    },
+    "double_lift": [
+      {
+        "bin": 0,
+        "exposure": 28662.046022905906,
+        "observed": 3106811.15,
+        "pred_a": 2654284.9476105827,
+        "pred_b": 2976661.0954345474,
+        "ratio_a": 1.1704889306616406,
+        "ratio_b": 1.0437235044207989
+      },
+      {
+        "bin": 1,
+        "exposure": 28663.02710157946,
+        "observed": 2856497.5,
+        "pred_a": 2821307.209403639,
+        "pred_b": 3033612.8122167694,
+        "ratio_a": 1.012473044579856,
+        "ratio_b": 0.9416157159201392
+      },
+      {
+        "bin": 2,
+        "exposure": 28661.62794370836,
+        "observed": 3102052.12,
+        "pred_a": 2981980.506716262,
+        "pred_b": 3146458.6286567617,
+        "ratio_a": 1.0402657270942257,
+        "ratio_b": 0.9858868290044166
+      },
+      {
+        "bin": 3,
+        "exposure": 28662.732021109365,
+        "observed": 3303675.0,
+        "pred_a": 3187896.71735359,
+        "pred_b": 3313177.697309987,
+        "ratio_a": 1.0363180783167036,
+        "ratio_b": 0.9971318479785426
+      },
+      {
+        "bin": 4,
+        "exposure": 28661.86427951194,
+        "observed": 3241610.98,
+        "pred_a": 3369015.009810121,
+        "pred_b": 3452546.654154836,
+        "ratio_a": 0.9621835968557167,
+        "ratio_b": 0.9389043233055248
+      },
+      {
+        "bin": 5,
+        "exposure": 28662.375218204954,
+        "observed": 3607702.22,
+        "pred_a": 3620714.3765247962,
+        "pred_b": 3656828.6106076157,
+        "ratio_a": 0.9964061908309693,
+        "ratio_b": 0.9865658482147315
+      },
+      {
+        "bin": 6,
+        "exposure": 28662.551574219626,
+        "observed": 4202411.52,
+        "pred_a": 3877878.0248494362,
+        "pred_b": 3853732.9538778127,
+        "ratio_a": 1.0836884226556258,
+        "ratio_b": 1.0904781338757086
+      },
+      {
+        "bin": 7,
+        "exposure": 28661.98353694139,
+        "observed": 4920648.0,
+        "pred_a": 4260670.059856181,
+        "pred_b": 4153640.573957685,
+        "ratio_a": 1.1549000347063008,
+        "ratio_b": 1.1846590749453059
+      },
+      {
+        "bin": 8,
+        "exposure": 28662.17771614642,
+        "observed": 4727350.15,
+        "pred_a": 4865336.6079617245,
+        "pred_b": 4623603.676127287,
+        "ratio_a": 0.9716388671369787,
+        "ratio_b": 1.022438444369352
+      },
+      {
+        "bin": 9,
+        "exposure": 28662.510355565537,
+        "observed": 6261903.18,
+        "pred_a": 8029468.403203001,
+        "pred_b": 7114214.370533184,
+        "ratio_a": 0.7798652246395403,
+        "ratio_b": 0.8801960207913574
+      }
+    ],
+    "calibration": {
+      "BonusMalus": {
+        "frequency": {
+          "null": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 11653.0,
+              "predicted": 15623.9799595731,
+              "ratio": 0.7458406904099997
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 2873.0,
+              "predicted": 2012.5376536302715,
+              "ratio": 1.4275509304472402
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 1730.0,
+              "predicted": 1150.914666482111,
+              "ratio": 1.5031522756486568
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 2784.0,
+              "predicted": 1755.3675273737485,
+              "ratio": 1.5859926520147125
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 1709.0,
+              "predicted": 521.1181485064195,
+              "ratio": 3.279486628700569
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 374.0,
+              "predicted": 59.138382377985884,
+              "ratio": 6.324149984515311
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 11653.0,
+              "predicted": 12030.918819457493,
+              "ratio": 0.9685877009787243
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 2873.0,
+              "predicted": 2168.2489605763326,
+              "ratio": 1.3250323427971762
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 1730.0,
+              "predicted": 1592.5863453553113,
+              "ratio": 1.086283330913547
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 2784.0,
+              "predicted": 3435.4680543142117,
+              "ratio": 0.8103699280521304
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 1709.0,
+              "predicted": 1536.834389824543,
+              "ratio": 1.1120261306718369
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 374.0,
+              "predicted": 359.4521879338934,
+              "ratio": 1.0404721755895447
+            }
+          ],
+          "full": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 11653.0,
+              "predicted": 12203.621170280352,
+              "ratio": 0.9548805094326193
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 2873.0,
+              "predicted": 2082.336136305625,
+              "ratio": 1.3797003999061987
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 1730.0,
+              "predicted": 1528.067499140773,
+              "ratio": 1.1321489403922098
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 2784.0,
+              "predicted": 3326.6604264380303,
+              "ratio": 0.8368753173226413
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 1709.0,
+              "predicted": 1571.7332433974016,
+              "ratio": 1.0873346397547001
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 374.0,
+              "predicted": 409.6882535705811,
+              "ratio": 0.9128892438102751
+            }
+          ]
+        },
+        "pure_premium": {
+          "null": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 21050341.26,
+              "predicted": 29091692.444609497,
+              "ratio": 0.7235859962454847
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 4781297.76,
+              "predicted": 3746987.7214267114,
+              "ratio": 1.2760377443082365
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 3632604.34,
+              "predicted": 2143248.587052108,
+              "ratio": 1.6949057435266524
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 5120405.43,
+              "predicted": 3268345.230556275,
+              "ratio": 1.5666660247909314
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 4010285.9899999998,
+              "predicted": 970326.6364360555,
+              "ratio": 4.132923738679906
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 735727.04,
+              "predicted": 110148.8698684851,
+              "ratio": 6.679388003512329
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 21050341.26,
+              "predicted": 22401335.95835373,
+              "ratio": 0.9396913335496883
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 4781297.76,
+              "predicted": 4036896.8808073113,
+              "ratio": 1.1843992802322514
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 3632604.34,
+              "predicted": 2965747.1433031242,
+              "ratio": 1.2248530183035624
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 5120405.43,
+              "predicted": 6396631.54035355,
+              "ratio": 0.8004846609809557
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 4010285.9899999998,
+              "predicted": 2861610.4932558695,
+              "ratio": 1.4014087519777003
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 735727.04,
+              "predicted": 669531.7152759313,
+              "ratio": 1.098868094242239
+            }
+          ],
+          "freq_x_sev": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 21050341.26,
+              "predicted": 21895634.045880996,
+              "ratio": 0.961394459547975
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 4781297.76,
+              "predicted": 3747429.3963441695,
+              "ratio": 1.275887349516025
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 3632604.34,
+              "predicted": 2821836.5595905306,
+              "ratio": 1.2873191849662327
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 5120405.43,
+              "predicted": 6577580.1586071225,
+              "ratio": 0.7784634024261445
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 4010285.9899999998,
+              "predicted": 3326332.319447126,
+              "ratio": 1.205617961426823
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 735727.04,
+              "predicted": 955664.5930065423,
+              "ratio": 0.769859054509267
+            }
+          ],
+          "tweedie": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 21050341.26,
+              "predicted": 21567526.165335175,
+              "ratio": 0.9760202027172487
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 4781297.76,
+              "predicted": 3752846.3561555427,
+              "ratio": 1.2740456992484004
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 3632604.34,
+              "predicted": 2861085.86258385,
+              "ratio": 1.2696593232330995
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 5120405.43,
+              "predicted": 6801447.997222095,
+              "ratio": 0.7528404880977285
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 4010285.9899999998,
+              "predicted": 3581506.2271111915,
+              "ratio": 1.119720513018529
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 735727.04,
+              "predicted": 1104139.2548814802,
+              "ratio": 0.6663353709663858
+            }
+          ],
+          "tweedie_ref": [
+            {
+              "level": "50-59",
+              "weight": 369106.0,
+              "observed": 21050341.26,
+              "predicted": 21567526.165335175,
+              "ratio": 0.9760202027172487
+            },
+            {
+              "level": "60-69",
+              "weight": 58591.0,
+              "observed": 4781297.76,
+              "predicted": 3752846.3561555427,
+              "ratio": 1.2740456992484004
+            },
+            {
+              "level": "70-79",
+              "weight": 35758.0,
+              "observed": 3632604.34,
+              "predicted": 2861085.86258385,
+              "ratio": 1.2696593232330995
+            },
+            {
+              "level": "80-99",
+              "weight": 57026.0,
+              "observed": 5120405.43,
+              "predicted": 6801447.997222095,
+              "ratio": 0.7528404880977285
+            },
+            {
+              "level": "100-124",
+              "weight": 20129.0,
+              "observed": 4010285.9899999998,
+              "predicted": 3581506.2271111915,
+              "ratio": 1.119720513018529
+            },
+            {
+              "level": "125+",
+              "weight": 1801.0,
+              "observed": 735727.04,
+              "predicted": 1104139.2548814802,
+              "ratio": 0.6663353709663858
+            }
+          ]
+        }
+      },
+      "DrivAge": {
+        "frequency": {
+          "null": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 509.0,
+              "predicted": 152.78993813002063,
+              "ratio": 3.3313712030359817
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 1424.0,
+              "predicted": 803.4571590502326,
+              "ratio": 1.772340919437835
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 1913.0,
+              "predicted": 1720.9626888641533,
+              "ratio": 1.1115871438576002
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 4639.0,
+              "predicted": 4948.655248400337,
+              "ratio": 0.9374263849759117
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 5354.0,
+              "predicted": 5187.942721843896,
+              "ratio": 1.032008309856028
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 4124.0,
+              "predicted": 4465.91090572859,
+              "ratio": 0.9234398283024393
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 1882.0,
+              "predicted": 2250.950950162295,
+              "ratio": 0.8360910751361803
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 1063.0,
+              "predicted": 1313.4303590997906,
+              "ratio": 0.8093310715983202
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 215.0,
+              "predicted": 278.9563666643216,
+              "ratio": 0.7707298548905943
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 509.0,
+              "predicted": 375.17228740380995,
+              "ratio": 1.3567100158763779
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 1424.0,
+              "predicted": 1628.4999529751242,
+              "ratio": 0.8744243421060461
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 1913.0,
+              "predicted": 2461.0304142482983,
+              "ratio": 0.7773166836641108
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 4639.0,
+              "predicted": 5121.071720304925,
+              "ratio": 0.9058650714862042
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 5354.0,
+              "predicted": 4576.828893440777,
+              "ratio": 1.1698055847517077
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 4124.0,
+              "predicted": 3792.2525697201645,
+              "ratio": 1.0874803099689945
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 1882.0,
+              "predicted": 1867.2149489422782,
+              "ratio": 1.0079182373010118
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 1063.0,
+              "predicted": 1069.9313127092903,
+              "ratio": 0.993521721790029
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 215.0,
+              "predicted": 231.50665771711624,
+              "ratio": 0.9286989934549263
+            }
+          ],
+          "full": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 509.0,
+              "predicted": 509.2733688635297,
+              "ratio": 0.9994632178310447
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 1424.0,
+              "predicted": 1424.1648694982994,
+              "ratio": 0.9998842342611938
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 1913.0,
+              "predicted": 1912.3450912467683,
+              "ratio": 1.00034246368829
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 4639.0,
+              "predicted": 4638.229882779737,
+              "ratio": 1.0001660368803889
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 5354.0,
+              "predicted": 5353.721188932546,
+              "ratio": 1.0000520779954007
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 4124.0,
+              "predicted": 4124.329223080101,
+              "ratio": 0.9999201753637275
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 1882.0,
+              "predicted": 1882.1866301032885,
+              "ratio": 0.9999008439969217
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 1063.0,
+              "predicted": 1063.0110076596022,
+              "ratio": 0.9999896448300883
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 215.0,
+              "predicted": 214.84546696889063,
+              "ratio": 1.000719275269288
+            }
+          ]
+        },
+        "pure_premium": {
+          "null": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 1494457.54,
+              "predicted": 284526.66230938525,
+              "ratio": 5.252434087793763
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 2895173.82,
+              "predicted": 1495946.3321176316,
+              "ratio": 1.9353460467406274
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 3510352.2199999997,
+              "predicted": 3204472.310598092,
+              "ratio": 1.0954540653667928
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 8374342.9799999995,
+              "predicted": 9214459.145957492,
+              "ratio": 0.9088263182190066
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 9163140.34,
+              "predicted": 9659774.010744391,
+              "ratio": 0.948587444158425
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 7252248.09,
+              "predicted": 8315409.716700724,
+              "ratio": 0.8721456112300199
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 3414051.08,
+              "predicted": 4191141.408199421,
+              "ratio": 0.8145874232066842
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 2771993.28,
+              "predicted": 2445716.344955515,
+              "ratio": 1.1334075129838572
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 454902.47,
+              "predicted": 519303.558366477,
+              "ratio": 0.8759856593914793
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 1494457.54,
+              "predicted": 698672.1202238816,
+              "ratio": 2.1389969582887005
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 2895173.82,
+              "predicted": 3032348.9730036333,
+              "ratio": 0.954762741945312
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 3510352.2199999997,
+              "predicted": 4582500.482157412,
+              "ratio": 0.7660342281835065
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 8374342.9799999995,
+              "predicted": 9535367.840789277,
+              "ratio": 0.8782401601936339
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 9163140.34,
+              "predicted": 8521800.052939057,
+              "ratio": 1.0752587813697592
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 7252248.09,
+              "predicted": 7061110.038566817,
+              "ratio": 1.02706912233193
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 3414051.08,
+              "predicted": 3476646.799715389,
+              "ratio": 0.9819953756244341
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 2771993.28,
+              "predicted": 1992268.5996736947,
+              "ratio": 1.391375279645532
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 454902.47,
+              "predicted": 431038.82428035693,
+              "ratio": 1.0553631004341308
+            }
+          ],
+          "freq_x_sev": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 1494457.54,
+              "predicted": 1503203.3333157443,
+              "ratio": 0.9941818960070739
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 2895173.82,
+              "predicted": 2899611.7638950795,
+              "ratio": 0.9984694696199197
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 3510352.2199999997,
+              "predicted": 3500596.184773955,
+              "ratio": 1.002786963908742
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 8374342.9799999995,
+              "predicted": 8343786.634543211,
+              "ratio": 1.0036621676458366
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 9163140.34,
+              "predicted": 9161244.411067562,
+              "ratio": 1.0002069510262326
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 7252248.09,
+              "predicted": 7341754.523791013,
+              "ratio": 0.9878085771594559
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 3414051.08,
+              "predicted": 3386476.0869732467,
+              "ratio": 1.0081426805678109
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 2771993.28,
+              "predicted": 2730033.270547387,
+              "ratio": 1.0153697795207453
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 454902.47,
+              "predicted": 457770.8639692867,
+              "ratio": 0.993733996208463
+            }
+          ],
+          "tweedie": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 1494457.54,
+              "predicted": 1574727.4090029704,
+              "ratio": 0.9490261815828857
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 2895173.82,
+              "predicted": 2803914.8995796116,
+              "ratio": 1.0325469651144086
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 3510352.2199999997,
+              "predicted": 3396323.1800937047,
+              "ratio": 1.0335742607107103
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 8374342.9799999995,
+              "predicted": 8530089.009404983,
+              "ratio": 0.9817415704298907
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 9163140.34,
+              "predicted": 9389772.613122748,
+              "ratio": 0.9758639231789259
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 7252248.09,
+              "predicted": 7425026.170132843,
+              "ratio": 0.9767303069142245
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 3414051.08,
+              "predicted": 3363571.5207304135,
+              "ratio": 1.0150077258528531
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 2771993.28,
+              "predicted": 2741598.976944418,
+              "ratio": 1.0110863416973757
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 454902.47,
+              "predicted": 443528.0842776412,
+              "ratio": 1.0256452435044419
+            }
+          ],
+          "tweedie_ref": [
+            {
+              "level": "18-20",
+              "weight": 5433.0,
+              "observed": 1494457.54,
+              "predicted": 1574727.4090029704,
+              "ratio": 0.9490261815828857
+            },
+            {
+              "level": "21-25",
+              "weight": 25697.0,
+              "observed": 2895173.82,
+              "predicted": 2803914.8995796116,
+              "ratio": 1.0325469651144086
+            },
+            {
+              "level": "26-30",
+              "weight": 52400.0,
+              "observed": 3510352.2199999997,
+              "predicted": 3396323.1800937047,
+              "ratio": 1.0335742607107103
+            },
+            {
+              "level": "31-40",
+              "weight": 136119.0,
+              "observed": 8374342.9799999995,
+              "predicted": 8530089.009404983,
+              "ratio": 0.9817415704298907
+            },
+            {
+              "level": "41-50",
+              "weight": 132149.0,
+              "observed": 9163140.34,
+              "predicted": 9389772.613122748,
+              "ratio": 0.9758639231789259
+            },
+            {
+              "level": "51-60",
+              "weight": 108145.0,
+              "observed": 7252248.09,
+              "predicted": 7425026.170132843,
+              "ratio": 0.9767303069142245
+            },
+            {
+              "level": "61-70",
+              "weight": 50910.0,
+              "observed": 3414051.08,
+              "predicted": 3363571.5207304135,
+              "ratio": 1.0150077258528531
+            },
+            {
+              "level": "71-80",
+              "weight": 26595.0,
+              "observed": 2771993.28,
+              "predicted": 2741598.976944418,
+              "ratio": 1.0110863416973757
+            },
+            {
+              "level": "81+",
+              "weight": 4963.0,
+              "observed": 454902.47,
+              "predicted": 443528.0842776412,
+              "ratio": 1.0256452435044419
+            }
+          ]
+        }
+      },
+      "VehAge": {
+        "frequency": {
+          "null": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 939.0,
+              "predicted": 985.4447556224143,
+              "ratio": 0.9528692447167376
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 3649.0,
+              "predicted": 3681.5719847437804,
+              "ratio": 0.9911526964897721
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 4268.0,
+              "predicted": 4252.0662547725815,
+              "ratio": 1.0037472946733919
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 6386.0,
+              "predicted": 5832.188374927482,
+              "ratio": 1.0949577739041059
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 4538.0,
+              "predicted": 4590.251915650116,
+              "ratio": 0.9886167651339642
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 1343.0,
+              "predicted": 1781.5330522272623,
+              "ratio": 0.7538451213807059
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 939.0,
+              "predicted": 978.5838230457448,
+              "ratio": 0.9595498902459433
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 3649.0,
+              "predicted": 3567.892918241943,
+              "ratio": 1.0227324876661439
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 4268.0,
+              "predicted": 4103.944655127261,
+              "ratio": 1.0399750383250848
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 6386.0,
+              "predicted": 5903.079454726975,
+              "ratio": 1.0818082407625937
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 4538.0,
+              "predicted": 4761.123560279204,
+              "ratio": 0.9531363642521977
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 1343.0,
+              "predicted": 1808.8843460406567,
+              "ratio": 0.742446582026983
+            }
+          ],
+          "full": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 939.0,
+              "predicted": 939.1199832102503,
+              "ratio": 0.9998722386783421
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 3649.0,
+              "predicted": 3648.8550456321286,
+              "ratio": 1.0000397259869351
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 4268.0,
+              "predicted": 4267.777004197885,
+              "ratio": 1.0000522510435517
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 6386.0,
+              "predicted": 6385.698602816944,
+              "ratio": 1.0000471987799304
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 4538.0,
+              "predicted": 4537.682246643341,
+              "ratio": 1.0000700254754271
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 1343.0,
+              "predicted": 1342.9738466322135,
+              "ratio": 1.0000194742197341
+            }
+          ]
+        },
+        "pure_premium": {
+          "null": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 1762388.33,
+              "predicted": 1834935.719915519,
+              "ratio": 0.9604632526752168
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 7142159.02,
+              "predicted": 6855159.096196367,
+              "ratio": 1.0418662674018573
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 8081060.1,
+              "predicted": 7916886.193609687,
+              "ratio": 1.0207371815604511
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 11820214.5,
+              "predicted": 10859341.342601765,
+              "ratio": 1.088483557803702
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 8077305.3,
+              "predicted": 8547205.703380648,
+              "ratio": 0.9450229209769937
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 2447534.57,
+              "predicted": 3317221.434245144,
+              "ratio": 0.7378267078383788
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 1762388.33,
+              "predicted": 1822112.965579455,
+              "ratio": 0.9672223200714333
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 7142159.02,
+              "predicted": 6643562.1227253415,
+              "ratio": 1.0750496327217487
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 8081060.1,
+              "predicted": 7640887.463952585,
+              "ratio": 1.0576075276758121
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 11820214.5,
+              "predicted": 10991344.571104659,
+              "ratio": 1.075411149521631
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 8077305.3,
+              "predicted": 8865734.894175401,
+              "ratio": 0.9110700236825959
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 2447534.57,
+              "predicted": 3368111.713812076,
+              "ratio": 0.7266785599667197
+            }
+          ],
+          "freq_x_sev": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 1762388.33,
+              "predicted": 1795100.4293055148,
+              "ratio": 0.9817770088116071
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 7142159.02,
+              "predicted": 7138087.330465111,
+              "ratio": 1.000570417444672
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 8081060.1,
+              "predicted": 8186628.990712139,
+              "ratio": 0.9871047178476137
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 11820214.5,
+              "predicted": 11857095.546720887,
+              "ratio": 0.9968895378656971
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 8077305.3,
+              "predicted": 8004703.924112916,
+              "ratio": 1.009069839006585
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 2447534.57,
+              "predicted": 2342860.8515599202,
+              "ratio": 1.0446777359271617
+            }
+          ],
+          "tweedie": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 1762388.33,
+              "predicted": 1834136.200300412,
+              "ratio": 0.9608819288945606
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 7142159.02,
+              "predicted": 7262385.307233965,
+              "ratio": 0.9834453444498173
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 8081060.1,
+              "predicted": 8266751.012425597,
+              "ratio": 0.9775376188122167
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 11820214.5,
+              "predicted": 12068267.247998454,
+              "ratio": 0.9794458688309546
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 8077305.3,
+              "predicted": 7916219.596341328,
+              "ratio": 1.0203488169697972
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 2447534.57,
+              "predicted": 2320792.4989895783,
+              "ratio": 1.054611548023187
+            }
+          ],
+          "tweedie_ref": [
+            {
+              "level": "0-0",
+              "weight": 46111.0,
+              "observed": 1762388.33,
+              "predicted": 1834136.200300412,
+              "ratio": 0.9608819288945606
+            },
+            {
+              "level": "1-2",
+              "weight": 104302.0,
+              "observed": 7142159.02,
+              "predicted": 7262385.307233965,
+              "ratio": 0.9834453444498173
+            },
+            {
+              "level": "3-5",
+              "weight": 106190.0,
+              "observed": 8081060.1,
+              "predicted": 8266751.012425597,
+              "ratio": 0.9775376188122167
+            },
+            {
+              "level": "6-10",
+              "weight": 137345.0,
+              "observed": 11820214.5,
+              "predicted": 12068267.247998454,
+              "ratio": 0.9794458688309546
+            },
+            {
+              "level": "11-15",
+              "weight": 107127.0,
+              "observed": 8077305.3,
+              "predicted": 7916219.596341328,
+              "ratio": 1.0203488169697972
+            },
+            {
+              "level": "16+",
+              "weight": 41336.0,
+              "observed": 2447534.57,
+              "predicted": 2320792.4989895783,
+              "ratio": 1.054611548023187
+            }
+          ]
+        }
+      },
+      "Region": {
+        "frequency": {
+          "null": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 2072.0,
+              "predicted": 1776.8867817490484,
+              "ratio": 1.1660844243325745
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 62.0,
+              "predicted": 71.79707146650854,
+              "ratio": 0.8635449710357808
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 267.0,
+              "predicted": 215.42021457723837,
+              "ratio": 1.2394380003937273
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 174.0,
+              "predicted": 186.259790521832,
+              "ratio": 0.9341790813385726
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 5182.0,
+              "predicted": 6045.7589554687875,
+              "ratio": 0.8571297728157917
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 376.0,
+              "predicted": 396.0065037688917,
+              "ratio": 0.9494793555699593
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 284.0,
+              "predicted": 295.6731221791855,
+              "ratio": 0.960520178184775
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 758.0,
+              "predicted": 674.6747149377866,
+              "ratio": 1.1235043839902865
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 370.0,
+              "predicted": 480.06774480822213,
+              "ratio": 0.7707245571097636
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 72.0,
+              "predicted": 71.73721138913692,
+              "ratio": 1.0036632119617472
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 26.0,
+              "predicted": 33.66754658651026,
+              "ratio": 0.7722570438327557
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 1273.0,
+              "predicted": 1293.6539582288638,
+              "ratio": 0.9840344026333433
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 1498.0,
+              "predicted": 1638.2384044915677,
+              "ratio": 0.9143968276490922
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 624.0,
+              "predicted": 661.2226513200031,
+              "ratio": 0.9437063275952581
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 836.0,
+              "predicted": 836.4276138781676,
+              "ratio": 0.9994887616440772
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 281.0,
+              "predicted": 412.3059904801122,
+              "ratio": 0.6815326638179277
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 156.0,
+              "predicted": 141.17167584422717,
+              "ratio": 1.105037530135541
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 3368.0,
+              "predicted": 2671.9682423407326,
+              "ratio": 1.2604940233307267
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 119.0,
+              "predicted": 136.500238535196,
+              "ratio": 0.8717933483267604
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 848.0,
+              "predicted": 866.3947041662527,
+              "ratio": 0.978768678896815
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 2376.0,
+              "predicted": 2112.696036118896,
+              "ratio": 1.1246293642718257
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 101.0,
+              "predicted": 104.52716508646994,
+              "ratio": 0.9662559959073597
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 2072.0,
+              "predicted": 1972.7538557102548,
+              "ratio": 1.0503084274819543
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 62.0,
+              "predicted": 74.17818249805957,
+              "ratio": 0.8358252778924835
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 267.0,
+              "predicted": 243.49716711375888,
+              "ratio": 1.0965219972159301
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 174.0,
+              "predicted": 185.1479495559817,
+              "ratio": 0.9397889656206482
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 5182.0,
+              "predicted": 5826.200806658051,
+              "ratio": 0.8894303804424535
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 376.0,
+              "predicted": 385.95575409708016,
+              "ratio": 0.9742049341371499
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 284.0,
+              "predicted": 308.8776943095329,
+              "ratio": 0.919457782909366
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 758.0,
+              "predicted": 753.2141273501302,
+              "ratio": 1.0063539337302487
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 370.0,
+              "predicted": 436.4087165682385,
+              "ratio": 0.8478290784600894
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 72.0,
+              "predicted": 74.24144206681657,
+              "ratio": 0.9698087482621998
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 26.0,
+              "predicted": 38.98382597280492,
+              "ratio": 0.6669432604726271
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 1273.0,
+              "predicted": 1277.16886635917,
+              "ratio": 0.9967358534419539
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 1498.0,
+              "predicted": 1548.4133647081887,
+              "ratio": 0.9674419209642449
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 624.0,
+              "predicted": 662.8962377414028,
+              "ratio": 0.9413237916782742
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 836.0,
+              "predicted": 831.4611567685461,
+              "ratio": 1.0054588758530754
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 281.0,
+              "predicted": 411.14046987136584,
+              "ratio": 0.683464705111411
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 156.0,
+              "predicted": 133.58304550063934,
+              "ratio": 1.1678128718756706
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 3368.0,
+              "predicted": 2727.1915624651874,
+              "ratio": 1.2349700865734445
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 119.0,
+              "predicted": 136.22571754756066,
+              "ratio": 0.8735501793811684
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 848.0,
+              "predicted": 885.7974987256007,
+              "ratio": 0.9573294135736666
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 2376.0,
+              "predicted": 2098.113011180231,
+              "ratio": 1.1324461491535445
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 101.0,
+              "predicted": 112.05830469318288,
+              "ratio": 0.9013165090846175
+            }
+          ],
+          "full": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 2072.0,
+              "predicted": 2072.229114821395,
+              "ratio": 0.9998894355745915
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 62.0,
+              "predicted": 61.847880646538876,
+              "ratio": 1.0024595726138215
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 267.0,
+              "predicted": 267.1342203545584,
+              "ratio": 0.999497554621118
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 174.0,
+              "predicted": 173.95351954295919,
+              "ratio": 1.0002672004404565
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 5182.0,
+              "predicted": 5181.723332988665,
+              "ratio": 1.000053392856692
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 376.0,
+              "predicted": 376.3574086196629,
+              "ratio": 0.9990503478569115
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 284.0,
+              "predicted": 284.0803197719316,
+              "ratio": 0.9997172638639801
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 758.0,
+              "predicted": 757.8470115596236,
+              "ratio": 1.000201872459801
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 370.0,
+              "predicted": 369.92385596238574,
+              "ratio": 1.0002058370564293
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 72.0,
+              "predicted": 74.06464584009746,
+              "ratio": 0.9721237330351252
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 26.0,
+              "predicted": 33.25347110610534,
+              "ratio": 0.7818732642086919
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 1273.0,
+              "predicted": 1272.8792476684089,
+              "ratio": 1.0000948655041806
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 1498.0,
+              "predicted": 1497.9248286125821,
+              "ratio": 1.0000501836847764
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 624.0,
+              "predicted": 623.9469258760345,
+              "ratio": 1.000085061920757
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 836.0,
+              "predicted": 836.005040677301,
+              "ratio": 0.9999939705180522
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 281.0,
+              "predicted": 280.9894131987948,
+              "ratio": 1.0000376768686217
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 156.0,
+              "predicted": 156.0841149702754,
+              "ratio": 0.9994610920509661
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 3368.0,
+              "predicted": 3368.270195208264,
+              "ratio": 0.9999197822049287
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 119.0,
+              "predicted": 118.23376751074933,
+              "ratio": 1.0064806569678244
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 848.0,
+              "predicted": 847.3435747898559,
+              "ratio": 1.000774686006567
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 2376.0,
+              "predicted": 2375.465013709925,
+              "ratio": 1.0002252132896032
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 101.0,
+              "predicted": 92.54982569664861,
+              "ratio": 1.0913040542188441
+            }
+          ]
+        },
+        "pure_premium": {
+          "null": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 3689526.49,
+              "predicted": 3308752.215961783,
+              "ratio": 1.1150809275476479
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 197698.13999999998,
+              "predicted": 133694.17673586815,
+              "ratio": 1.4787341141310946
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 492542.98,
+              "predicted": 401076.83254373755,
+              "ratio": 1.2280514356218468
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 255906.88,
+              "predicted": 346821.54804407107,
+              "ratio": 0.7378632655416254
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 10219268.24,
+              "predicted": 11257001.201150998,
+              "ratio": 0.9078144398665523
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 778421.88,
+              "predicted": 737421.385940402,
+              "ratio": 1.0555998169314167
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 496768.5,
+              "predicted": 550358.5954467498,
+              "ratio": 0.902626949247066
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 1288752.67,
+              "predicted": 1256203.0723498375,
+              "ratio": 1.0259110954005832
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 698446.65,
+              "predicted": 893977.7263468689,
+              "ratio": 0.7812797001711856
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 86053.61,
+              "predicted": 133469.49586795282,
+              "ratio": 0.6447436505277324
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 42798.39,
+              "predicted": 62670.90097333173,
+              "ratio": 0.682906888768233
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 2013239.9,
+              "predicted": 2409013.979187381,
+              "ratio": 0.8357111736973459
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 2994345.07,
+              "predicted": 3050270.7169992956,
+              "ratio": 0.9816653496728603
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 1013352.65,
+              "predicted": 1231096.7048461614,
+              "ratio": 0.8231300157095532
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 1407901.02,
+              "predicted": 1557311.6179134634,
+              "ratio": 0.9040586378507542
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 403554.29,
+              "predicted": 767629.976341301,
+              "ratio": 0.5257146052625922
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 236380.63,
+              "predicted": 262842.0310583052,
+              "ratio": 0.8993258385968135
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 6054109.2299999995,
+              "predicted": 4975223.692925208,
+              "ratio": 1.2168516640988367
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 151414.16,
+              "predicted": 254117.10909486772,
+              "ratio": 0.5958440206537752
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 1563318.87,
+              "predicted": 1613280.7447959986,
+              "ratio": 0.9690308863121551
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 5057034.57,
+              "predicted": 3933852.862578295,
+              "ratio": 1.2855169592401985
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 189827.0,
+              "predicted": 194662.90284725197,
+              "ratio": 0.9751575529979299
+            }
+          ],
+          "bonus_malus_only": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 3689526.49,
+              "predicted": 3673500.344861779,
+              "ratio": 1.0043626360783218
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 197698.13999999998,
+              "predicted": 138172.78185588153,
+              "ratio": 1.43080379033119
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 492542.98,
+              "predicted": 453373.224009524,
+              "ratio": 1.0863962711429407
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 255906.88,
+              "predicted": 344765.63800958183,
+              "ratio": 0.7422632994326649
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 10219268.24,
+              "predicted": 10848177.357031532,
+              "ratio": 0.9420262873353663
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 778421.88,
+              "predicted": 718639.8099489613,
+              "ratio": 1.0831878073318602
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 496768.5,
+              "predicted": 574982.123280275,
+              "ratio": 0.8639720782377267
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 1288752.67,
+              "predicted": 1402489.053489856,
+              "ratio": 0.9189039064462982
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 698446.65,
+              "predicted": 812711.3882776957,
+              "ratio": 0.8594030550994906
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 86053.61,
+              "predicted": 138147.9263650124,
+              "ratio": 0.6229091689196292
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 42798.39,
+              "predicted": 72558.03802291783,
+              "ratio": 0.5898504309954179
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 2013239.9,
+              "predicted": 2378262.141079685,
+              "ratio": 0.846517238459688
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 2994345.07,
+              "predicted": 2882943.464835692,
+              "ratio": 1.0386416197622719
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 1013352.65,
+              "predicted": 1234269.8174776002,
+              "ratio": 0.8210138785301623
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 1407901.02,
+              "predicted": 1548195.4838684562,
+              "ratio": 0.90938194476714
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 403554.29,
+              "predicted": 765359.1686558905,
+              "ratio": 0.5272743915888726
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 236380.63,
+              "predicted": 248694.6436666314,
+              "ratio": 0.9504854085915175
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 6054109.2299999995,
+              "predicted": 5078100.256537243,
+              "ratio": 1.1921996266628059
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 151414.16,
+              "predicted": 253634.50981457692,
+              "ratio": 0.5969777539763554
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 1563318.87,
+              "predicted": 1649398.8493849223,
+              "ratio": 0.9478113014223198
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 5057034.57,
+              "predicted": 3906680.1552930013,
+              "ratio": 1.2944583044886413
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 189827.0,
+              "predicted": 208697.5555828024,
+              "ratio": 0.9095794125134573
+            }
+          ],
+          "freq_x_sev": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 3689526.49,
+              "predicted": 3737134.2824395467,
+              "ratio": 0.9872608825796678
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 197698.13999999998,
+              "predicted": 108586.8531158401,
+              "ratio": 1.8206452653075438
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 492542.98,
+              "predicted": 495659.11171019234,
+              "ratio": 0.9937131556011537
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 255906.88,
+              "predicted": 266026.358914955,
+              "ratio": 0.961960615646399
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 10219268.24,
+              "predicted": 10023127.171025293,
+              "ratio": 1.0195688496841293
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 778421.88,
+              "predicted": 788962.4532812074,
+              "ratio": 0.9866399557578814
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 496768.5,
+              "predicted": 512365.8605990798,
+              "ratio": 0.9695581579521267
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 1288752.67,
+              "predicted": 1312854.2439986004,
+              "ratio": 0.981641850868994
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 698446.65,
+              "predicted": 694040.5983806292,
+              "ratio": 1.0063484061734302
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 86053.61,
+              "predicted": 123636.02484742871,
+              "ratio": 0.6960237528357389
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 42798.39,
+              "predicted": 58424.37319281225,
+              "ratio": 0.732543417432253
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 2013239.9,
+              "predicted": 2013021.3921722819,
+              "ratio": 1.0001085471960545
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 2994345.07,
+              "predicted": 2988225.723158712,
+              "ratio": 1.0020478194782485
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 1013352.65,
+              "predicted": 1030635.283032737,
+              "ratio": 0.9832310873523743
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 1407901.02,
+              "predicted": 1431318.8039886982,
+              "ratio": 0.9836390160434983
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 403554.29,
+              "predicted": 420509.7482326773,
+              "ratio": 0.9596787986391805
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 236380.63,
+              "predicted": 237595.92714529976,
+              "ratio": 0.9948850253457562
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 6054109.2299999995,
+              "predicted": 5977204.60055185,
+              "ratio": 1.0128663203934911
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 151414.16,
+              "predicted": 202107.674668217,
+              "ratio": 0.749175706704675
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 1563318.87,
+              "predicted": 1597915.5999334857,
+              "ratio": 0.9783488377390359
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 5057034.57,
+              "predicted": 5139452.570822188,
+              "ratio": 0.98396366155997
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 189827.0,
+              "predicted": 165672.41766475482,
+              "ratio": 1.1457972466130302
+            }
+          ],
+          "tweedie": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 3689526.49,
+              "predicted": 3895731.4361605374,
+              "ratio": 0.9470690037186538
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 197698.13999999998,
+              "predicted": 126635.15159725837,
+              "ratio": 1.5611632118445706
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 492542.98,
+              "predicted": 504216.69928438513,
+              "ratio": 0.976847813051505
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 255906.88,
+              "predicted": 276472.46862563456,
+              "ratio": 0.925614334302914
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 10219268.24,
+              "predicted": 9753939.451727184,
+              "ratio": 1.047706753827595
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 778421.88,
+              "predicted": 854247.3237012799,
+              "ratio": 0.9112371305153831
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 496768.5,
+              "predicted": 510003.57546735526,
+              "ratio": 0.9740490535674639
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 1288752.67,
+              "predicted": 1362970.7275998741,
+              "ratio": 0.945546844039293
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 698446.65,
+              "predicted": 721522.8191780738,
+              "ratio": 0.9680174090621817
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 86053.61,
+              "predicted": 144059.4592947854,
+              "ratio": 0.5973478619263076
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 42798.39,
+              "predicted": 66884.81899062934,
+              "ratio": 0.6398819739049622
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 2013239.9,
+              "predicted": 1998566.1808415886,
+              "ratio": 1.007342123217672
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 2994345.07,
+              "predicted": 2940773.5580493025,
+              "ratio": 1.018216809588778
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 1013352.65,
+              "predicted": 1018003.6252652501,
+              "ratio": 0.9954312782883871
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 1407901.02,
+              "predicted": 1402023.7388726836,
+              "ratio": 1.0041919982981473
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 403554.29,
+              "predicted": 438995.033054057,
+              "ratio": 0.9192684645940108
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 236380.63,
+              "predicted": 242501.85915084253,
+              "ratio": 0.974758011454935
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 6054109.2299999995,
+              "predicted": 6012581.166230987,
+              "ratio": 1.0069068612332837
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 151414.16,
+              "predicted": 209226.03895369716,
+              "ratio": 0.7236869787202193
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 1563318.87,
+              "predicted": 1667734.321708891,
+              "ratio": 0.9373908359684661
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 5057034.57,
+              "predicted": 5326970.065232686,
+              "ratio": 0.949326635605771
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 189827.0,
+              "predicted": 194492.3443023515,
+              "ratio": 0.976012709810835
+            }
+          ],
+          "tweedie_ref": [
+            {
+              "level": "R11",
+              "weight": 55880.0,
+              "observed": 3689526.49,
+              "predicted": 3895731.4361605374,
+              "ratio": 0.9470690037186538
+            },
+            {
+              "level": "R21",
+              "weight": 2458.0,
+              "observed": 197698.13999999998,
+              "predicted": 126635.15159725837,
+              "ratio": 1.5611632118445706
+            },
+            {
+              "level": "R22",
+              "weight": 6535.0,
+              "observed": 492542.98,
+              "predicted": 504216.69928438513,
+              "ratio": 0.976847813051505
+            },
+            {
+              "level": "R23",
+              "weight": 7002.0,
+              "observed": 255906.88,
+              "predicted": 276472.46862563456,
+              "ratio": 0.925614334302914
+            },
+            {
+              "level": "R24",
+              "weight": 128313.0,
+              "observed": 10219268.24,
+              "predicted": 9753939.451727184,
+              "ratio": 1.047706753827595
+            },
+            {
+              "level": "R25",
+              "weight": 8809.0,
+              "observed": 778421.88,
+              "predicted": 854247.3237012799,
+              "ratio": 0.9112371305153831
+            },
+            {
+              "level": "R26",
+              "weight": 8345.0,
+              "observed": 496768.5,
+              "predicted": 510003.57546735526,
+              "ratio": 0.9740490535674639
+            },
+            {
+              "level": "R31",
+              "weight": 21634.0,
+              "observed": 1288752.67,
+              "predicted": 1362970.7275998741,
+              "ratio": 0.945546844039293
+            },
+            {
+              "level": "R41",
+              "weight": 10411.0,
+              "observed": 698446.65,
+              "predicted": 721522.8191780738,
+              "ratio": 0.9680174090621817
+            },
+            {
+              "level": "R42",
+              "weight": 1748.0,
+              "observed": 86053.61,
+              "predicted": 144059.4592947854,
+              "ratio": 0.5973478619263076
+            },
+            {
+              "level": "R43",
+              "weight": 1073.0,
+              "observed": 42798.39,
+              "predicted": 66884.81899062934,
+              "ratio": 0.6398819739049622
+            },
+            {
+              "level": "R52",
+              "weight": 31019.0,
+              "observed": 2013239.9,
+              "predicted": 1998566.1808415886,
+              "ratio": 1.007342123217672
+            },
+            {
+              "level": "R53",
+              "weight": 33703.0,
+              "observed": 2994345.07,
+              "predicted": 2940773.5580493025,
+              "ratio": 1.018216809588778
+            },
+            {
+              "level": "R54",
+              "weight": 15297.0,
+              "observed": 1013352.65,
+              "predicted": 1018003.6252652501,
+              "ratio": 0.9954312782883871
+            },
+            {
+              "level": "R72",
+              "weight": 24832.0,
+              "observed": 1407901.02,
+              "predicted": 1402023.7388726836,
+              "ratio": 1.0041919982981473
+            },
+            {
+              "level": "R73",
+              "weight": 13669.0,
+              "observed": 403554.29,
+              "predicted": 438995.033054057,
+              "ratio": 0.9192684645940108
+            },
+            {
+              "level": "R74",
+              "weight": 3669.0,
+              "observed": 236380.63,
+              "predicted": 242501.85915084253,
+              "ratio": 0.974758011454935
+            },
+            {
+              "level": "R82",
+              "weight": 67915.0,
+              "observed": 6054109.2299999995,
+              "predicted": 6012581.166230987,
+              "ratio": 1.0069068612332837
+            },
+            {
+              "level": "R83",
+              "weight": 4176.0,
+              "observed": 151414.16,
+              "predicted": 209226.03895369716,
+              "ratio": 0.7236869787202193
+            },
+            {
+              "level": "R91",
+              "weight": 28652.0,
+              "observed": 1563318.87,
+              "predicted": 1667734.321708891,
+              "ratio": 0.9373908359684661
+            },
+            {
+              "level": "R93",
+              "weight": 63629.0,
+              "observed": 5057034.57,
+              "predicted": 5326970.065232686,
+              "ratio": 0.949326635605771
+            },
+            {
+              "level": "R94",
+              "weight": 3642.0,
+              "observed": 189827.0,
+              "predicted": 194492.3443023515,
+              "ratio": 0.976012709810835
+            }
+          ]
+        }
+      }
+    }
+  },
+  "loaded_premium": {
+    "label": "loaded premium totals (reporting only; not part of any CV metric)",
+    "mode": "flat_per_exposure_year",
+    "loading_per_exposure_year_by_fold": [
+      36.50204484948499,
+      41.72964891291124,
+      42.040297096011614,
+      34.23763879606979,
+      23.016419949587178
+    ],
+    "observed_uncapped_cost_total": 49507321.05,
+    "predicted_tweedie_capped_total": 39668551.863289334,
+    "loading_total": 10176393.492106719,
+    "predicted_loaded_total": 49844945.355396055,
+    "ratio_observed_to_loaded": 0.9932265086662492
+  },
+  "final": {
+    "power_cv": {
+      "power": 1.5,
+      "at_grid_edge": false,
+      "loglik_spread_nats": 67346.68086407013,
+      "best_minus_next_nats": 513.0440979090054,
+      "weakly_identified": false,
+      "cv_loglik": {
+        "1.1": -332233.7611245899,
+        "1.2": -285867.02194968646,
+        "1.3": -272189.905311389,
+        "1.4": -266711.0303137229,
+        "1.5": -264887.08026051975,
+        "1.6": -265400.12435842876,
+        "1.7": -267919.9880495903,
+        "1.8": -272994.44896885165,
+        "1.9": -283503.06420743914
+      },
+      "cv_loglik_per_policy": {
+        "1.1": -0.6125129488977729,
+        "1.2": -0.5270302813727716,
+        "1.3": -0.5018148697415594,
+        "1.4": -0.49171390387312003,
+        "1.5": -0.48835123229528854,
+        "1.6": -0.489297090874685,
+        "1.7": -0.49394276305161644,
+        "1.8": -0.5032981428637171,
+        "1.9": -0.5226720405881133
+      },
+      "diagnostic_cv_poisson_deviance_per_exposure": {
+        "1.1": 1147.423352658527,
+        "1.2": 1147.5334333475964,
+        "1.3": 1147.728199874055,
+        "1.4": 1148.0154232758473,
+        "1.5": 1148.4078574472467,
+        "1.6": 1148.924354256536,
+        "1.7": 1149.5914479035393,
+        "1.8": 1150.4455796164418,
+        "1.9": 1151.5359481668597
+      }
+    },
+    "tweedie_power": 1.5,
+    "severity_claim_rows": 19966,
+    "files": [
+      "glm_relativities_frequency.csv",
+      "glm_relativities_severity.csv",
+      "glm_relativities_tweedie.csv",
+      "feature_map.json",
+      "glm_models.json"
+    ]
+  },
+  "convergence": {
+    "solver": {
+      "max_iter": 1000,
+      "gradient_tol": 1e-05
+    },
+    "n_fits": 244,
+    "n_not_converged": 0,
+    "max_n_iter": 65,
+    "not_converged": []
+  },
+  "cap_point_mass": {
+    "cap": 100000.0,
+    "policies_with_claim_cost": 19966,
+    "policies_at_cap_multiple": 31,
+    "share_of_claim_policies": 0.0015526394871281178,
+    "policies_with_a_capped_claim": 36
+  },
+  "excess_loading_train": 35.505395347655835,
+  "timing_seconds": {
+    "coverage_check": 16.862329650000902,
+    "cv_fits": 283.5712973350019,
+    "cv_metrics": 5.907443847012473,
+    "final_fit": 15.432965246000094,
+    "total": 323.30215455402504,
+    "load_and_clean": 1.5182520360103808
+  }
+}

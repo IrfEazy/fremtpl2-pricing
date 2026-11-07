@@ -12,6 +12,8 @@ from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize_scalar
+from scipy.special import gammaln, logsumexp
 
 
 def _vec(x, name: str = "array") -> np.ndarray:
@@ -125,6 +127,99 @@ def tweedie_deviance(y, mu, power: float, weight=None) -> float:
     """
     _, _, w = _prep(y, mu, weight)
     return float(np.sum(w * tweedie_unit_deviance(y, mu, power)))
+
+
+def _tweedie_log_w(y: np.ndarray, phi: np.ndarray, power: float, chunk_terms: int) -> np.ndarray:
+    """log W(y, phi, p) of the Dunn & Smyth (2005) series for y > 0, 1 < p < 2.
+
+    W = sum_{j>=1} W_j with log W_j = j z - log Gamma(j + 1) - log Gamma(-j alpha), where
+    alpha = (2 - p) / (1 - p) and z = -alpha log y + alpha log(p - 1) - (1 - alpha) log phi
+    - log(2 - p). The terms peak at j_max = y^(2-p) / (phi (2-p)) with spread about
+    sqrt(j_max / (1 - alpha)); the sum runs over j_max +- 12 spreads (terms below e^-70 of the
+    peak are dropped) and is evaluated with a log-sum-exp.
+    """
+    alpha = (2.0 - power) / (1.0 - power)
+    z = -alpha * np.log(y) + alpha * np.log(power - 1.0) - (1.0 - alpha) * np.log(phi)
+    z -= np.log(2.0 - power)
+    jmax = y ** (2.0 - power) / (phi * (2.0 - power))
+    half = 12.0 * np.sqrt(jmax / (1.0 - alpha)) + 8.0
+    lo = np.maximum(1.0, np.floor(jmax - half))
+    hi = np.maximum(lo + 1.0, np.ceil(jmax + half))
+    out = np.empty(len(y))
+    order = np.argsort(hi - lo)
+    start = 0
+    while start < len(order):  # rows of similar width share a padded block
+        width = int((hi - lo)[order[start]]) + 1
+        n_rows = max(1, chunk_terms // max(width, 1))
+        end = min(len(order), start + n_rows)
+        idx = order[start:end]
+        width = int((hi - lo)[idx].max()) + 1
+        while len(idx) > 1 and len(idx) * width > 4 * chunk_terms:
+            end = start + (end - start) // 2
+            idx = order[start:end]
+            width = int((hi - lo)[idx].max()) + 1
+        j = lo[idx, None] + np.arange(width)[None, :]
+        valid = j <= hi[idx, None]
+        lw = j * z[idx, None] - gammaln(j + 1.0) - gammaln(-j * alpha)
+        out[idx] = logsumexp(np.where(valid, lw, -np.inf), axis=1)
+        start = end
+    return out
+
+
+def tweedie_logpdf(y, mu, phi: float, power: float, weight=None, chunk_terms: int = 2_000_000):
+    """Per-observation log density of a compound Poisson-gamma (Tweedie) response, 1 < p < 2.
+
+    Reproductive form with prior weights: Y_i ~ Tw_p(mu_i, phi / w_i), i.e.
+    f(y) = a(y, phi/w, p) exp{ w [y mu^(1-p)/(1-p) - mu^(2-p)/(2-p)] / phi }, with the
+    Dunn & Smyth (2005) series for a(y, ., p) when y > 0. The point mass at zero is
+    log P(Y = 0) = -w mu^(2-p) / (phi (2-p)). Observations with weight 0 return 0 (no
+    information). The response is treated as continuous: any point mass above zero (for example
+    values sitting exactly at a cap) is not modelled. Returns an array of the length of ``y``.
+    """
+    if not 1.0 < power < 2.0:
+        raise ValueError("power must be in (1, 2)")
+    if not np.isfinite(phi) or phi <= 0:
+        raise ValueError("phi must be finite and > 0")
+    y, mu, w = _prep(y, mu, weight)
+    out = np.zeros(len(y))
+    live = w > 0
+    pos = live & (y > 0)
+    zero = live & (y == 0)
+    out[zero] = -w[zero] * mu[zero] ** (2.0 - power) / (phi * (2.0 - power))
+    if pos.any():
+        yp, mp, wp = y[pos], mu[pos], w[pos]
+        phi_i = phi / wp
+        kernel = yp * mp ** (1.0 - power) / (1.0 - power) - mp ** (2.0 - power) / (2.0 - power)
+        out[pos] = -np.log(yp) + _tweedie_log_w(yp, phi_i, power, chunk_terms) + kernel / phi_i
+    return out
+
+
+def tweedie_loglik(y, mu, phi: float, power: float, weight=None) -> float:
+    """Total log-likelihood: the sum of :func:`tweedie_logpdf` (see there)."""
+    return float(np.sum(tweedie_logpdf(y, mu, phi, power, weight)))
+
+
+def tweedie_mle_dispersion(
+    y, mu, power: float, weight=None, log_range: float = 3.0, xatol: float = 1e-3
+) -> float:
+    """Maximum-likelihood dispersion phi for fixed means: bounded 1-D search over log phi.
+
+    The search interval is the weighted Pearson estimate times exp(+-log_range)."""
+    y, mu, w = _prep(y, mu, weight)
+    live = w > 0
+    pearson = float(np.sum(w[live] * (y[live] - mu[live]) ** 2 / mu[live] ** power) / live.sum())
+    centre = np.log(max(pearson, 1e-12))
+
+    def neg(log_phi: float) -> float:
+        return -tweedie_loglik(y, mu, float(np.exp(log_phi)), power, w)
+
+    res = minimize_scalar(
+        neg,
+        bounds=(centre - log_range, centre + log_range),
+        method="bounded",
+        options={"xatol": xatol},
+    )
+    return float(np.exp(res.x))
 
 
 def deviance_explained(dev_model: float, dev_null: float) -> float:

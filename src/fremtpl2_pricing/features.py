@@ -77,14 +77,24 @@ def _level_sort_key(v: str):
         return (1, 0.0, v)
 
 
-def fit(train_df: pd.DataFrame, feat_cfg: dict) -> FeatureMap:
-    """Learn level sets, reference levels and rare levels from ``train_df`` only."""
+def fit(
+    train_df: pd.DataFrame,
+    feat_cfg: dict,
+    weight_column: str = EXPOSURE,
+    min_weight: float | None = None,
+) -> FeatureMap:
+    """Learn level sets, reference levels and rare levels from ``train_df`` only.
+
+    ``weight_column`` is the weight of the rare-level and reference choice (default Exposure;
+    the severity map uses the claim count N on claims-only rows) and ``min_weight`` the rare
+    threshold (default ``rare_levels.min_exposure_years``).
+    """
     defs = feat_cfg["definitions"]
     other = feat_cfg["rare_levels"]["other_label"]
-    min_exp = feat_cfg["rare_levels"]["min_exposure_years"]
+    min_exp = feat_cfg["rare_levels"]["min_exposure_years"] if min_weight is None else min_weight
     if feat_cfg.get("reference_level") != "max_exposure":
         raise ValueError("features.reference_level: only 'max_exposure' is supported")
-    exposure = train_df[EXPOSURE]
+    exposure = train_df[weight_column]
     levels: dict = {}
     for name, spec in defs.items():
         kind = spec["kind"]

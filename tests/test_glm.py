@@ -175,3 +175,37 @@ def test_tweedie_power_range():
     X, _, expo, _, _, pp = make_data()
     with pytest.raises(ValueError):
         glm.fit_tweedie(X, pp, expo, 2.0)
+
+
+def test_empty_category_raises_named_error():
+    X, count, expo, *_ = make_data()
+    X["area"] = pd.Categorical(X["area"].astype(str), categories=["A", "B", "C", "Z"])
+    with pytest.raises(ValueError, match=r"area\[Z\]"):
+        glm.fit_frequency(X, count, expo)
+
+
+def test_non_finite_numeric_raises():
+    X, count, expo, *_ = make_data()
+    X.loc[3, "age"] = np.nan
+    with pytest.raises(ValueError, match="age"):
+        glm.fit_frequency(X, count, expo)
+    X.loc[3, "age"] = np.inf
+    with pytest.raises(ValueError, match="age"):
+        glm.fit_frequency(X, count, expo)
+
+
+def test_coefficient_table_length_guard():
+    X, count, expo, *_ = make_data()
+    m = glm.fit_frequency(X, count, expo)
+    with pytest.raises(ValueError):
+        glm.coefficient_table(m, X, count, np.ones(len(X) - 1), offset=np.log(expo))
+
+
+def test_convergence_flag_and_solver_override():
+    rng = np.random.default_rng(1)
+    X = pd.DataFrame({"x": rng.normal(size=300)})
+    y = rng.poisson(np.exp(0.3 * X["x"]))
+    ok = glm.fit_frequency(X, y, np.ones(300))
+    assert ok.converged is True and ok.n_iter >= 1
+    hard = glm.fit_frequency(X, y, np.ones(300), {"max_iter": 1, "gradient_tol": 1e-14})
+    assert hard.converged is False and hard.n_iter == 1

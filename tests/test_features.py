@@ -235,3 +235,15 @@ def test_empty_levels_are_dropped():
     assert "OTHER" in fm2.levels["VehBrand"]["levels"]
     out = features.transform(frame([row(VehBrand="B9")]), fm2)
     assert out["VehBrand"].astype(str).tolist() == ["OTHER"]
+
+
+def test_weight_column_drives_rare_levels_and_reference():
+    df = frame(
+        [row(VehBrand="B1", Exposure=5.0, N=1)] * 4
+        + [row(VehBrand="B2", Exposure=0.1, N=5)] * 4
+        + [row(VehBrand="B3", Exposure=0.1, N=1)] * 4
+    )
+    by_exposure = features.fit(df, cfg_with(1)).levels["VehBrand"]
+    assert by_exposure["reference"] == "B1" and by_exposure["rare"] == ["B2", "B3"]
+    by_claims = features.fit(df, cfg_with(1), weight_column="N", min_weight=10).levels["VehBrand"]
+    assert by_claims["reference"] == "B2" and by_claims["rare"] == ["B1", "B3"]
