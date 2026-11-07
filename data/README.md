@@ -39,13 +39,17 @@ uv run fremtpl2 download --force   # re-download
 
 ## Cleaning
 
-The raw files are never modified. Cleaning rules (exposure cap, ClaimNb cap, severity rows without a
-policy, ClaimNb/severity mismatches, per-claim cap) are defined in the `clean:` section of
-`configs/default.yaml`, implemented in `src/fremtpl2_pricing/clean.py`, and justified with measured
-counts in `reports/data_audit.md` (`make audit`). `make split` writes `data/processed/split.parquet`
-(git-ignored).
-Target definitions (`clean.targets` in the same config; judgement calls, section R5 of the audit): the
-severity sample is the policies with severity rows, weighted by the number of severity rows (not
-ClaimNb); the pure-premium observed cost is the sum of capped severity amounts, so claims without
-severity rows have zero cost. Frequency x severity and Tweedie are therefore not on the same target
-unless frequency uses `frequency_count: sev_rows`; this is marked for human review.
+The raw files are never modified. Cleaning rules (exposure quarantine and cap, severity rows without a
+policy, quarantine of non-positive amounts, ClaimNb/severity mismatches, per-claim cap) are defined in the
+`clean:` section of `configs/default.yaml`, implemented in `src/fremtpl2_pricing/clean.py` and
+`targets.py`, and justified with measured counts in `reports/data_audit.md` (`make audit`). `make split`
+recomputes the split assignment in memory, asserts it equals the stored, frozen `data/processed/split.parquet`
+(git-ignored, never overwritten) and writes `results/split_summary.json` and `results/targets_summary.json`.
+
+Target definitions (`clean.targets`, human decision of 2026-11-07, section 8 of the audit): per policy,
+`N` = number of matched severity rows (frequency target), `S` = sum of matched amounts, `S_cap` = sum of
+amounts capped per claim at 100000 before aggregation, `excess = S - S_cap`. Recorded `ClaimNb` is kept
+as `ClaimNb_raw` with a discrepancy flag (audit only) and is not clipped. Severity rows whose IDpol is not
+in the policy file (orphans) are excluded from modelling and listed in `results/orphan_ledger.csv`.
+The OpenML file has 678,013 policies; the CASdatasets documentation reports 677,991 policies and 26,444
+severity rows, which we cite as an external claim (our matched row count is compared with it in the audit).

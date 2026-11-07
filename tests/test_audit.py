@@ -77,25 +77,48 @@ def test_cleaning_totals_and_render():
     freq, sev = tiny()
     au = compute_audit(freq, sev, CFG)
     b, a = au["cleaning"]["before"], au["cleaning"]["after"]
-    assert b["claims"] == 10 and a["claims"] == 8  # ClaimNb 6 capped to 4
+    assert b["claims"] == 10 and a["claims"] == 10  # no ClaimNb clipping
     assert b["sev_rows"] == 6 and a["sev_rows"] == 5  # orphan dropped
     assert abs(b["exposure"] - a["exposure"] - 0.5) < 1e-9  # exposure 1.5 capped at 1
     md = render_markdown(au)
-    assert "for human review" in md and "pre-registered" in md
+    assert "for human review" not in md and "pre-registered" in md
+    assert "## 8. Post-audit, pre-model amendments (human decision 2026-11-07)" in md
+    assert "rating-profile holdout" in md and "per policy after aggregation, not per claim" in md
 
 
 def test_targets_report_on_hand_built_frame():
     freq, sev = tiny()
-    tg = compute_audit(freq, sev, CFG)["cleaning"]["impact"]["targets"]
-    # policies with sev rows after cleaning: 2, 4, 6, 7; claims without sev rows: policy 5 (1)
-    # and the shortfall of policy 6 (ClaimNb capped to 4, 1 row -> 3)
-    assert tg["severity_sample_policies"] == 4 and tg["severity_sample_sev_rows"] == 5
-    assert tg["claims_without_sev_rows"] == 1 + 3
-    assert tg["cost_total"] == 100.0 + 200.0 + 1000.0 + 400.0 + 500.0  # 3000 capped at 1000
-    assert tg["severity_weight_total"] == 5
-    assert tg["frequency_count_total"] == tg["claims_total"] == 8
-    nb = compute_audit(freq, sev, CFG)["cleaning"]["impact"]["claim_nb"]
-    assert nb["sev_rows"] == 1 and nb["sev_amount"] == 400.0 and nb["sev_rows_kept"]
+    au = compute_audit(freq, sev, CFG)
+    tg = au["cleaning"]["impact"]["targets"]
+    # matched rows: policy 2 (1), 4 (2), 6 (1), 7 (1); the orphan 99 is excluded
+    assert tg["matched_rows"] == 5 and tg["policies_with_claim_rows"] == 4
+    assert tg["cost_total"] == 4200.0 and tg["limited_cost_total"] == 2200.0
+    assert tg["excess_total"] == 2000.0
+    assert tg["claim_nb_recorded_total"] == 10
+    assert tg["frequency_count_total"] == 5  # option (b) is the default
+    assert tg["discrepancy_policies"] == 3  # policies 5, 6, 7
+    assert tg["invariant_n_zero_iff_s_zero"]
+    rc = au["reconciliation"]
+    assert rc["matched_cost"] + rc["orphan_cost"] == rc["valid_total"]
+    assert rc["total_cost_check"] == 0 and rc["rows_check"] == 0
+    assert rc["claim_nb_minus_matched"] == 5 == rc["shortfall_claims"] - rc["surplus_rows"]
+    assert rc["by_status"]["claims_without_sev"]["gap"] == 1
+    assert rc["by_status"]["sev_without_claims"]["gap"] == -1
+    assert sum(v["gap"] for v in rc["by_status"].values()) == 5
+    assert au["severity"]["cap_basis"] == "matched claims only"
+    caps = {c["cap"]: c for c in au["severity"]["cap_table"]}
+    assert caps[1000]["claims_above"] == 1 and caps[1000]["excess"] == 2000.0
+    assert caps[None]["claims_above"] == 0 and caps[None]["excess_share_of_cost"] == 0.0
+    assert caps[500]["excess"] == 2500.0 + 0.0  # only the 3000 claim exceeds 500
+    assert au["version_note"]["matched_minus_external_rows"] == 1
+    assert [b["label"] for b in au["discrepancy"]["idpol_bands"]] == [
+        "IDpol<=3",
+        "(3,6]",
+        ">6",
+    ]
+    assert sum(b["policies"] for b in au["discrepancy"]["exposure_bands"]) == 7
+    hc = au["high_counts"]
+    assert hc["threshold"] == 5 and hc["policies"] == 0
 
 
 def test_markdown_is_rendered_from_json():
@@ -109,9 +132,12 @@ def test_markdown_is_rendered_from_json():
     changed["dataset"]["freq_rows"] = 123457
     changed["exposure"]["gt1"]["rows"] = 987654
     changed["leakage"]["distinct_groups"] = 424242
-    changed["cleaning"]["impact"]["targets"]["claims_without_sev_rows"] = 777777
+    changed["cleaning"]["impact"]["targets"]["matched_rows"] = 777777
+    changed["reconciliation"]["orphan_rows"] = 313131
+    changed["high_counts"]["policies"] = 555555
+    changed["version_note"]["external_policies"] = 654322
     md2 = render_markdown(changed)
-    for number in ("123,457", "987,654", "424,242", "777,777"):
+    for number in ("123,457", "987,654", "424,242", "777,777", "313,131", "555,555", "654,322"):
         assert number in md2 and number not in md
     changed["linkage"]["status"]["claims_without_sev"]["policies"] = 1
     assert "1 policy" in render_markdown(changed) and "1 policies" not in render_markdown(changed)
@@ -152,15 +178,23 @@ def test_target_text_follows_configured_targets():
     freq, sev = tiny()
     au = json.loads(json.dumps(compute_audit(freq, sev, CFG)))
     md = render_markdown(au)
-    assert "`frequency_count: claim_nb`, configured" in md
-    assert "`frequency_count: sev_rows`, alternative" in md
-    assert "treats them as zero cost" in md
+    assert "frequency target `sev_rows`" in md
     changed = copy.deepcopy(au)
-    tg = changed["cleaning"]["impact"]["targets"]
-    tg["frequency_count"] = "sev_rows"
-    tg["pure_premium_claims_without_sev"] = "exclude"
+    changed["cleaning"]["impact"]["targets"]["frequency_count"] = "claim_nb"
+    changed["cleaning"]["rules"]["targets"]["frequency_count"] = "claim_nb"
     md2 = render_markdown(changed)
-    assert "`frequency_count: sev_rows`, configured" in md2
-    assert "`frequency_count: claim_nb`, alternative" in md2
-    assert "treats them as zero cost" not in md2
-    assert "drops those policies from the pure-premium sample" in md2
+    assert "frequency target `claim_nb`" in md2 and "`frequency_count: claim_nb`" in md2
+
+
+def test_orphan_ledger_written(tmp_path, monkeypatch):
+    import fremtpl2_pricing.audit as audit_mod
+
+    freq, sev = tiny()
+    cfg = copy.deepcopy(CFG)
+    cfg["paths"] = {k: str(tmp_path / k) for k in ("raw", "processed", "results", "reports")}
+    monkeypatch.setattr(audit_mod, "load_raw", lambda _cfg: (freq, sev))
+    audit_mod.run_audit(cfg)
+    ledger = pd.read_csv(tmp_path / "results" / "orphan_ledger.csv")
+    assert list(ledger.columns) == ["IDpol", "ClaimAmount"]
+    assert ledger.to_dict("records") == [{"IDpol": 99, "ClaimAmount": 600.0}]
+    assert (tmp_path / "reports" / "data_audit.md").read_text().startswith("# Data audit")

@@ -2,7 +2,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fremtpl2_pricing.split import assign_split, attach_severity, split_summary
+from fremtpl2_pricing.clean import clean
+from fremtpl2_pricing.split import (
+    assign_split,
+    attach_severity,
+    split_summary,
+    train_excess_loading,
+    verify_frozen_split,
+)
 from synth import make_cfg, make_freq, make_sev
 
 freq = make_freq()
@@ -78,7 +85,8 @@ def test_stratification_claim_share_within_tolerance():
     train = d[d["primary_set"] == "train"]
     for _, g in train.groupby("cv_fold"):
         assert abs(g["has_claim"].mean() - train["has_claim"].mean()) < tol
-    sm = split_summary(freq, make_sev(freq), s, make_cfg())
+    res = clean(freq, make_sev(freq), make_cfg()["clean"])
+    sm = split_summary(res.freq, res.sev, s, make_cfg())
     shares = [sm["primary_sets"][k]["share_with_claim"] for k in ("train", "test")]
     assert all(abs(x - overall) < tol for x in shares)
     assert 0 < sm["primary_sets"]["test"]["largest_group_share_of_policies"] < 0.5
@@ -129,17 +137,57 @@ def test_attach_severity_rejects_duplicate_policy_in_split():
 
 def test_summary_counts_and_orphans_excluded():
     cfg = make_cfg()
-    sev = make_sev(freq)  # contains two orphan rows
+    res = clean(freq, make_sev(freq), cfg["clean"])  # two orphan rows are removed by clean
+    sev = make_sev(freq)  # raw frame: orphans must be excluded by attach_severity
     s = assign_split(freq, cfg)
-    sm = split_summary(freq, sev, s, cfg)
+    sm = split_summary(res.freq, sev, s, cfg)
     assert sm["overlap_primary_train_test"] == {"idpol": 0, "group_id": 0}
     assert sm["groups_spanning_multiple_cv_folds"] == 0
     assert sm["severity_rows_by_primary_set"]["excluded_without_policy"] == 2
     by = sm["severity_rows_by_primary_set"]
-    assert by["train"] + by["test"] == int(sev["IDpol"].isin(freq["IDpol"]).sum())
+    assert by["train"] + by["test"] == len(res.sev)
+    assert sm["severity_rows_inherit_policy_set"] is True
+    tr, te = sm["primary_sets"]["train"], sm["primary_sets"]["test"]
+    assert tr["claims_n"] + te["claims_n"] == int(res.freq["N"].sum())
+    assert tr["excess_cost"] + te["excess_cost"] == pytest.approx(res.freq["excess"].sum())
+    assert tr["limited_cost"] + te["limited_cost"] == pytest.approx(res.freq["S_cap"].sum())
+    assert tr["policies_with_claim_rows"] + te["policies_with_claim_rows"] == int(
+        (res.freq["N"] > 0).sum()
+    )
+    assert set(sm["primary_rating_factor_mix"]["train"]) == set(cfg["rating_factors"])
     assert sm["primary_sets"]["train"]["policies"] + sm["primary_sets"]["test"]["policies"] == len(
         freq
     )
     assert np.isclose(
         sum(f["exposure"] for f in sm["cv_folds"].values()), sm["primary_sets"]["train"]["exposure"]
     )
+
+
+def test_excess_loading_from_train_set_only():
+    cfg = make_cfg()
+    res = clean(freq, make_sev(freq), cfg["clean"])
+    s = assign_split(res.freq, cfg)
+    d = res.freq.merge(s, on="IDpol")
+    train = d[d["primary_set"] == "train"]
+    base = train_excess_loading(d, cfg["clean"])
+    assert base == pytest.approx(train["excess"].sum() / train["Exposure"].sum())
+    assert base > 0
+    changed = d.copy()
+    test_rows = changed["primary_set"] == "test"
+    changed.loc[test_rows, "excess"] = 1e9
+    changed.loc[test_rows, "Exposure"] = 123.0
+    assert train_excess_loading(changed, cfg["clean"]) == base
+
+
+def test_frozen_split_verification_detects_difference(tmp_path):
+    cfg = make_cfg()
+    s = assign_split(freq, cfg)
+    path = tmp_path / "split.parquet"
+    s.to_parquet(path, index=False)
+    before = path.read_bytes()
+    digest = verify_frozen_split(assign_split(freq, cfg), path)
+    assert len(digest) == 64 and path.read_bytes() == before
+    other = assign_split(freq, make_cfg(seed=8))
+    with pytest.raises(ValueError, match="never overwritten"):
+        verify_frozen_split(other, path)
+    assert path.read_bytes() == before

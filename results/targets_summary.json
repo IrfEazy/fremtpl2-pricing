@@ -1,0 +1,35 @@
+{
+  "targets": {
+    "frequency_count": "sev_rows",
+    "policies": 678013,
+    "policies_with_claim_rows": 24944,
+    "matched_rows": 26444,
+    "claim_nb_recorded_total": 36102,
+    "frequency_count_total": 26444,
+    "discrepancy_policies": 9117,
+    "cost_total": 59909216.5,
+    "limited_cost_total": 49302196.05,
+    "excess_total": 10607020.450000003,
+    "excess_share_of_cost": 0.17705156351026563,
+    "excess_share_of_limited_cost": 0.21514296116227472,
+    "invariant_n_zero_iff_s_zero": true
+  },
+  "large_loss": {
+    "cap": 100000,
+    "claims_capped": 41,
+    "amount_removed": 10607020.45,
+    "amount_removed_share": 0.17705156351026555,
+    "amount_removed_share_of_limited": 0.21514296116227463,
+    "applied_per_claim_before_aggregation": true
+  },
+  "excess_loading": {
+    "mode": "flat_per_exposure_year",
+    "value_per_exposure_year": 35.505395347655835,
+    "train_excess": 10176659.23,
+    "train_exposure": 286622.89576989296,
+    "train_policies": 542411,
+    "basis": "train set of the primary split; matched claims only (orphans excluded)",
+    "per_claim_cap": 100000,
+    "test_set_used": false
+  }
+}

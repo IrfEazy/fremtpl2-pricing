@@ -12,43 +12,262 @@
     "train": {
       "policies": 542411,
       "exposure": 286622.89576989296,
-      "claims": 28796,
+      "claims": 28811,
+      "claims_n": 21123,
+      "policies_with_claim_rows": 19966,
+      "cost": 49507321.05,
+      "limited_cost": 39330661.82,
+      "excess_cost": 10176659.23,
       "policies_with_claim": 27248,
-      "claim_rate": 0.10046650293812553,
+      "claim_rate": 0.10051883651029084,
       "share_with_claim": 0.0502349694235552,
       "largest_group_policies": 18,
       "largest_group_share_of_policies": 3.318516770493224e-05,
-      "largest_group_share_of_claims": 0.0003472704542297541
+      "largest_group_share_of_claims": 0.0008330151678178474
     },
     "test": {
       "policies": 135602,
       "exposure": 71737.2096930908,
-      "claims": 7260,
+      "claims": 7291,
+      "claims_n": 5321,
+      "policies_with_claim_rows": 4978,
+      "cost": 10401895.45,
+      "limited_cost": 9971534.23,
+      "excess_cost": 430361.22000000003,
       "policies_with_claim": 6812,
-      "claim_rate": 0.10120270959882664,
+      "claim_rate": 0.1016348423808602,
       "share_with_claim": 0.05023524726773941,
       "largest_group_policies": 22,
       "largest_group_share_of_policies": 0.00016223949499269923,
-      "largest_group_share_of_claims": 0.003305785123966942
+      "largest_group_share_of_claims": 0.006583459059113976
     }
   },
+  "primary_rating_factor_mix": {
+    "train": {
+      "Area": {
+        "kind": "categorical",
+        "shares": {
+          "A": 0.15303155725086695,
+          "B": 0.11135098661347208,
+          "C": 0.28268785109446526,
+          "D": 0.22398882028572428,
+          "E": 0.20236315266467678,
+          "F": 0.02657763209079462
+        }
+      },
+      "VehPower": {
+        "kind": "numeric",
+        "mean": 6.453823760948801,
+        "q25": 5.0,
+        "median": 6.0,
+        "q75": 7.0
+      },
+      "VehAge": {
+        "kind": "numeric",
+        "mean": 7.0427129980771035,
+        "q25": 2.0,
+        "median": 6.0,
+        "q75": 11.0
+      },
+      "DrivAge": {
+        "kind": "numeric",
+        "mean": 45.50088217237482,
+        "q25": 34.0,
+        "median": 44.0,
+        "q75": 55.0
+      },
+      "BonusMalus": {
+        "kind": "numeric",
+        "mean": 59.755703700699286,
+        "q25": 50.0,
+        "median": 50.0,
+        "q75": 64.0
+      },
+      "VehBrand": {
+        "kind": "categorical",
+        "shares": {
+          "B1": 0.24014815333759823,
+          "B10": 0.026223656968608674,
+          "B11": 0.020016186987358294,
+          "B12": 0.24458759132834695,
+          "B13": 0.017914459699379253,
+          "B14": 0.005954893982607285,
+          "B2": 0.2362415216505565,
+          "B3": 0.07887561277333978,
+          "B4": 0.03686319045889556,
+          "B5": 0.05114018705372863,
+          "B6": 0.042034545759580835
+        }
+      },
+      "VehGas": {
+        "kind": "categorical",
+        "shares": {
+          "Diesel": 0.4900490587395905,
+          "Regular": 0.5099509412604095
+        }
+      },
+      "Density": {
+        "kind": "numeric",
+        "mean": 1795.6795013375465,
+        "q25": 92.0,
+        "median": 393.0,
+        "q75": 1658.0
+      },
+      "Region": {
+        "kind": "categorical",
+        "shares": {
+          "R11": 0.10302150951953408,
+          "R21": 0.004531619012151302,
+          "R22": 0.012048059497318454,
+          "R23": 0.01290903023721864,
+          "R24": 0.23656046798460945,
+          "R25": 0.016240452350708225,
+          "R26": 0.015385012472092195,
+          "R31": 0.039884884340472444,
+          "R41": 0.019193932276447195,
+          "R42": 0.0032226485082345307,
+          "R43": 0.0019782047192995716,
+          "R52": 0.057187262057738504,
+          "R53": 0.06213553928662951,
+          "R54": 0.028201861687908246,
+          "R72": 0.045780782469382074,
+          "R73": 0.02520044763103993,
+          "R74": 0.006764243350522021,
+          "R82": 0.12520948137113738,
+          "R83": 0.007698958907544279,
+          "R91": 0.05282341250453992,
+          "R93": 0.11730772421650741,
+          "R94": 0.006714465598964623
+        }
+      }
+    },
+    "test": {
+      "Area": {
+        "kind": "categorical",
+        "shares": {
+          "A": 0.15450362089054734,
+          "B": 0.11106768336750196,
+          "C": 0.284265718794708,
+          "D": 0.22198787628501054,
+          "E": 0.20208404005840622,
+          "F": 0.0260910606038259
+        }
+      },
+      "VehPower": {
+        "kind": "numeric",
+        "mean": 6.457861978436896,
+        "q25": 5.0,
+        "median": 6.0,
+        "q75": 7.0
+      },
+      "VehAge": {
+        "kind": "numeric",
+        "mean": 7.0504712319877285,
+        "q25": 2.0,
+        "median": 6.0,
+        "q75": 11.0
+      },
+      "DrivAge": {
+        "kind": "numeric",
+        "mean": 45.49207976283536,
+        "q25": 34.0,
+        "median": 44.0,
+        "q75": 55.0
+      },
+      "BonusMalus": {
+        "kind": "numeric",
+        "mean": 59.78469344109969,
+        "q25": 50.0,
+        "median": 50.0,
+        "q75": 65.0
+      },
+      "VehBrand": {
+        "kind": "categorical",
+        "shares": {
+          "B1": 0.23950236722172238,
+          "B10": 0.025685461866344156,
+          "B11": 0.020117697379094704,
+          "B12": 0.24599194702143037,
+          "B13": 0.01814869987168331,
+          "B14": 0.006024984882228876,
+          "B2": 0.2339272282119733,
+          "B3": 0.07825843276647837,
+          "B4": 0.03822952463827967,
+          "B5": 0.05172490081267238,
+          "B6": 0.042388755328092505
+        }
+      },
+      "VehGas": {
+        "kind": "categorical",
+        "shares": {
+          "Diesel": 0.48913732835798884,
+          "Regular": 0.5108626716420112
+        }
+      },
+      "Density": {
+        "kind": "numeric",
+        "mean": 1779.3939469919324,
+        "q25": 92.0,
+        "median": 389.0,
+        "q75": 1629.0
+      },
+      "Region": {
+        "kind": "categorical",
+        "shares": {
+          "R11": 0.10258698249288359,
+          "R21": 0.004188728779811507,
+          "R22": 0.010759428327015826,
+          "R23": 0.013141399094408637,
+          "R24": 0.23810858246928512,
+          "R25": 0.015368504889308417,
+          "R26": 0.01583309980678751,
+          "R31": 0.0416734266456247,
+          "R41": 0.01901889352664415,
+          "R42": 0.0033332841698500023,
+          "R43": 0.001865754192416041,
+          "R52": 0.05701980796743411,
+          "R53": 0.06208610492470613,
+          "R54": 0.02764708485125588,
+          "R72": 0.04791227268034395,
+          "R73": 0.025604342118847805,
+          "R74": 0.006622321204701995,
+          "R82": 0.12416483532691258,
+          "R83": 0.008193094497131312,
+          "R91": 0.052749959440126254,
+          "R93": 0.11567675992979455,
+          "R94": 0.00644533266470996
+        }
+      }
+    }
+  },
+  "severity_rows_inherit_policy_set": true,
   "test_share_of_policies": 0.19999911506121565,
   "cv_folds": {
     "0": {
       "policies": 108483,
       "exposure": 57408.96996107493,
-      "claims": 5763,
+      "claims": 5764,
+      "claims_n": 4215,
+      "policies_with_claim_rows": 3985,
+      "cost": 9952325.219999999,
+      "limited_cost": 8142442.99,
+      "excess_cost": 1809882.2300000002,
       "policies_with_claim": 5450,
-      "claim_rate": 0.10038500958835342,
+      "claim_rate": 0.10040242846907324,
       "share_with_claim": 0.05023828618308859,
       "largest_group_policies": 18,
       "largest_group_share_of_policies": 0.00016592461491662288,
-      "largest_group_share_of_claims": 0.001041124414367517
+      "largest_group_share_of_claims": 0.001040943789035392
     },
     "1": {
       "policies": 108483,
       "exposure": 57390.2765364174,
       "claims": 5760,
+      "claims_n": 4218,
+      "policies_with_claim_rows": 3989,
+      "cost": 7930250.67,
+      "limited_cost": 7319388.16,
+      "excess_cost": 610862.51,
       "policies_with_claim": 5450,
       "claim_rate": 0.10036543379164503,
       "share_with_claim": 0.05023828618308859,
@@ -60,6 +279,11 @@
       "policies": 108481,
       "exposure": 57168.06822741224,
       "claims": 5752,
+      "claims_n": 4273,
+      "policies_with_claim_rows": 4037,
+      "cost": 8309339.380000001,
+      "limited_cost": 7779029.27,
+      "excess_cost": 530310.11,
       "policies_with_claim": 5449,
       "claim_rate": 0.10061560899904434,
       "share_with_claim": 0.050229994192531414,
@@ -70,18 +294,28 @@
     "3": {
       "policies": 108482,
       "exposure": 57359.99254360357,
-      "claims": 5761,
+      "claims": 5775,
+      "claims_n": 4230,
+      "policies_with_claim_rows": 3986,
+      "cost": 10169745.549999999,
+      "limited_cost": 7842506.79,
+      "excess_cost": 2327238.76,
       "policies_with_claim": 5449,
-      "claim_rate": 0.10043585684953912,
+      "claim_rate": 0.10067992940567409,
       "share_with_claim": 0.0502295311664608,
       "largest_group_policies": 14,
       "largest_group_share_of_policies": 0.0001290536678896038,
-      "largest_group_share_of_claims": 0.0017358097552508246
+      "largest_group_share_of_claims": 0.004155844155844156
     },
     "4": {
       "policies": 108482,
       "exposure": 57295.58850138483,
       "claims": 5760,
+      "claims_n": 4187,
+      "policies_with_claim_rows": 3969,
+      "cost": 13145660.23,
+      "limited_cost": 8247294.609999999,
+      "excess_cost": 4898365.62,
       "policies_with_claim": 5450,
       "claim_rate": 0.10053130006441563,
       "share_with_claim": 0.05023874928559577,
@@ -94,24 +328,34 @@
     "train": {
       "policies": 542410,
       "exposure": 286786.34306310356,
-      "claims": 28883,
+      "claims": 28913,
+      "claims_n": 21150,
+      "policies_with_claim_rows": 19926,
+      "cost": 49095974.74,
+      "limited_cost": 39572189.24,
+      "excess_cost": 9523785.5,
       "policies_with_claim": 27248,
-      "claim_rate": 0.10071260608684102,
+      "claim_rate": 0.10081721357853528,
       "share_with_claim": 0.05023506203794178,
       "largest_group_policies": 16,
       "largest_group_share_of_policies": 2.949798123190944e-05,
-      "largest_group_share_of_claims": 0.0006924488453415504
+      "largest_group_share_of_claims": 0.0014526337633590427
     },
     "test": {
       "policies": 135603,
       "exposure": 71573.76239988023,
-      "claims": 7173,
+      "claims": 7189,
+      "claims_n": 5294,
+      "policies_with_claim_rows": 5018,
+      "cost": 10813241.76,
+      "limited_cost": 9730006.809999999,
+      "excess_cost": 1083234.95,
       "policies_with_claim": 6812,
-      "claim_rate": 0.10021828893002281,
+      "claim_rate": 0.10044183453477401,
       "share_with_claim": 0.050234876809510116,
       "largest_group_policies": 8,
       "largest_group_share_of_policies": 5.899574493189679e-05,
-      "largest_group_share_of_claims": 0.0011152934615920815
+      "largest_group_share_of_claims": 0.003060230908332174
     }
   },
   "random_test_share_of_policies": 0.20000058995918957,
@@ -131,5 +375,11 @@
     "test": 5321,
     "excluded_without_policy": 0
   },
-  "group_sizes_largest": 22
+  "group_sizes_largest": 22,
+  "frozen_split": {
+    "file": "data/processed/split.parquet",
+    "sha256": "cd10c7e650ec50ac83c8910dbaa2883356f3f31a1aa90f0d1b888620059c54d0",
+    "status": "verified identical to the stored file (not overwritten)",
+    "recomputed_identical": true
+  }
 }

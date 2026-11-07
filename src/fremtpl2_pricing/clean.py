@@ -3,31 +3,33 @@
 Every rule is row-wise (or per-policy) so the result for a policy does not depend on which set it
 falls into: ``clean(full)`` restricted to a subset equals cleaning that subset alone.
 
-Target definitions (``clean.targets``), added as per-policy columns:
-
-- severity sample: policies with at least one severity row (``in_severity_sample``);
-  ``sev_weight`` = number of severity rows (or capped ClaimNb, by config), never ClaimNb by default.
-- pure-premium observed cost ``cost`` = sum of the (capped) severity amounts of the policy; claims
-  without severity rows contribute zero cost.
-- ``freq_count``: frequency target, ClaimNb as recorded (after the ClaimNb cap) or the number of
-  severity rows, by config.
+Order: IDpol normalisation, severity quarantine (amount not finite or <= 0), exposure quarantine
+(Exposure not finite or <= 0), orphan severity rows (IDpol not in freq; kept in ``orphans`` for the
+ledger), matched-row counts, policy exclusions (all optional, off in the primary rules), exposure
+cap, then the single target table (``fremtpl2_pricing.targets``). Sensitivities are named rule
+overrides declared in ``clean.sensitivities``; ``clean_sensitivity`` applies one by name.
 """
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from .targets import build_target_table, cap_amounts, valid_amount
+
 STATUSES = ("no_claims", "ok", "claims_without_sev", "sev_without_claims", "count_mismatch")
+SENSITIVITIES_KEY = "sensitivities"
 
 
-@dataclass
+@dataclass(frozen=True)
 class CleanResult:
-    freq: pd.DataFrame  # adds sev_rows and sev_status
-    sev: pd.DataFrame  # ClaimAmount possibly capped; ClaimAmount_uncapped kept optionally
+    freq: pd.DataFrame  # policies with target columns, sev_rows and sev_status
+    sev: pd.DataFrame  # matched valid rows: ClaimAmount (raw), ClaimAmount_capped
+    orphans: pd.DataFrame  # valid severity rows whose IDpol is not in freq: IDpol, ClaimAmount
     report: dict[str, Any]
 
 
@@ -46,9 +48,29 @@ def sev_status(claim_nb: pd.Series, sev_rows: pd.Series) -> pd.Series:
     return pd.Series(status, index=claim_nb.index)
 
 
-FREQUENCY_COUNTS = ("claim_nb", "sev_rows")
-SEVERITY_WEIGHTS = ("sev_rows", "claim_nb")
-PURE_PREMIUM_MODES = ("zero_cost", "exclude")
+def sensitivity_rules(rules: dict[str, Any], name: str | None) -> dict[str, Any]:
+    """Rules with the named sensitivity's overrides deep-merged in; None/'primary' = unchanged."""
+    out = copy.deepcopy({k: v for k, v in rules.items() if k != SENSITIVITIES_KEY})
+    if name in (None, "primary"):
+        return out
+    known = rules.get(SENSITIVITIES_KEY, {})
+    if name not in known:
+        raise ValueError(f"unknown sensitivity '{name}'; declared: {sorted(known)}")
+
+    def merge(base: dict[str, Any], over: dict[str, Any]) -> None:
+        for k, v in over.items():
+            if isinstance(v, dict) and isinstance(base.get(k), dict):
+                merge(base[k], v)
+            else:
+                base[k] = copy.deepcopy(v)
+
+    merge(out, known[name])
+    return out
+
+
+def clean_sensitivity(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any], name: str):
+    """Clean under the named pre-registered sensitivity (cleaning/target side only)."""
+    return clean(freq, sev, sensitivity_rules(rules, name))
 
 
 def _impact(freq_rows: pd.DataFrame) -> dict[str, Any]:
@@ -59,57 +81,32 @@ def _impact(freq_rows: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def add_targets(freq: pd.DataFrame, sev: pd.DataFrame, targets: dict[str, Any]) -> pd.DataFrame:
-    """Add freq_count, sev_weight, cost, in_severity_sample, in_pure_premium_sample (per policy)."""
-    if targets["frequency_count"] not in FREQUENCY_COUNTS:
-        raise ValueError(f"clean.targets.frequency_count must be one of {FREQUENCY_COUNTS}")
-    if targets["severity_weight"] not in SEVERITY_WEIGHTS:
-        raise ValueError(f"clean.targets.severity_weight must be one of {SEVERITY_WEIGHTS}")
-    mode = targets["pure_premium_claims_without_sev"]
-    if mode not in PURE_PREMIUM_MODES:
-        raise ValueError(
-            f"clean.targets.pure_premium_claims_without_sev must be one of {PURE_PREMIUM_MODES}"
-        )
-    freq = freq.copy()
-    cost = sev.groupby("IDpol")["ClaimAmount"].sum()
-    freq["cost"] = freq["IDpol"].map(cost).fillna(0.0).astype("float64")
-    freq["in_severity_sample"] = freq["sev_rows"] > 0
-    freq["freq_count"] = freq[
-        "ClaimNb" if targets["frequency_count"] == "claim_nb" else "sev_rows"
-    ].astype("int64")
-    freq["sev_weight"] = np.where(
-        freq["in_severity_sample"],
-        freq["sev_rows" if targets["severity_weight"] == "sev_rows" else "ClaimNb"],
-        0,
-    ).astype("int64")
-    freq["in_pure_premium_sample"] = (
-        ~(freq["sev_status"] == "claims_without_sev") if mode == "exclude" else True
-    )
-    return freq
+def _as_int_idpol(s: pd.Series, label: str) -> pd.Series:
+    """IDpol as int64; floats are accepted only when every value is integral."""
+    if pd.api.types.is_integer_dtype(s):
+        return s.astype("int64")
+    v = pd.to_numeric(s, errors="coerce")
+    if v.isna().any() or not np.isfinite(v).all() or (v != np.floor(v)).any():
+        raise ValueError(f"{label}.IDpol contains non-integral or missing values")
+    return v.astype("int64")
 
 
 def target_stats(freq: pd.DataFrame, eps: float) -> dict[str, Any]:
-    """Measured consequences of the target definitions on a cleaned frame (needs add_targets)."""
-    sev_rows = int(freq["sev_rows"].sum())
-    cost = float(freq["cost"].sum())
-    unmatched = (freq["ClaimNb"] - freq["sev_rows"]).clip(lower=0)
-    claims = int(freq["ClaimNb"].sum())
-    mean_cost = cost / max(sev_rows, 1)
-    implied = float(unmatched.sum()) * mean_cost
+    """Measured consequences of the target definitions on a cleaned frame."""
+    n, s, sc = int(freq["N"].sum()), float(freq["S"].sum()), float(freq["S_cap"].sum())
     return {
-        "severity_sample_policies": int(freq["in_severity_sample"].sum()),
-        "severity_sample_sev_rows": sev_rows,
-        "severity_weight_total": int(freq["sev_weight"].sum()),
+        "policies": int(len(freq)),
+        "policies_with_claim_rows": int((freq["N"] > 0).sum()),
+        "matched_rows": n,
+        "claim_nb_recorded_total": int(freq["ClaimNb_raw"].sum()),
         "frequency_count_total": int(freq["freq_count"].sum()),
-        "claims_total": claims,
-        "claims_without_sev_rows": int(unmatched.sum()),
-        "claims_without_sev_rows_share": float(unmatched.sum() / max(claims, 1)),
-        "pure_premium_sample_policies": int(freq["in_pure_premium_sample"].sum()),
-        "cost_total": cost,
-        "cost_per_sev_row": mean_cost,
-        "cost_per_claim_if_all_claims_valued": cost / max(claims, 1),
-        "implied_cost_at_mean_severity": implied,
-        "implied_cost_share_of_total": float(implied / max(cost + implied, eps)),
+        "discrepancy_policies": int(freq["claim_discrepancy"].sum()),
+        "cost_total": s,
+        "limited_cost_total": sc,
+        "excess_total": s - sc,
+        "excess_share_of_cost": (s - sc) / max(s, eps),
+        "excess_share_of_limited_cost": (s - sc) / max(sc, eps),
+        "invariant_n_zero_iff_s_zero": bool(((freq["N"] == 0) == (freq["S"] == 0)).all()),
     }
 
 
@@ -119,26 +116,67 @@ def clean(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any]) -> Clean
     sev = sev.copy()
     report: dict[str, Any] = {}
 
+    freq_dtype, sev_dtype = str(freq["IDpol"].dtype), str(sev["IDpol"].dtype)
+    freq["IDpol"] = _as_int_idpol(freq["IDpol"], "freq")
+    sev["IDpol"] = _as_int_idpol(sev["IDpol"], "sev")
     n_dup = int(freq["IDpol"].duplicated().sum())
     report["duplicate_idpol"] = {"action": rules["duplicate_idpol"], "rows": n_dup}
     if n_dup and rules["duplicate_idpol"] == "error":
         raise ValueError(f"{n_dup} duplicated IDpol in freq and clean.duplicate_idpol=error")
+    report["idpol"] = {
+        "freq_dtype": freq_dtype,
+        "sev_dtype": sev_dtype,
+        "normalised_dtype": "int64",
+        "freq_unique": bool(freq["IDpol"].is_unique),
+        "sev_distinct_idpol": int(sev["IDpol"].nunique()),
+        "join": "many_to_one (sev -> freq)" if freq["IDpol"].is_unique else "NOT many_to_one",
+    }
+    raw_sev_rows, raw_sev_total = int(len(sev)), float(sev["ClaimAmount"].sum())
 
-    # Severity rows without a policy in freq.
+    # Severity amounts must be finite and > 0.
+    bad = ~valid_amount(sev["ClaimAmount"])
+    report["sev_quarantine"] = {
+        "rows": int(bad.sum()),
+        "policies": int(sev.loc[bad, "IDpol"].nunique()),
+        "amount_finite_sum": float(
+            sev.loc[bad, "ClaimAmount"].where(lambda a: np.isfinite(a)).sum()
+        ),
+    }
+    sev = sev[~bad]
+    valid_total = float(sev["ClaimAmount"].sum())
+
+    # Exposure must be finite and > 0 (no floor above that).
+    e = freq["Exposure"].astype("float64")
+    bad_e = ~(np.isfinite(e) & (e > 0))
+    quarantined_ids = freq.loc[bad_e, "IDpol"]
+    in_q = sev["IDpol"].isin(quarantined_ids)
+    report["exposure_quarantine"] = {
+        "policies": int(bad_e.sum()),
+        "claims": int(freq.loc[bad_e, "ClaimNb"].sum()),
+        "sev_rows": int(in_q.sum()),
+        "sev_amount": float(sev.loc[in_q, "ClaimAmount"].sum()),
+    }
+
+    # Severity rows without a policy in freq (judged on the raw policy table).
     orphan = ~sev["IDpol"].isin(freq["IDpol"])
+    orphan_sev = sev[orphan][["IDpol", "ClaimAmount"]].reset_index(drop=True)
     report["sev_without_policy"] = {
         "action": rules["sev_without_policy"],
         "rows": int(orphan.sum()),
-        "amount": float(sev.loc[orphan, "ClaimAmount"].sum()),
-        "amount_share": float(
-            sev.loc[orphan, "ClaimAmount"].sum() / max(sev["ClaimAmount"].sum(), eps)
-        ),
+        "distinct_idpol": int(orphan_sev["IDpol"].nunique()),
+        "amount": float(orphan_sev["ClaimAmount"].sum()),
+        "amount_share": float(orphan_sev["ClaimAmount"].sum() / max(sev["ClaimAmount"].sum(), eps)),
     }
-    if rules["sev_without_policy"] == "drop":
-        sev = sev[~orphan]
+    if rules["sev_without_policy"] != "drop":
+        raise ValueError("clean.sev_without_policy must be 'drop' (orphans cannot be modelled)")
+    sev = sev[~orphan]
+    freq = freq[~bad_e]
+    sev = sev[~sev["IDpol"].isin(quarantined_ids)]
+    matched_rows0, matched_cost0 = int(len(sev)), float(sev["ClaimAmount"].sum())
 
-    # ClaimNb versus severity rows (classified on the raw ClaimNb, before any cap).
+    # ClaimNb versus matched severity rows (classified on the recorded ClaimNb).
     counts = sev.groupby("IDpol").size()
+    freq["ClaimNb_raw"] = freq["ClaimNb"].astype("int64")
     freq["sev_rows"] = freq["IDpol"].map(counts).fillna(0).astype("int64")
     freq["sev_status"] = sev_status(freq["ClaimNb"], freq["sev_rows"])
     cons: dict[str, Any] = {}
@@ -154,10 +192,19 @@ def clean(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any]) -> Clean
             drop |= m
     report["sev_consistency"] = cons
 
-    # Policy-level exclusions.
+    # Optional policy-level exclusions (all off in the primary rules).
     emin = rules.get("exposure_min")
     low = (freq["Exposure"] < emin) if emin is not None else pd.Series(False, index=freq.index)
     report["exposure_min"] = {"threshold": emin, **_impact(freq[low])}
+    hc = rules["high_count"]["exclude_n_above"]
+    high_n = (freq["sev_rows"] > hc) if hc is not None else pd.Series(False, index=freq.index)
+    hsev = sev["IDpol"].isin(freq.loc[high_n, "IDpol"])
+    report["high_count"] = {
+        "exclude_n_above": hc,
+        **_impact(freq[high_n]),
+        "sev_rows": int(hsev.sum()),
+        "sev_amount": float(sev.loc[hsev, "ClaimAmount"].sum()),
+    }
     nb = rules["claim_nb"]
     high = pd.Series(False, index=freq.index)
     if nb["max"] is not None:
@@ -167,13 +214,6 @@ def clean(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any]) -> Clean
             "action": nb["action"],
             **_impact(freq[over]),
             "excess_claims": int((freq.loc[over, "ClaimNb"] - nb["max"]).sum()),
-            # Severity rows of these policies are never capped or dropped by the ClaimNb cap
-            # (dropped only if action = exclude).
-            "sev_rows": int(freq.loc[over, "sev_rows"].sum()),
-            "sev_amount": float(
-                sev.loc[sev["IDpol"].isin(freq.loc[over, "IDpol"]), "ClaimAmount"].sum()
-            ),
-            "sev_rows_kept": nb["action"] == "cap",
         }
         if nb["action"] == "exclude":
             high = over
@@ -181,7 +221,7 @@ def clean(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any]) -> Clean
             freq.loc[over, "ClaimNb"] = nb["max"]
     else:
         report["claim_nb"] = {"max": None}
-    excluded = drop | low | high
+    excluded = drop | low | high | high_n
     report["policies_excluded"] = _impact(freq[excluded])
     freq = freq[~excluded]
     sev = sev[sev["IDpol"].isin(freq["IDpol"])]
@@ -198,24 +238,37 @@ def clean(freq: pd.DataFrame, sev: pd.DataFrame, rules: dict[str, Any]) -> Clean
     else:
         report["exposure_cap"] = {"cap": None}
 
-    ll = rules["large_loss"]
-    if ll["cap"] is not None:
-        if ll.get("keep_uncapped_column"):
-            sev["ClaimAmount_uncapped"] = sev["ClaimAmount"]
-        over = sev["ClaimAmount"] > ll["cap"]
-        removed = float((sev.loc[over, "ClaimAmount"] - ll["cap"]).sum())
-        report["large_loss"] = {
-            "cap": ll["cap"],
-            "claims_capped": int(over.sum()),
-            "amount_removed": removed,
-            "amount_removed_share": removed / max(float(sev["ClaimAmount"].sum()), eps),
-        }
-        sev.loc[over, "ClaimAmount"] = float(ll["cap"])
-    else:
-        report["large_loss"] = {"cap": None}
-    freq = add_targets(freq, sev, rules["targets"]).reset_index(drop=True)
-    report["targets"] = {**rules["targets"], **target_stats(freq, eps)}
-    return CleanResult(freq, sev.reset_index(drop=True), report)
+    ll = rules["large_loss"]["cap"]
+    sev["ClaimAmount_capped"] = cap_amounts(sev["ClaimAmount"].astype("float64"), ll)
+    over_c = sev["ClaimAmount"] > ll if ll is not None else pd.Series(False, index=sev.index)
+    removed = float((sev.loc[over_c, "ClaimAmount"] - sev.loc[over_c, "ClaimAmount_capped"]).sum())
+    report["large_loss"] = {
+        "cap": ll,
+        "claims_capped": int(over_c.sum()),
+        "amount_removed": removed,
+        "amount_removed_share": removed / max(float(sev["ClaimAmount"].sum()), eps),
+        "amount_removed_share_of_limited": removed
+        / max(float(sev["ClaimAmount_capped"].sum()), eps),
+        "applied_per_claim_before_aggregation": True,
+    }
+    tg = rules["targets"]
+    freq = build_target_table(freq, sev, ll, tg["frequency_count"]).reset_index(drop=True)
+    report["targets"] = {**tg, **target_stats(freq, eps)}
+    report["reconciliation"] = {
+        "sev_rows_raw": raw_sev_rows,
+        "sev_total_raw": raw_sev_total,
+        "quarantined_rows": report["sev_quarantine"]["rows"],
+        "orphan_rows": int(len(orphan_sev)),
+        "orphan_cost": float(orphan_sev["ClaimAmount"].sum()),
+        "valid_total": valid_total,
+        "exposure_quarantined_rows": report["exposure_quarantine"]["sev_rows"],
+        "exposure_quarantined_cost": report["exposure_quarantine"]["sev_amount"],
+        "matched_rows": matched_rows0,
+        "matched_cost": matched_cost0,
+        "matched_rows_modelled": int(len(sev)),
+        "matched_cost_modelled": float(sev["ClaimAmount"].sum()),
+    }
+    return CleanResult(freq, sev.reset_index(drop=True), orphan_sev, report)
 
 
 def totals(freq: pd.DataFrame, sev: pd.DataFrame) -> dict[str, Any]:

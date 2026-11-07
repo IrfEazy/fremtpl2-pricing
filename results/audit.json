@@ -210,44 +210,1243 @@
       }
     ],
     "top_share": 0.15638043181474734,
+    "cap_basis": "matched claims only",
+    "matched_rows": 26444,
+    "matched_total": 59909216.5,
     "cap_candidates": [
       {
         "cap": 25000,
-        "claims_above": 179,
-        "share_of_claims": 0.006719471451631067,
-        "excess_share_of_cost": 0.2766433564024755
+        "claims_above": 177,
+        "share_of_claims": 0.00669338980487067,
+        "excess": 16588178.149999999,
+        "limited_cost": 43321038.35,
+        "excess_share_of_cost": 0.2768885844133849,
+        "excess_share_of_limited_cost": 0.3829127551371353
       },
       {
         "cap": 50000,
-        "claims_above": 89,
-        "share_of_claims": 0.0033409662524869553,
-        "excess_share_of_cost": 0.2256062148509475
+        "claims_above": 88,
+        "share_of_claims": 0.0033277870216306157,
+        "excess": 13517329.27,
+        "limited_cost": 46391887.230000004,
+        "excess_share_of_cost": 0.22563021284045667,
+        "excess_share_of_limited_cost": 0.29137269632908613
       },
       {
         "cap": 100000,
-        "claims_above": 42,
-        "share_of_claims": 0.0015766357596005856,
-        "excess_share_of_cost": 0.17683504939545983
+        "claims_above": 41,
+        "share_of_claims": 0.0015504462259869913,
+        "excess": 10607020.45,
+        "limited_cost": 49302196.05,
+        "excess_share_of_cost": 0.17705156351026555,
+        "excess_share_of_limited_cost": 0.21514296116227463
       },
       {
         "cap": 200000,
-        "claims_above": 21,
-        "share_of_claims": 0.0007883178798002928,
-        "excess_share_of_cost": 0.12743911288805737
+        "claims_above": 20,
+        "share_of_claims": 0.0007563152321887763,
+        "excess": 7708789.320000001,
+        "limited_cost": 52200427.18,
+        "excess_share_of_cost": 0.12867451404576458,
+        "excess_share_of_limited_cost": 0.14767674780549567
       },
       {
         "cap": 500000,
         "claims_above": 4,
-        "share_of_claims": 0.0001501557866286272,
-        "excess_share_of_cost": 0.09150298861555851
+        "share_of_claims": 0.00015126304643775526,
+        "excess": 5554042.0600000005,
+        "limited_cost": 54355174.44,
+        "excess_share_of_cost": 0.09270763973352916,
+        "excess_share_of_limited_cost": 0.10218055810180196
       },
       {
         "cap": 1000000,
         "claims_above": 3,
-        "share_of_claims": 0.0001126168399714704,
-        "excess_share_of_cost": 0.06226951261199074
+        "share_of_claims": 0.00011344728482831644,
+        "excess": 3779630.56,
+        "limited_cost": 56129585.94,
+        "excess_share_of_cost": 0.06308930045846953,
+        "excess_share_of_limited_cost": 0.06733758136110705
+      }
+    ],
+    "cap_table": [
+      {
+        "cap": 50000,
+        "claims_above": 88,
+        "share_of_claims": 0.0033277870216306157,
+        "excess": 13517329.27,
+        "limited_cost": 46391887.230000004,
+        "excess_share_of_cost": 0.22563021284045667,
+        "excess_share_of_limited_cost": 0.29137269632908613
+      },
+      {
+        "cap": 100000,
+        "claims_above": 41,
+        "share_of_claims": 0.0015504462259869913,
+        "excess": 10607020.45,
+        "limited_cost": 49302196.05,
+        "excess_share_of_cost": 0.17705156351026555,
+        "excess_share_of_limited_cost": 0.21514296116227463
+      },
+      {
+        "cap": 200000,
+        "claims_above": 20,
+        "share_of_claims": 0.0007563152321887763,
+        "excess": 7708789.320000001,
+        "limited_cost": 52200427.18,
+        "excess_share_of_cost": 0.12867451404576458,
+        "excess_share_of_limited_cost": 0.14767674780549567
+      },
+      {
+        "cap": null,
+        "claims_above": 0,
+        "share_of_claims": 0.0,
+        "excess": 0.0,
+        "limited_cost": 59909216.5,
+        "excess_share_of_cost": 0.0,
+        "excess_share_of_limited_cost": 0.0
       }
     ]
+  },
+  "reconciliation": {
+    "sev_rows_raw": 26639,
+    "sev_total_raw": 60697930.68000001,
+    "quarantined_rows": 0,
+    "orphan_rows": 195,
+    "orphan_cost": 788714.1800000002,
+    "valid_total": 60697930.68000001,
+    "exposure_quarantined_rows": 0,
+    "exposure_quarantined_cost": 0.0,
+    "matched_rows": 26444,
+    "matched_cost": 59909216.5,
+    "matched_rows_modelled": 26444,
+    "matched_cost_modelled": 59909216.5,
+    "total_cost_check": 6.984919309616089e-09,
+    "rows_check": 0,
+    "claim_nb_total": 36102,
+    "claim_nb_minus_matched": 9658,
+    "shortfall_claims": 9658,
+    "surplus_rows": 0,
+    "by_status": {
+      "no_claims": {
+        "policies": 643953,
+        "claim_nb": 0,
+        "matched_rows": 0,
+        "gap": 0
+      },
+      "ok": {
+        "policies": 24943,
+        "claim_nb": 26443,
+        "matched_rows": 26443,
+        "gap": 0
+      },
+      "claims_without_sev": {
+        "policies": 9116,
+        "claim_nb": 9657,
+        "matched_rows": 0,
+        "gap": 9657
+      },
+      "sev_without_claims": {
+        "policies": 0,
+        "claim_nb": 0,
+        "matched_rows": 0,
+        "gap": 0
+      },
+      "count_mismatch": {
+        "policies": 1,
+        "claim_nb": 2,
+        "matched_rows": 1,
+        "gap": 1
+      }
+    },
+    "external_severity_rows": 26444,
+    "matched_equals_external": true
+  },
+  "discrepancy": {
+    "idpol_bands": [
+      {
+        "label": "IDpol<=24500",
+        "policies": 9139,
+        "exposure": 4639.503770491803,
+        "exposure_raw": 4639.503770491803,
+        "claim_nb": 9675,
+        "matched_rows": 302,
+        "claims_gap": 9373,
+        "discrepancy_policies": 8851,
+        "discrepancy_share": 0.9684867053288105,
+        "freq_n_per_exposure": 0.06509316835149095,
+        "freq_n_per_raw_exposure": 0.06509316835149095,
+        "freq_claim_nb_per_exposure": 2.085352330465811
+      },
+      {
+        "label": "(24500,100000]",
+        "policies": 40193,
+        "exposure": 24761.80868852459,
+        "exposure_raw": 24761.80868852459,
+        "claim_nb": 2647,
+        "matched_rows": 2383,
+        "claims_gap": 264,
+        "discrepancy_policies": 245,
+        "discrepancy_share": 0.006095588784116637,
+        "freq_n_per_exposure": 0.09623691184983421,
+        "freq_n_per_raw_exposure": 0.09623691184983421,
+        "freq_claim_nb_per_exposure": 0.1068984916770924
+      },
+      {
+        "label": "(100000,1000000]",
+        "policies": 37698,
+        "exposure": 23496.103169398906,
+        "exposure_raw": 23496.103169398906,
+        "claim_nb": 1884,
+        "matched_rows": 1881,
+        "claims_gap": 3,
+        "discrepancy_policies": 3,
+        "discrepancy_share": 7.95798185580137e-05,
+        "freq_n_per_exposure": 0.08005582825537623,
+        "freq_n_per_raw_exposure": 0.08005582825537623,
+        "freq_claim_nb_per_exposure": 0.08018350900219501
+      },
+      {
+        "label": "(1000000,3000000]",
+        "policies": 269640,
+        "exposure": 147939.22904109588,
+        "exposure_raw": 148078.5690410959,
+        "claim_nb": 11320,
+        "matched_rows": 11309,
+        "claims_gap": 11,
+        "discrepancy_policies": 11,
+        "discrepancy_share": 4.0795134253078176e-05,
+        "freq_n_per_exposure": 0.07644355099929907,
+        "freq_n_per_raw_exposure": 0.07637161861593517,
+        "freq_claim_nb_per_exposure": 0.0765179058548117
+      },
+      {
+        "label": ">3000000",
+        "policies": 321343,
+        "exposure": 157523.4607934726,
+        "exposure_raw": 157523.4607934726,
+        "claim_nb": 10576,
+        "matched_rows": 10569,
+        "claims_gap": 7,
+        "discrepancy_policies": 7,
+        "discrepancy_share": 2.1783577050067995e-05,
+        "freq_n_per_exposure": 0.06709476764135412,
+        "freq_n_per_raw_exposure": 0.06709476764135412,
+        "freq_claim_nb_per_exposure": 0.06713920546645484
+      }
+    ],
+    "exposure_bands": [
+      {
+        "label": "e<=0.002739726027",
+        "policies": 3105,
+        "exposure": 8.498914589415374,
+        "exposure_raw": 8.498914589415374,
+        "claim_nb": 50,
+        "matched_rows": 3,
+        "claims_gap": 47,
+        "discrepancy_policies": 44,
+        "discrepancy_share": 0.014170692431561997,
+        "freq_n_per_exposure": 0.3529862511780301,
+        "freq_n_per_raw_exposure": 0.3529862511780301,
+        "freq_claim_nb_per_exposure": 5.883104186300502
+      },
+      {
+        "label": "(0.002739726027,0.05]",
+        "policies": 46237,
+        "exposure": 1358.786548394341,
+        "exposure_raw": 1358.786548394341,
+        "claim_nb": 1405,
+        "matched_rows": 410,
+        "claims_gap": 995,
+        "discrepancy_policies": 944,
+        "discrepancy_share": 0.020416549516620888,
+        "freq_n_per_exposure": 0.3017398137216557,
+        "freq_n_per_raw_exposure": 0.3017398137216557,
+        "freq_claim_nb_per_exposure": 1.034010825070552
+      },
+      {
+        "label": "(0.05,1]",
+        "policies": 627447,
+        "exposure": 355768.82,
+        "exposure_raw": 355768.82,
+        "claim_nb": 34593,
+        "matched_rows": 25977,
+        "claims_gap": 8616,
+        "discrepancy_policies": 8129,
+        "discrepancy_share": 0.012955675937569229,
+        "freq_n_per_exposure": 0.07301651673690797,
+        "freq_n_per_raw_exposure": 0.07301651673690797,
+        "freq_claim_nb_per_exposure": 0.09723449064479568
+      },
+      {
+        "label": ">1",
+        "policies": 1224,
+        "exposure": 1224.0,
+        "exposure_raw": 1363.34,
+        "claim_nb": 54,
+        "matched_rows": 54,
+        "claims_gap": 0,
+        "discrepancy_policies": 0,
+        "discrepancy_share": 0.0,
+        "freq_n_per_exposure": 0.04411764705882353,
+        "freq_n_per_raw_exposure": 0.0396086082708642,
+        "freq_claim_nb_per_exposure": 0.04411764705882353
+      }
+    ],
+    "factors": {
+      "Area": [
+        {
+          "label": "A",
+          "policies": 103957,
+          "exposure": 61956.827712403625,
+          "exposure_raw": 61969.37771240362,
+          "claim_nb": 5063,
+          "matched_rows": 3364,
+          "claims_gap": 1699,
+          "discrepancy_policies": 1594,
+          "discrepancy_share": 0.015333262791346423,
+          "freq_n_per_exposure": 0.054295872209844186,
+          "freq_n_per_raw_exposure": 0.054284876243426775,
+          "freq_claim_nb_per_exposure": 0.08171819292462577
+        },
+        {
+          "label": "B",
+          "policies": 75459,
+          "exposure": 43001.82393068344,
+          "exposure_raw": 43012.32393068344,
+          "claim_nb": 3800,
+          "matched_rows": 2633,
+          "claims_gap": 1167,
+          "discrepancy_policies": 1106,
+          "discrepancy_share": 0.01465696603453531,
+          "freq_n_per_exposure": 0.06122996094873209,
+          "freq_n_per_raw_exposure": 0.06121501373055811,
+          "freq_claim_nb_per_exposure": 0.08836834470382908
+        },
+        {
+          "label": "C",
+          "policies": 191880,
+          "exposure": 104402.52378471443,
+          "exposure_raw": 104449.00378471443,
+          "claim_nb": 9875,
+          "matched_rows": 7093,
+          "claims_gap": 2782,
+          "discrepancy_policies": 2626,
+          "discrepancy_share": 0.013685636856368564,
+          "freq_n_per_exposure": 0.0679389706577044,
+          "freq_n_per_raw_exposure": 0.06790873769001925,
+          "freq_claim_nb_per_exposure": 0.09458583607004525
+        },
+        {
+          "label": "D",
+          "policies": 151596,
+          "exposure": 77087.8016917434,
+          "exposure_raw": 77120.19169174338,
+          "claim_nb": 8428,
+          "matched_rows": 6458,
+          "claims_gap": 1970,
+          "discrepancy_policies": 1850,
+          "discrepancy_share": 0.012203488218686508,
+          "freq_n_per_exposure": 0.0837746032222332,
+          "freq_n_per_raw_exposure": 0.08373941841085185,
+          "freq_claim_nb_per_exposure": 0.10932987859352453
+        },
+        {
+          "label": "E",
+          "policies": 137167,
+          "exposure": 63785.694269780666,
+          "exposure_raw": 63819.314269780676,
+          "claim_nb": 7805,
+          "matched_rows": 6122,
+          "claims_gap": 1683,
+          "discrepancy_policies": 1599,
+          "discrepancy_share": 0.011657322825460935,
+          "freq_n_per_exposure": 0.09597763370117271,
+          "freq_n_per_raw_exposure": 0.0959270727059324,
+          "freq_claim_nb_per_exposure": 0.1223628603459087
+        },
+        {
+          "label": "F",
+          "policies": 17954,
+          "exposure": 8125.434073658209,
+          "exposure_raw": 8129.234073658208,
+          "claim_nb": 1131,
+          "matched_rows": 774,
+          "claims_gap": 357,
+          "discrepancy_policies": 342,
+          "discrepancy_share": 0.019048679959897515,
+          "freq_n_per_exposure": 0.09525644943809532,
+          "freq_n_per_raw_exposure": 0.0952119219334639,
+          "freq_claim_nb_per_exposure": 0.13919256371380595
+        }
+      ],
+      "VehPower": [
+        {
+          "label": "(3.999, 5.0]",
+          "policies": 240170,
+          "exposure": 128203.45612470993,
+          "exposure_raw": 128246.98612470995,
+          "claim_nb": 12977,
+          "matched_rows": 9118,
+          "claims_gap": 3859,
+          "discrepancy_policies": 3646,
+          "discrepancy_share": 0.01518091351959029,
+          "freq_n_per_exposure": 0.07112132758051752,
+          "freq_n_per_raw_exposure": 0.07109718735326438,
+          "freq_claim_nb_per_exposure": 0.10122192015928666
+        },
+        {
+          "label": "(5.0, 6.0]",
+          "policies": 148976,
+          "exposure": 82497.5901721686,
+          "exposure_raw": 82524.21017216859,
+          "claim_nb": 8381,
+          "matched_rows": 6305,
+          "claims_gap": 2076,
+          "discrepancy_policies": 1955,
+          "discrepancy_share": 0.01312291912791322,
+          "freq_n_per_exposure": 0.07642647484419558,
+          "freq_n_per_raw_exposure": 0.076401821802911,
+          "freq_claim_nb_per_exposure": 0.10159084625998464
+        },
+        {
+          "label": "(6.0, 7.0]",
+          "policies": 145401,
+          "exposure": 77919.74670035182,
+          "exposure_raw": 77950.45670035182,
+          "claim_nb": 7627,
+          "matched_rows": 5593,
+          "claims_gap": 2034,
+          "discrepancy_policies": 1910,
+          "discrepancy_share": 0.013136085721556248,
+          "freq_n_per_exposure": 0.07177898076989958,
+          "freq_n_per_raw_exposure": 0.07175070213507494,
+          "freq_claim_nb_per_exposure": 0.0978827617257329
+        },
+        {
+          "label": "(7.0, 8.0]",
+          "policies": 46956,
+          "exposure": 22673.96630511266,
+          "exposure_raw": 22684.61630511266,
+          "claim_nb": 1922,
+          "matched_rows": 1645,
+          "claims_gap": 277,
+          "discrepancy_policies": 260,
+          "discrepancy_share": 0.005537098560354375,
+          "freq_n_per_exposure": 0.07255016514817153,
+          "freq_n_per_raw_exposure": 0.07251610421240626,
+          "freq_claim_nb_per_exposure": 0.08476681909713416
+        },
+        {
+          "label": "(8.0, 15.0]",
+          "policies": 96510,
+          "exposure": 47065.346160640765,
+          "exposure_raw": 47093.17616064077,
+          "claim_nb": 5195,
+          "matched_rows": 3783,
+          "claims_gap": 1412,
+          "discrepancy_policies": 1346,
+          "discrepancy_share": 0.01394674127033468,
+          "freq_n_per_exposure": 0.0803776091880442,
+          "freq_n_per_raw_exposure": 0.08033010954911407,
+          "freq_claim_nb_per_exposure": 0.11037845089397029
+        }
+      ],
+      "VehAge": [
+        {
+          "label": "(-0.001, 2.0]",
+          "policies": 188147,
+          "exposure": 79137.94534770568,
+          "exposure_raw": 79176.05534770567,
+          "claim_nb": 10904,
+          "matched_rows": 5747,
+          "claims_gap": 5157,
+          "discrepancy_policies": 4891,
+          "discrepancy_share": 0.025995631075701447,
+          "freq_n_per_exposure": 0.07262003043861706,
+          "freq_n_per_raw_exposure": 0.0725850760657595,
+          "freq_claim_nb_per_exposure": 0.13778472453500618
+        },
+        {
+          "label": "(2.0, 4.0]",
+          "policies": 93753,
+          "exposure": 49827.058576240735,
+          "exposure_raw": 49841.35857624074,
+          "claim_nb": 4602,
+          "matched_rows": 3666,
+          "claims_gap": 936,
+          "discrepancy_policies": 884,
+          "discrepancy_share": 0.009429031604321994,
+          "freq_n_per_exposure": 0.07357448151169967,
+          "freq_n_per_raw_exposure": 0.07355337223386953,
+          "freq_claim_nb_per_exposure": 0.09235945551468681
+        },
+        {
+          "label": "(4.0, 8.0]",
+          "policies": 140014,
+          "exposure": 81450.28708585972,
+          "exposure_raw": 81474.16708585972,
+          "claim_nb": 8090,
+          "matched_rows": 6495,
+          "claims_gap": 1595,
+          "discrepancy_policies": 1495,
+          "discrepancy_share": 0.010677503678203608,
+          "freq_n_per_exposure": 0.07974189204702721,
+          "freq_n_per_raw_exposure": 0.07971851977517475,
+          "freq_claim_nb_per_exposure": 0.09932438901623558
+        },
+        {
+          "label": "(8.0, 12.0]",
+          "policies": 128811,
+          "exposure": 74560.39205928586,
+          "exposure_raw": 74590.19205928588,
+          "claim_nb": 7179,
+          "matched_rows": 5971,
+          "claims_gap": 1208,
+          "discrepancy_policies": 1140,
+          "discrepancy_share": 0.00885017583901996,
+          "freq_n_per_exposure": 0.0800827334069304,
+          "freq_n_per_raw_exposure": 0.080050739046953,
+          "freq_claim_nb_per_exposure": 0.09628436495199352
+        },
+        {
+          "label": "(12.0, 100.0]",
+          "policies": 127288,
+          "exposure": 73384.42239389176,
+          "exposure_raw": 73417.67239389176,
+          "claim_nb": 5327,
+          "matched_rows": 4565,
+          "claims_gap": 762,
+          "discrepancy_policies": 707,
+          "discrepancy_share": 0.005554333479982402,
+          "freq_n_per_exposure": 0.06220666254613695,
+          "freq_n_per_raw_exposure": 0.06217848988058904,
+          "freq_claim_nb_per_exposure": 0.07259033765241435
+        }
+      ],
+      "DrivAge": [
+        {
+          "label": "(17.999, 32.0]",
+          "policies": 137178,
+          "exposure": 60729.00752226963,
+          "exposure_raw": 60749.167522269636,
+          "claim_nb": 7268,
+          "matched_rows": 5828,
+          "claims_gap": 1440,
+          "discrepancy_policies": 1352,
+          "discrepancy_share": 0.009855807782589045,
+          "freq_n_per_exposure": 0.09596731838344046,
+          "freq_n_per_raw_exposure": 0.09593547101470241,
+          "freq_claim_nb_per_exposure": 0.11967921585635642
+        },
+        {
+          "label": "(32.0, 40.0]",
+          "policies": 137408,
+          "exposure": 68562.91857100083,
+          "exposure_raw": 68596.26857100082,
+          "claim_nb": 6188,
+          "matched_rows": 4754,
+          "claims_gap": 1434,
+          "discrepancy_policies": 1360,
+          "discrepancy_share": 0.009897531439217512,
+          "freq_n_per_exposure": 0.06933777177348366,
+          "freq_n_per_raw_exposure": 0.0693040612709036,
+          "freq_claim_nb_per_exposure": 0.0902528674241306
+        },
+        {
+          "label": "(40.0, 48.0]",
+          "policies": 132457,
+          "exposure": 69989.82280110786,
+          "exposure_raw": 70019.95280110787,
+          "claim_nb": 7207,
+          "matched_rows": 5289,
+          "claims_gap": 1918,
+          "discrepancy_policies": 1813,
+          "discrepancy_share": 0.01368746083634689,
+          "freq_n_per_exposure": 0.07556812959835471,
+          "freq_n_per_raw_exposure": 0.07553561218505016,
+          "freq_claim_nb_per_exposure": 0.10297211382403902
+        },
+        {
+          "label": "(48.0, 57.0]",
+          "policies": 138534,
+          "exposure": 77306.26987723631,
+          "exposure_raw": 77335.97987723633,
+          "claim_nb": 7799,
+          "matched_rows": 5590,
+          "claims_gap": 2209,
+          "discrepancy_policies": 2091,
+          "discrepancy_share": 0.015093767594958639,
+          "freq_n_per_exposure": 0.07230978818247234,
+          "freq_n_per_raw_exposure": 0.07228200908391676,
+          "freq_claim_nb_per_exposure": 0.10088444329787152
+        },
+        {
+          "label": "(57.0, 100.0]",
+          "policies": 132436,
+          "exposure": 81772.08669136911,
+          "exposure_raw": 81798.07669136912,
+          "claim_nb": 7640,
+          "matched_rows": 4983,
+          "claims_gap": 2657,
+          "discrepancy_policies": 2501,
+          "discrepancy_share": 0.018884593312996467,
+          "freq_n_per_exposure": 0.06093766469244261,
+          "freq_n_per_raw_exposure": 0.060918302746912616,
+          "freq_claim_nb_per_exposure": 0.0934304150612606
+        }
+      ],
+      "BonusMalus": [
+        {
+          "label": "(49.999, 53.0]",
+          "policies": 408146,
+          "exposure": 237871.09252488957,
+          "exposure_raw": 237957.42252488958,
+          "claim_nb": 19109,
+          "matched_rows": 12432,
+          "claims_gap": 6677,
+          "discrepancy_policies": 6300,
+          "discrepancy_share": 0.015435652928118859,
+          "freq_n_per_exposure": 0.052263601550067214,
+          "freq_n_per_raw_exposure": 0.05224464052471258,
+          "freq_claim_nb_per_exposure": 0.0803334268034294
+        },
+        {
+          "label": "(53.0, 72.0]",
+          "policies": 148021,
+          "exposure": 70761.8213721087,
+          "exposure_raw": 70800.07137210868,
+          "claim_nb": 8213,
+          "matched_rows": 6702,
+          "claims_gap": 1511,
+          "discrepancy_policies": 1431,
+          "discrepancy_share": 0.009667547172360678,
+          "freq_n_per_exposure": 0.09471209007971697,
+          "freq_n_per_raw_exposure": 0.09466092152331104,
+          "freq_claim_nb_per_exposure": 0.11606541268646903
+        },
+        {
+          "label": "(72.0, 230.0]",
+          "policies": 121846,
+          "exposure": 49727.191565985486,
+          "exposure_raw": 49741.95156598548,
+          "claim_nb": 8780,
+          "matched_rows": 7310,
+          "claims_gap": 1470,
+          "discrepancy_policies": 1386,
+          "discrepancy_share": 0.011375014362391871,
+          "freq_n_per_exposure": 0.14700206807979488,
+          "freq_n_per_raw_exposure": 0.14695844794715937,
+          "freq_claim_nb_per_exposure": 0.17656335947203816
+        }
+      ],
+      "VehBrand": [
+        {
+          "label": "B1",
+          "policies": 162736,
+          "exposure": 95314.98957781271,
+          "exposure_raw": 95351.0595778127,
+          "claim_nb": 8677,
+          "matched_rows": 6898,
+          "claims_gap": 1779,
+          "discrepancy_policies": 1668,
+          "discrepancy_share": 0.01024972962343919,
+          "freq_n_per_exposure": 0.07237056868551248,
+          "freq_n_per_raw_exposure": 0.07234319189049788,
+          "freq_claim_nb_per_exposure": 0.09103499920037572
+        },
+        {
+          "label": "B10",
+          "policies": 17707,
+          "exposure": 9489.844123063103,
+          "exposure_raw": 9496.014123063103,
+          "claim_nb": 858,
+          "matched_rows": 765,
+          "claims_gap": 93,
+          "discrepancy_policies": 85,
+          "discrepancy_share": 0.004800361438978935,
+          "freq_n_per_exposure": 0.0806124937437935,
+          "freq_n_per_raw_exposure": 0.08056011607459952,
+          "freq_claim_nb_per_exposure": 0.09041244396362723
+        },
+        {
+          "label": "B11",
+          "policies": 13585,
+          "exposure": 6883.077278987948,
+          "exposure_raw": 6887.817278987948,
+          "claim_nb": 721,
+          "matched_rows": 664,
+          "claims_gap": 57,
+          "discrepancy_policies": 55,
+          "discrepancy_share": 0.004048582995951417,
+          "freq_n_per_exposure": 0.0964684795893547,
+          "freq_n_per_raw_exposure": 0.09640209272473092,
+          "freq_claim_nb_per_exposure": 0.10474965931313968
+        },
+        {
+          "label": "B12",
+          "policies": 166024,
+          "exposure": 64802.37871846695,
+          "exposure_raw": 64808.60871846695,
+          "claim_nb": 8859,
+          "matched_rows": 4200,
+          "claims_gap": 4659,
+          "discrepancy_policies": 4430,
+          "discrepancy_share": 0.026682889220835542,
+          "freq_n_per_exposure": 0.06481243563985271,
+          "freq_n_per_raw_exposure": 0.0648062052719738,
+          "freq_claim_nb_per_exposure": 0.1367079446032036
+        },
+        {
+          "label": "B13",
+          "policies": 12178,
+          "exposure": 6768.032215734711,
+          "exposure_raw": 6772.032215734711,
+          "claim_nb": 649,
+          "matched_rows": 539,
+          "claims_gap": 110,
+          "discrepancy_policies": 102,
+          "discrepancy_share": 0.00837575956643127,
+          "freq_n_per_exposure": 0.07963910082267366,
+          "freq_n_per_raw_exposure": 0.07959206082151263,
+          "freq_claim_nb_per_exposure": 0.09589197854158664
+        },
+        {
+          "label": "B14",
+          "policies": 4047,
+          "exposure": 2270.507743094543,
+          "exposure_raw": 2274.467743094543,
+          "claim_nb": 166,
+          "matched_rows": 131,
+          "claims_gap": 35,
+          "discrepancy_policies": 33,
+          "discrepancy_share": 0.00815418828762046,
+          "freq_n_per_exposure": 0.057696345849697996,
+          "freq_n_per_raw_exposure": 0.05759589266443807,
+          "freq_claim_nb_per_exposure": 0.07311140008435013
+        },
+        {
+          "label": "B2",
+          "policies": 159861,
+          "exposure": 94823.7571008309,
+          "exposure_raw": 94864.05710083089,
+          "claim_nb": 8560,
+          "matched_rows": 6805,
+          "claims_gap": 1755,
+          "discrepancy_policies": 1642,
+          "discrepancy_share": 0.010271423298990999,
+          "freq_n_per_exposure": 0.07176471601693549,
+          "freq_n_per_raw_exposure": 0.07173422904279725,
+          "freq_claim_nb_per_exposure": 0.0902727360918395
+        },
+        {
+          "label": "B3",
+          "policies": 53395,
+          "exposure": 28576.436331312223,
+          "exposure_raw": 28592.876331312225,
+          "claim_nb": 2818,
+          "matched_rows": 2429,
+          "claims_gap": 389,
+          "discrepancy_policies": 367,
+          "discrepancy_share": 0.006873302743702594,
+          "freq_n_per_exposure": 0.08500010189648657,
+          "freq_n_per_raw_exposure": 0.08495122952495647,
+          "freq_claim_nb_per_exposure": 0.09861271599188932
+        },
+        {
+          "label": "B4",
+          "policies": 25179,
+          "exposure": 13770.056079796392,
+          "exposure_raw": 13775.496079796394,
+          "claim_nb": 1312,
+          "matched_rows": 1099,
+          "claims_gap": 213,
+          "discrepancy_policies": 201,
+          "discrepancy_share": 0.007982842845228166,
+          "freq_n_per_exposure": 0.07981085869450215,
+          "freq_n_per_raw_exposure": 0.07977934105849228,
+          "freq_claim_nb_per_exposure": 0.09527920528406444
+        },
+        {
+          "label": "B5",
+          "policies": 34753,
+          "exposure": 19983.602694812485,
+          "exposure_raw": 19992.062694812485,
+          "claim_nb": 2020,
+          "matched_rows": 1662,
+          "claims_gap": 358,
+          "discrepancy_policies": 335,
+          "discrepancy_share": 0.009639455586568067,
+          "freq_n_per_exposure": 0.08316818670696631,
+          "freq_n_per_raw_exposure": 0.08313299259666956,
+          "freq_claim_nb_per_exposure": 0.10108287433698673
+        },
+        {
+          "label": "B6",
+          "policies": 28548,
+          "exposure": 15677.423599071786,
+          "exposure_raw": 15684.953599071787,
+          "claim_nb": 1462,
+          "matched_rows": 1252,
+          "claims_gap": 210,
+          "discrepancy_policies": 199,
+          "discrepancy_share": 0.0069707159871094295,
+          "freq_n_per_exposure": 0.07986006068459663,
+          "freq_n_per_raw_exposure": 0.07982172163225855,
+          "freq_claim_nb_per_exposure": 0.09325511878664558
+        }
+      ],
+      "VehGas": [
+        {
+          "label": "Diesel",
+          "policies": 332136,
+          "exposure": 170587.55312673104,
+          "exposure_raw": 170660.89312673104,
+          "claim_nb": 16648,
+          "matched_rows": 13450,
+          "claims_gap": 3198,
+          "discrepancy_policies": 3009,
+          "discrepancy_share": 0.009059541874412892,
+          "freq_n_per_exposure": 0.0788451428810159,
+          "freq_n_per_raw_exposure": 0.0788112598825565,
+          "freq_claim_nb_per_exposure": 0.09759211440023441
+        },
+        {
+          "label": "Regular",
+          "policies": 345877,
+          "exposure": 187772.5523362527,
+          "exposure_raw": 187838.5523362527,
+          "claim_nb": 19454,
+          "matched_rows": 12994,
+          "claims_gap": 6460,
+          "discrepancy_policies": 6108,
+          "discrepancy_share": 0.017659456974589233,
+          "freq_n_per_exposure": 0.06920074227212433,
+          "freq_n_per_raw_exposure": 0.069176427513875,
+          "freq_claim_nb_per_exposure": 0.10360406650468729
+        }
+      ],
+      "Density": [
+        {
+          "label": "(0.999, 67.0]",
+          "policies": 137340,
+          "exposure": 81391.9895650872,
+          "exposure_raw": 81409.00956508721,
+          "claim_nb": 6753,
+          "matched_rows": 4522,
+          "claims_gap": 2231,
+          "discrepancy_policies": 2093,
+          "discrepancy_share": 0.015239551478083589,
+          "freq_n_per_exposure": 0.05555829294950292,
+          "freq_n_per_raw_exposure": 0.0555466775011508,
+          "freq_claim_nb_per_exposure": 0.08296885278372253
+        },
+        {
+          "label": "(67.0, 214.0]",
+          "policies": 134178,
+          "exposure": 74079.35956957856,
+          "exposure_raw": 74104.37956957857,
+          "claim_nb": 6743,
+          "matched_rows": 4839,
+          "claims_gap": 1904,
+          "discrepancy_policies": 1811,
+          "discrepancy_share": 0.013496996527001447,
+          "freq_n_per_exposure": 0.06532183901313295,
+          "freq_n_per_raw_exposure": 0.06529978427869482,
+          "freq_claim_nb_per_exposure": 0.09102400505591143
+        },
+        {
+          "label": "(214.0, 716.0]",
+          "policies": 135398,
+          "exposure": 72007.45158544801,
+          "exposure_raw": 72041.13158544802,
+          "claim_nb": 7091,
+          "matched_rows": 5102,
+          "claims_gap": 1989,
+          "discrepancy_policies": 1867,
+          "discrepancy_share": 0.013788977680615667,
+          "freq_n_per_exposure": 0.0708537781530247,
+          "freq_n_per_raw_exposure": 0.0708206532534614,
+          "freq_claim_nb_per_exposure": 0.09847591942044259
+        },
+        {
+          "label": "(716.0, 2715.0]",
+          "policies": 137845,
+          "exposure": 69456.81392469496,
+          "exposure_raw": 69486.20392469497,
+          "claim_nb": 7855,
+          "matched_rows": 6077,
+          "claims_gap": 1778,
+          "discrepancy_policies": 1673,
+          "discrepancy_share": 0.012136820341688129,
+          "freq_n_per_exposure": 0.0874932156633139,
+          "freq_n_per_raw_exposure": 0.08745620938777851,
+          "freq_claim_nb_per_exposure": 0.11309185602029467
+        },
+        {
+          "label": "(2715.0, 27000.0]",
+          "policies": 133252,
+          "exposure": 61424.49081817502,
+          "exposure_raw": 61458.72081817502,
+          "claim_nb": 7660,
+          "matched_rows": 5904,
+          "claims_gap": 1756,
+          "discrepancy_policies": 1673,
+          "discrepancy_share": 0.012555158646774532,
+          "freq_n_per_exposure": 0.09611801288636898,
+          "freq_n_per_raw_exposure": 0.09606447907477479,
+          "freq_claim_nb_per_exposure": 0.12470595845352073
+        }
+      ],
+      "Region": [
+        {
+          "label": "R11",
+          "policies": 69791,
+          "exposure": 30198.13195448761,
+          "exposure_raw": 30208.64195448761,
+          "claim_nb": 3978,
+          "matched_rows": 2591,
+          "claims_gap": 1387,
+          "discrepancy_policies": 1321,
+          "discrepancy_share": 0.018927941998251922,
+          "freq_n_per_exposure": 0.08580000921596619,
+          "freq_n_per_raw_exposure": 0.0857701582184199,
+          "freq_claim_nb_per_exposure": 0.1317300025708659
+        },
+        {
+          "label": "R21",
+          "policies": 3026,
+          "exposure": 1204.3415090949923,
+          "exposure_raw": 1205.8315090949923,
+          "claim_nb": 160,
+          "matched_rows": 77,
+          "claims_gap": 83,
+          "discrepancy_policies": 79,
+          "discrepancy_share": 0.026107072042300065,
+          "freq_n_per_exposure": 0.06393535340143013,
+          "freq_n_per_raw_exposure": 0.06385635092401135,
+          "freq_claim_nb_per_exposure": 0.13285268239258208
+        },
+        {
+          "label": "R22",
+          "policies": 7994,
+          "exposure": 3572.8402208249117,
+          "exposure_raw": 3574.410220824912,
+          "claim_nb": 439,
+          "matched_rows": 314,
+          "claims_gap": 125,
+          "discrepancy_policies": 119,
+          "discrepancy_share": 0.0148861646234676,
+          "freq_n_per_exposure": 0.08788526231030348,
+          "freq_n_per_raw_exposure": 0.08784666017644004,
+          "freq_claim_nb_per_exposure": 0.1228714336121759
+        },
+        {
+          "label": "R23",
+          "policies": 8784,
+          "exposure": 3176.8821813009954,
+          "exposure_raw": 3177.6821813009956,
+          "claim_nb": 303,
+          "matched_rows": 220,
+          "claims_gap": 83,
+          "discrepancy_policies": 75,
+          "discrepancy_share": 0.00853825136612022,
+          "freq_n_per_exposure": 0.06925028611224912,
+          "freq_n_per_raw_exposure": 0.06923285194931872,
+          "freq_claim_nb_per_exposure": 0.095376530418234
+        },
+        {
+          "label": "R24",
+          "policies": 160601,
+          "exposure": 102706.44338573246,
+          "exposure_raw": 102712.90338573247,
+          "claim_nb": 9204,
+          "matched_rows": 6475,
+          "claims_gap": 2729,
+          "discrepancy_policies": 2546,
+          "discrepancy_share": 0.01585295234774379,
+          "freq_n_per_exposure": 0.06304375642414153,
+          "freq_n_per_raw_exposure": 0.06303979136568173,
+          "freq_claim_nb_per_exposure": 0.08961463075332798
+        },
+        {
+          "label": "R25",
+          "policies": 10893,
+          "exposure": 6652.651142301071,
+          "exposure_raw": 6657.901142301071,
+          "claim_nb": 633,
+          "matched_rows": 452,
+          "claims_gap": 181,
+          "discrepancy_policies": 176,
+          "discrepancy_share": 0.016157165151932433,
+          "freq_n_per_exposure": 0.06794283817558766,
+          "freq_n_per_raw_exposure": 0.06788926274801702,
+          "freq_claim_nb_per_exposure": 0.09515003664855527
+        },
+        {
+          "label": "R26",
+          "policies": 10492,
+          "exposure": 5022.988609177333,
+          "exposure_raw": 5025.358609177334,
+          "claim_nb": 511,
+          "matched_rows": 345,
+          "claims_gap": 166,
+          "discrepancy_policies": 160,
+          "discrepancy_share": 0.015249714067861228,
+          "freq_n_per_exposure": 0.06868420911201394,
+          "freq_n_per_raw_exposure": 0.06865181708026952,
+          "freq_claim_nb_per_exposure": 0.10173226335141775
+        },
+        {
+          "label": "R31",
+          "policies": 27285,
+          "exposure": 11488.074269032113,
+          "exposure_raw": 11497.974269032115,
+          "claim_nb": 1176,
+          "matched_rows": 944,
+          "claims_gap": 232,
+          "discrepancy_policies": 220,
+          "discrepancy_share": 0.008063038299431922,
+          "freq_n_per_exposure": 0.082172170713128,
+          "freq_n_per_raw_exposure": 0.08210141872925454,
+          "freq_claim_nb_per_exposure": 0.10236702622737133
+        },
+        {
+          "label": "R41",
+          "policies": 12990,
+          "exposure": 8112.4879721536045,
+          "exposure_raw": 8113.777972153604,
+          "claim_nb": 611,
+          "matched_rows": 468,
+          "claims_gap": 143,
+          "discrepancy_policies": 137,
+          "discrepancy_share": 0.01054657428791378,
+          "freq_n_per_exposure": 0.057688837457315956,
+          "freq_n_per_raw_exposure": 0.0576796655770186,
+          "freq_claim_nb_per_exposure": 0.07531598223594027
+        },
+        {
+          "label": "R42",
+          "policies": 2200,
+          "exposure": 1208.6358230406468,
+          "exposure_raw": 1209.1158230406468,
+          "claim_nb": 133,
+          "matched_rows": 92,
+          "claims_gap": 41,
+          "discrepancy_policies": 41,
+          "discrepancy_share": 0.018636363636363635,
+          "freq_n_per_exposure": 0.07611887571605265,
+          "freq_n_per_raw_exposure": 0.0760886577173734,
+          "freq_claim_nb_per_exposure": 0.11004141815472829
+        },
+        {
+          "label": "R43",
+          "policies": 1326,
+          "exposure": 563.7729463283181,
+          "exposure_raw": 564.0129463283181,
+          "claim_nb": 57,
+          "matched_rows": 38,
+          "claims_gap": 19,
+          "discrepancy_policies": 18,
+          "discrepancy_share": 0.013574660633484163,
+          "freq_n_per_exposure": 0.0674030214601152,
+          "freq_n_per_raw_exposure": 0.06737433998169216,
+          "freq_claim_nb_per_exposure": 0.1011045321901728
+        },
+        {
+          "label": "R52",
+          "policies": 38751,
+          "exposure": 21930.321164757843,
+          "exposure_raw": 21934.031164757842,
+          "claim_nb": 2010,
+          "matched_rows": 1576,
+          "claims_gap": 434,
+          "discrepancy_policies": 411,
+          "discrepancy_share": 0.01060617790508632,
+          "freq_n_per_exposure": 0.07186397263222216,
+          "freq_n_per_raw_exposure": 0.07185181730443664,
+          "freq_claim_nb_per_exposure": 0.091653924486527
+        },
+        {
+          "label": "R53",
+          "policies": 42122,
+          "exposure": 27752.79367467625,
+          "exposure_raw": 27753.463674676248,
+          "claim_nb": 2702,
+          "matched_rows": 1871,
+          "claims_gap": 831,
+          "discrepancy_policies": 782,
+          "discrepancy_share": 0.01856512036465505,
+          "freq_n_per_exposure": 0.06741663639099663,
+          "freq_n_per_raw_exposure": 0.06741500887715146,
+          "freq_claim_nb_per_exposure": 0.09735956789335805
+        },
+        {
+          "label": "R54",
+          "policies": 19046,
+          "exposure": 11163.008715472715,
+          "exposure_raw": 11163.408715472713,
+          "claim_nb": 968,
+          "matched_rows": 800,
+          "claims_gap": 168,
+          "discrepancy_policies": 155,
+          "discrepancy_share": 0.008138191746298436,
+          "freq_n_per_exposure": 0.07166526698945812,
+          "freq_n_per_raw_exposure": 0.0716626991262251,
+          "freq_claim_nb_per_exposure": 0.08671497305724432
+        },
+        {
+          "label": "R72",
+          "policies": 31329,
+          "exposure": 14316.166692117673,
+          "exposure_raw": 14322.166692117675,
+          "claim_nb": 1348,
+          "matched_rows": 1055,
+          "claims_gap": 293,
+          "discrepancy_policies": 279,
+          "discrepancy_share": 0.008905486929043378,
+          "freq_n_per_exposure": 0.07369291114645037,
+          "freq_n_per_raw_exposure": 0.0736620388995073,
+          "freq_claim_nb_per_exposure": 0.09415928362598587
+        },
+        {
+          "label": "R73",
+          "policies": 17141,
+          "exposure": 7014.428554532526,
+          "exposure_raw": 7020.108554532524,
+          "claim_nb": 688,
+          "matched_rows": 369,
+          "claims_gap": 319,
+          "discrepancy_policies": 298,
+          "discrepancy_share": 0.017385216731812612,
+          "freq_n_per_exposure": 0.05260585336799284,
+          "freq_n_per_raw_exposure": 0.05256328974596206,
+          "freq_claim_nb_per_exposure": 0.09808354232297851
+        },
+        {
+          "label": "R74",
+          "policies": 4567,
+          "exposure": 2395.7345422561566,
+          "exposure_raw": 2395.994542256157,
+          "claim_nb": 259,
+          "matched_rows": 197,
+          "claims_gap": 62,
+          "discrepancy_policies": 58,
+          "discrepancy_share": 0.012699802934092402,
+          "freq_n_per_exposure": 0.08222947765092431,
+          "freq_n_per_raw_exposure": 0.08222055456541129,
+          "freq_claim_nb_per_exposure": 0.10810880564258576
+        },
+        {
+          "label": "R82",
+          "policies": 84752,
+          "exposure": 45332.58728572498,
+          "exposure_raw": 45347.41728572498,
+          "claim_nb": 5032,
+          "matched_rows": 4233,
+          "claims_gap": 799,
+          "discrepancy_policies": 758,
+          "discrepancy_share": 0.00894374174060789,
+          "freq_n_per_exposure": 0.09337653669136489,
+          "freq_n_per_raw_exposure": 0.09334599969230256,
+          "freq_claim_nb_per_exposure": 0.11100182674957433
+        },
+        {
+          "label": "R83",
+          "policies": 5287,
+          "exposure": 2322.274228609926,
+          "exposure_raw": 2322.884228609926,
+          "claim_nb": 189,
+          "matched_rows": 141,
+          "claims_gap": 48,
+          "discrepancy_policies": 46,
+          "discrepancy_share": 0.008700586343862303,
+          "freq_n_per_exposure": 0.06071634360098816,
+          "freq_n_per_raw_exposure": 0.06070039921205115,
+          "freq_claim_nb_per_exposure": 0.08138573716728201
+        },
+        {
+          "label": "R91",
+          "policies": 35805,
+          "exposure": 14710.624176959353,
+          "exposure_raw": 14736.104176959352,
+          "claim_nb": 1547,
+          "matched_rows": 1068,
+          "claims_gap": 479,
+          "discrepancy_policies": 455,
+          "discrepancy_share": 0.01270772238514174,
+          "freq_n_per_exposure": 0.07260059037282487,
+          "freq_n_per_raw_exposure": 0.07247505766618237,
+          "freq_claim_nb_per_exposure": 0.10516209111119858
+        },
+        {
+          "label": "R93",
+          "policies": 79315,
+          "exposure": 35748.98101504603,
+          "exposure_raw": 35790.321015046036,
+          "claim_nb": 3907,
+          "matched_rows": 2986,
+          "claims_gap": 921,
+          "discrepancy_policies": 872,
+          "discrepancy_share": 0.010994137300636702,
+          "freq_n_per_exposure": 0.08352685629677814,
+          "freq_n_per_raw_exposure": 0.08343037769191015,
+          "freq_claim_nb_per_exposure": 0.10928982838295787
+        },
+        {
+          "label": "R94",
+          "policies": 4516,
+          "exposure": 1765.935399356239,
+          "exposure_raw": 1765.935399356239,
+          "claim_nb": 247,
+          "matched_rows": 132,
+          "claims_gap": 115,
+          "discrepancy_policies": 111,
+          "discrepancy_share": 0.0245792736935341,
+          "freq_n_per_exposure": 0.07474792115731968,
+          "freq_n_per_raw_exposure": 0.07474792115731968,
+          "freq_claim_nb_per_exposure": 0.13986921610498457
+        }
+      ]
+    }
+  },
+  "high_counts": {
+    "threshold": 5,
+    "policies": 6,
+    "exposure": 1.3,
+    "matched_rows": 61,
+    "claim_nb_recorded": 61,
+    "cost": 131635.6,
+    "limited_cost": 131635.6,
+    "cost_share_of_matched": 0.0021972512359596623,
+    "n_values": [
+      6,
+      8,
+      9,
+      11,
+      11,
+      16
+    ],
+    "exposures": [
+      0.33,
+      0.41,
+      0.08,
+      0.08,
+      0.07,
+      0.33
+    ],
+    "n_per_exposure": 46.92307692307692,
+    "portfolio_n_per_exposure": 0.07379169610924084
+  },
+  "version_note": {
+    "source": "CASdatasets documentation",
+    "external_policies": 677991,
+    "external_severity_rows": 26444,
+    "file_policies": 678013,
+    "file_severity_rows": 26639,
+    "matched_rows": 26444,
+    "policies_difference": 22,
+    "matched_minus_external_rows": 0
   },
   "linkage": {
     "duplicate_idpol_freq": 0,
@@ -444,8 +1643,11 @@
       "exposure_cap": 1.0,
       "exposure_min": null,
       "claim_nb": {
-        "max": 4,
+        "max": null,
         "action": "cap"
+      },
+      "high_count": {
+        "exclude_n_above": null
       },
       "sev_without_policy": "drop",
       "sev_consistency": {
@@ -454,14 +1656,50 @@
         "count_mismatch": "flag"
       },
       "large_loss": {
-        "cap": 100000,
-        "keep_uncapped_column": true
+        "cap": 100000
       },
       "epsilon": 1e-12,
       "targets": {
-        "frequency_count": "claim_nb",
-        "severity_weight": "sev_rows",
-        "pure_premium_claims_without_sev": "zero_cost"
+        "frequency_count": "sev_rows"
+      },
+      "excess_loading": {
+        "mode": "flat_per_exposure_year"
+      },
+      "sensitivities": {
+        "exclude_high_count": {
+          "high_count": {
+            "exclude_n_above": 5
+          }
+        },
+        "frequency_recorded_claim_nb": {
+          "targets": {
+            "frequency_count": "claim_nb"
+          }
+        },
+        "cap_50000": {
+          "large_loss": {
+            "cap": 50000
+          }
+        },
+        "cap_200000": {
+          "large_loss": {
+            "cap": 200000
+          }
+        },
+        "cap_uncapped": {
+          "large_loss": {
+            "cap": null
+          }
+        },
+        "raw_exposure": {
+          "exposure_cap": null
+        },
+        "exclude_short_records_1day": {
+          "exposure_min": 0.00274
+        },
+        "exclude_short_records_0_05": {
+          "exposure_min": 0.05
+        }
       }
     },
     "impact": {
@@ -469,9 +1707,29 @@
         "action": "error",
         "rows": 0
       },
+      "idpol": {
+        "freq_dtype": "int64",
+        "sev_dtype": "int64",
+        "normalised_dtype": "int64",
+        "freq_unique": true,
+        "sev_distinct_idpol": 24950,
+        "join": "many_to_one (sev -> freq)"
+      },
+      "sev_quarantine": {
+        "rows": 0,
+        "policies": 0,
+        "amount_finite_sum": 0.0
+      },
+      "exposure_quarantine": {
+        "policies": 0,
+        "claims": 0,
+        "sev_rows": 0,
+        "sev_amount": 0.0
+      },
       "sev_without_policy": {
         "action": "drop",
         "rows": 195,
+        "distinct_idpol": 6,
         "amount": 788714.1800000002,
         "amount_share": 0.012994086802696913
       },
@@ -504,16 +1762,16 @@
         "exposure": 0.0,
         "claims": 0
       },
+      "high_count": {
+        "exclude_n_above": null,
+        "policies": 0,
+        "exposure": 0.0,
+        "claims": 0,
+        "sev_rows": 0,
+        "sev_amount": 0.0
+      },
       "claim_nb": {
-        "max": 4,
-        "action": "cap",
-        "policies": 9,
-        "exposure": 3.3800000000000003,
-        "claims": 82,
-        "excess_claims": 46,
-        "sev_rows": 71,
-        "sev_amount": 167225.7,
-        "sev_rows_kept": true
+        "max": null
       },
       "policies_excluded": {
         "policies": 0,
@@ -531,25 +1789,38 @@
         "cap": 100000,
         "claims_capped": 41,
         "amount_removed": 10607020.45,
-        "amount_removed_share": 0.17705156351026555
+        "amount_removed_share": 0.17705156351026555,
+        "amount_removed_share_of_limited": 0.21514296116227463,
+        "applied_per_claim_before_aggregation": true
       },
       "targets": {
-        "frequency_count": "claim_nb",
-        "severity_weight": "sev_rows",
-        "pure_premium_claims_without_sev": "zero_cost",
-        "severity_sample_policies": 24944,
-        "severity_sample_sev_rows": 26444,
-        "severity_weight_total": 26444,
-        "frequency_count_total": 36056,
-        "claims_total": 36056,
-        "claims_without_sev_rows": 9651,
-        "claims_without_sev_rows_share": 0.26766696250277344,
-        "pure_premium_sample_policies": 678013,
-        "cost_total": 49302196.05,
-        "cost_per_sev_row": 1864.4000926486158,
-        "cost_per_claim_if_all_claims_valued": 1367.3784127468382,
-        "implied_cost_at_mean_severity": 17993325.29415179,
-        "implied_cost_share_of_total": 0.267377753151406
+        "frequency_count": "sev_rows",
+        "policies": 678013,
+        "policies_with_claim_rows": 24944,
+        "matched_rows": 26444,
+        "claim_nb_recorded_total": 36102,
+        "frequency_count_total": 26444,
+        "discrepancy_policies": 9117,
+        "cost_total": 59909216.5,
+        "limited_cost_total": 49302196.05,
+        "excess_total": 10607020.450000003,
+        "excess_share_of_cost": 0.17705156351026563,
+        "excess_share_of_limited_cost": 0.21514296116227472,
+        "invariant_n_zero_iff_s_zero": true
+      },
+      "reconciliation": {
+        "sev_rows_raw": 26639,
+        "sev_total_raw": 60697930.68000001,
+        "quarantined_rows": 0,
+        "orphan_rows": 195,
+        "orphan_cost": 788714.1800000002,
+        "valid_total": 60697930.68000001,
+        "exposure_quarantined_rows": 0,
+        "exposure_quarantined_cost": 0.0,
+        "matched_rows": 26444,
+        "matched_cost": 59909216.5,
+        "matched_rows_modelled": 26444,
+        "matched_cost_modelled": 59909216.5
       }
     },
     "before": {
@@ -563,10 +1834,10 @@
     "after": {
       "policies": 678013,
       "exposure": 358360.1054629838,
-      "claims": 36056,
+      "claims": 36102,
       "policies_with_claim": 34060,
       "sev_rows": 26444,
-      "claim_amount": 49302196.05
+      "claim_amount": 59909216.5
     }
   },
   "split_primary": "grouped"

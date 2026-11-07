@@ -27,40 +27,64 @@ rating_factors: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehBrand, VehGas, 
 audit:
   exposure_small_thresholds: [0.00274, 0.01, 0.02, 0.05]  # ~1 day, then fractions of a year
   exposure_quantiles: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99, 0.999]
-  claim_nb_extreme_above: 4        # ClaimNb values above this are listed as extreme
+  exposure_bands: [0.0027397260273972603, 0.05, 1.0]  # upper edges: e<=1/365, (1/365,0.05], (0.05,1], then raw e>1
+  claim_nb_extreme_above: 4        # recorded ClaimNb values above this are listed as extreme
+  high_count_n_above: 5            # policies with N_i (matched severity rows) above this are re-audited
   amount_quantiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.995, 0.999]
   top_n: 10
-  large_loss_candidates: [25000, 50000, 100000, 200000, 500000, 1000000]  # evidence for clean.large_loss.cap
+  large_loss_candidates: [25000, 50000, 100000, 200000, 500000, 1000000]  # matched claims only
+  cap_table: [50000, 100000, 200000, null]  # per-claim caps in the cap table; null = uncapped
+  idpol_band_edges: [24500, 100000, 1000000, 3000000]  # upper edges of IDpol bands (<= edge); a last open band follows
+  discrepancy_numeric_bins: 5      # quantile bins for numeric rating factors in the discrepancy table
   small_amount_threshold: 100      # ClaimAmount rows below this are counted
   group_size_bins: [1, 2, 3, 4, 5, 10]  # lower edges of the group-size bins; the last bin is open-ended
   epsilon: 1.0e-12                 # guard against division by zero in ratios
+  # External figures from the CASdatasets documentation (https://dutangc.github.io/CASdatasets/reference/freMTPL.html),
+  # an external claim compared with, not asserted about, the files used here.
+  external_reference:
+    source: CASdatasets documentation
+    policies: 677991
+    severity_rows: 26444
 
-# Cleaning rules, applied by one function (fremtpl2_pricing.clean.clean) to the full dataset
-# before splitting. Each rule is justified with measured numbers in reports/data_audit.md;
-# judgement calls are marked "for human review" there.
+# Cleaning rules and targets, applied by one function (fremtpl2_pricing.clean.clean) to the full
+# dataset before splitting. Rules were fixed by the human decision of 2026-11-07 (post-audit,
+# pre-model amendments, reports/data_audit.md section 8) after the first audit.
 clean:
   duplicate_idpol: error           # error | keep (audit measured 0 duplicates)
-  exposure_cap: 1.0                # cap Exposure at this many years; null disables
-  exposure_min: null               # drop policies with Exposure below this; null = keep all
+  exposure_cap: 1.0                # cap Exposure at this many years; null disables (raw exposure)
+  exposure_min: null               # drop policies with Exposure below this; null = keep all. e <= 0 / non-finite is always quarantined
   claim_nb:
-    max: 4                         # null disables
+    max: null                      # no ClaimNb clipping in the primary rules; a number enables
     action: cap                    # cap | exclude (policy dropped)
-  sev_without_policy: drop         # severity rows whose IDpol is not in freq: drop | keep
+  high_count:
+    exclude_n_above: null          # drop whole policies with N_i above this (all targets alike); null = keep
+  sev_without_policy: drop         # severity rows whose IDpol is not in freq: drop (written to the orphan ledger)
   sev_consistency:                 # per category: flag (keep, mark in sev_status) | drop (policy)
     claims_without_sev: flag       # ClaimNb > 0 but no severity rows
     sev_without_claims: flag       # severity rows but ClaimNb = 0
     count_mismatch: flag           # both > 0 but counts differ
   large_loss:
-    cap: 100000                    # per-claim ClaimAmount cap; null disables
-    keep_uncapped_column: true
+    cap: 100000                    # per-claim cap applied before aggregation; null = uncapped
   epsilon: 1.0e-12                 # guard against division by zero in ratios
-  # Modelling targets derived per policy (columns added by clean). The severity sample is always
-  # the policies with severity rows. These keys are judgement calls: FOR HUMAN REVIEW (see
-  # reports/data_audit.md, R5). Severity rows of policies whose ClaimNb is capped are NOT capped.
+  # One policy-level target table (fremtpl2_pricing.targets): N = matched severity rows,
+  # S = sum of amounts, S_cap = sum of per-claim capped amounts, excess = S - S_cap.
   targets:
-    frequency_count: claim_nb      # claim_nb (a: ClaimNb as recorded, after claim_nb cap) | sev_rows (b: number of severity rows)
-    severity_weight: sev_rows      # sev_rows (one per severity row) | claim_nb (ClaimNb after cap)
-    pure_premium_claims_without_sev: zero_cost  # zero_cost (keep, observed cost 0) | exclude (policy leaves the pure-premium sample)
+    frequency_count: sev_rows      # sev_rows (b: N, primary) | claim_nb (a: recorded ClaimNb, sensitivity)
+  # Training-only flat annual loading of the excess over the cap:
+  # sum(train excess) / sum(train exposure), orphans excluded. none | flat_per_exposure_year
+  excess_loading:
+    mode: flat_per_exposure_year
+  # Pre-registered sensitivities (declared before any model is run): rule overrides merged into
+  # the primary rules, selectable by name (clean.clean_sensitivity). The split stays frozen.
+  sensitivities:
+    exclude_high_count: {high_count: {exclude_n_above: 5}}
+    frequency_recorded_claim_nb: {targets: {frequency_count: claim_nb}}
+    cap_50000: {large_loss: {cap: 50000}}
+    cap_200000: {large_loss: {cap: 200000}}
+    cap_uncapped: {large_loss: {cap: null}}
+    raw_exposure: {exposure_cap: null}
+    exclude_short_records_1day: {exposure_min: 0.00274}
+    exclude_short_records_0_05: {exposure_min: 0.05}
 
 split:
   primary: grouped                 # grouped | random
