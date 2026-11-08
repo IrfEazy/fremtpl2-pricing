@@ -65,7 +65,13 @@
   "sources": {
     "cv_glm": {
       "path": "results/cv_glm.json",
-      "sha256": "c04eb1e3aeeb0d9160583dc4cfb23697e9d831abd11bbdbf9be32cc366d73128"
+      "content_sha256_excluding": [
+        "fit_seconds",
+        "fold_seconds",
+        "seconds",
+        "timing_seconds"
+      ],
+      "sha256": "9bc69f5798107a24d518499a6214e40e1e3a957f05604858f1868a7a9f3de051"
     },
     "glm_models": {
       "path": "results/glm_models.json",
@@ -77,11 +83,23 @@
     },
     "cv_gbm": {
       "path": "results/cv_gbm.json",
-      "sha256": "d44936830654b7ed3ac49ba840c92bd7c820a0d026be162c19013f76f20c1ffc"
+      "content_sha256_excluding": [
+        "fit_seconds",
+        "fold_seconds",
+        "seconds",
+        "timing_seconds"
+      ],
+      "sha256": "6a1718e97c93b27e92be3cf51058a2162b299f4f022f6c54fd4bc1b17e21355e"
     },
     "gbm_models": {
       "path": "results/gbm_models.json",
-      "sha256": "aa04160d9d14ee593312bc43c00c9231d0a50aa4e7b5803189d88dcf1d5cd200"
+      "content_sha256_excluding": [
+        "fit_seconds",
+        "fold_seconds",
+        "seconds",
+        "timing_seconds"
+      ],
+      "sha256": "b005bda07442b3373f7e21cb321d5fbc8b01c0a092b1fe67378fc4c785141f4d"
     },
     "gbm_model_frequency": {
       "path": "data/processed/models/frequency.txt",

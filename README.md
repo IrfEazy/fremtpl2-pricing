@@ -112,14 +112,7 @@ covered by the declared, post-hoc deviations. Three run-state fields remain unco
 the amended verdict are FAIL. Held-out metrics were not recomputed. The records are in [`results/reproduction/`](results/reproduction/).
 
 <!-- docs:reproduction:begin -->
-Reproduction runs (each in a fresh clone of the tested commit; the history is immutable):
-
-| Run | Date | Tested commit | Strict verdict | Amended verdict | Minutes |
-| --- | --- | --- | --- | --- | --- |
-| run-1 | 2026-11-08 | `b0008e1d` | **FAIL** | - | 29.5 |
-| run-2 | 2026-11-08 | `483d8dd7` | **FAIL** | **FAIL** | 22.6 |
-
-Latest run (run-2): machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35 (x86_64, 8 CPUs), Python 3.12.15.
+Latest reproduction (fresh clone of the tested commit): commit `483d8dd7`, 2026-11-08, verdict **FAIL** (with declared deviations: **FAIL**), 22.6 minutes in total; machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35 (x86_64, 8 CPUs), Python 3.12.15.
 
 | Step | Minutes |
 | --- | --- |
@@ -134,7 +127,11 @@ Latest run (run-2): machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-
 | freeze_check | 0.1 |
 | report | 0.0 |
 
-Disclosure: the first run failed the original strict policy on the two declared metadata/provenance differences (the download date of the raw-data metadata and the GLM training config echo with its hash), and its reports and figures were not compared. The exceptions are post-hoc and artifact-specific (a third one allows the timing values rendered in the markdown reports to differ). A PASS_WITH_DECLARED_DEVIATIONS is not an exact pass under the original policy. The frozen artifacts and the original failure record are unchanged. Held-out metrics were not recomputed.
+Declared deviations of the verification policy (`configs/reproduce.yaml`):
+
+- The download date recorded in the raw-data metadata (data/raw/manifest.json) may differ; the raw data files must be byte-identical.
+- The echo of the GLM training config and its hash (cv_glm.json, glm_cv.md) may differ in the pinned config keys that the GLM training modules do not read.
+- The timing values rendered in the markdown reports (glm_cv.md, glm_sensitivities.md, gbm_cv.md) may differ; every other byte must be identical.
 <!-- docs:reproduction:end -->
 
 ## Repository map

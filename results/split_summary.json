@@ -379,7 +379,6 @@
   "frozen_split": {
     "file": "data/processed/split.parquet",
     "sha256": "cd10c7e650ec50ac83c8910dbaa2883356f3f31a1aa90f0d1b888620059c54d0",
-    "status": "verified identical to the stored file (not overwritten)",
     "recomputed_identical": true
   }
 }
