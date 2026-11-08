@@ -1,40 +1,154 @@
 # fremtpl2-pricing
 
-Motor third-party liability pricing on the public freMTPL2 data (French policies): claim
-frequency, claim severity and pure premium, comparing GLMs with gradient boosting and
-evaluating the results with actuarial criteria.
+Motor third-party liability (TPL) insurers price a policy from its expected claim frequency and
+claim severity; their product is the pure premium. This project asks one question on the public
+freMTPL2 data: does a gradient-boosted model (LightGBM) predict the pure premium better than a
+classical generalised linear model (GLM) on policies it has never seen, and how sure can we be?
+The answer comes from one test evaluation, run once under a protocol written before test access, with a confidence interval.
 
-Status: milestone 1 (scaffold, download, data audit, cleaning rules, pre-registered split) is
-complete, with the post-audit, pre-model amendments of 2026-11-07 applied (matched-row targets,
-per-claim cap 100000, no ClaimNb clipping; see section 8 of `reports/data_audit.md`). Milestone 2
-(grouped cross-validation of the frequency, severity and Tweedie GLMs on the training set only, with
-baselines and final refits) is implemented as `fremtpl2 train`; its outputs are `results/cv_glm.json`,
-`results/glm_relativities_*.csv` and `reports/glm_cv.md`. The declared cleaning sensitivities are run in CV only
-(`fremtpl2 sensitivities`). The LightGBM candidates (tuning, refit, monotonicity diagnostic) are implemented as `fremtpl2 gbm`. The freeze stage (`fremtpl2 freeze`) and the one-shot, fit-free test evaluation (`fremtpl2 evaluate`) are implemented and rehearsed on synthetic data only. `fremtpl2 interpret` (train-only interpretation) and `fremtpl2 report` (test report) are implemented. The test set is untouched. Milestone 3 (gradient boosting and the single final test evaluation) is
-pre-registered in [`reports/evaluation_protocol.md`](reports/evaluation_protocol.md), written before any test access.
+**This is a methodology demonstration, not a production tariff.** See [`MODEL_CARD.md`](MODEL_CARD.md).
+
+## Result
+
+Primary contrast: the selected GBM against the selected GLM on the loss fixed in the protocol, with a paired
+bootstrap over rating-profile groups. Lower loss is better; the other rows are descriptive.
+All numbers below are generated from `results/metrics.json` by `make docs`.
+
+<!-- docs:results:begin -->
+Population: the primary grouped test fold, 135 602 policies, 71737.2 exposure-years, 5 321 claims on 4 978 policies, 105 759 rating-profile groups.
+
+Primary contrast Delta = L(`gbm_freq_x_sev`) - L(`glm_freq_x_sev[simplified]`) = -1.37922 (95% group-bootstrap CI [-2.12406, -0.77571]): **improvement**.
+
+Gini difference (normalised, secondary) = 0.05891 (95% CI [0.02616, 0.10615]).
+
+| Candidate | Primary loss (Tweedie 1.5) | 95% CI (group bootstrap) | Normalised Gini | Gini 95% CI | Observed / predicted |
+| --- | --- | --- | --- | --- | --- |
+| `pp_null` | 78.197 | [74.500, 81.958] | 0.0000 | n/a | 1.0130 |
+| `bonus_malus_only` | 75.510 | [71.955, 79.230] | 0.2653 | n/a | 1.0129 |
+| `glm_freq_x_sev[simplified]` | 74.567 | [70.849, 78.504] | 0.3136 | [0.2577, 0.3647] | 1.0148 |
+| `glm_tweedie` | 74.415 | [70.739, 78.298] | 0.3192 | n/a | 1.0081 |
+| `gbm_freq_x_sev` | 73.188 | [69.631, 76.972] | 0.3725 | [0.3271, 0.4161] | 1.0303 |
+| `gbm_tweedie` | 73.504 | [69.812, 77.360] | 0.3572 | n/a | 1.0731 |
+<!-- docs:results:end -->
+
+![Lorenz curves on the test set](reports/figures/test_lorenz.png)
+
+![Lift charts on the test set](reports/figures/test_lift.png)
+
+Main risk drivers of the GBM, from SHAP contributions on a fixed training sample (no test row). The
+comparison with the GLM relativities is in [`reports/interpretation.md`](reports/interpretation.md).
+
+<!-- docs:drivers:begin -->
+Mean absolute TreeSHAP contribution to the raw score (log scale) on a fixed train sample of 20 000 of 542 411 train policies; no test row.
+
+| GBM component | Top drivers (mean absolute contribution, share) |
+| --- | --- |
+| frequency | BonusMalus (0.3866, 39.91%), DrivAge (0.1327, 13.70%), Density (0.1035, 10.68%) |
+| severity | Region (0.0456, 29.02%), DrivAge (0.0379, 24.11%), BonusMalus (0.0184, 11.70%) |
+| tweedie | BonusMalus (0.3984, 41.42%), DrivAge (0.1311, 13.63%), VehAge (0.0988, 10.27%) |
+<!-- docs:drivers:end -->
+
+## Data
+
+freMTPL2 (French motor policies, frequency and severity tables) from OpenML. Provenance and
+checksums are in [`data/README.md`](data/README.md). The raw files are downloaded, never committed.
+
+## Method
+
+- Cleaning and targets: documented rules, with a per-claim cap on claim amounts and a flat loading
+  for the excess above the cap ([`reports/data_audit.md`](reports/data_audit.md)).
+- Split: grouped by rating profile (all rating factors together), so identical profiles never sit on
+  both sides. The grouped split was registered as primary in
+  [`reports/data_audit.md`](reports/data_audit.md) (section 8, decision of 2026-11-07) before any model was fitted.
+  The selection rules, the primary contrast and the test decision rule were written in
+  [`reports/evaluation_protocol.md`](reports/evaluation_protocol.md) after the GLM cross-validation and before any test access.
+- Exposure enters as an offset (frequency) or a weight, never as a rating factor.
+- GLMs: frequency, severity and Tweedie models with readable relativities.
+- Gradient boosting: LightGBM frequency, severity and Tweedie models, tuned in grouped
+  cross-validation on the training set only, with a monotone constraint on BonusMalus.
+- Interpretation: SHAP contributions of the GBM against the GLM relativities, on training data.
+- Evaluation: one frozen, one-shot test evaluation with a paired group bootstrap for the single
+  primary contrast. No test outcome was used in training, tuning or selection. The full-data audit and the
+  freeze's factor-level coverage check read test covariate levels only (no outcomes), as disclosed in the
+  protocol amendment. The test set was evaluated once.
+
+## Limits
+
+The conclusion is conditional on the frozen models and on this dataset, and holds for held-out rating
+profiles of freMTPL2 only. The full list with measured values is in the limits section of
+[`reports/model_report.md`](reports/model_report.md).
+
+## Out of scope
+
+- Price elasticity and price optimisation: there is no price or conversion data.
+- Large-loss modelling beyond the documented per-claim cap.
+- Fairness or regulatory analysis of rating factors beyond the short discussion in the model card;
+  the data has no protected attributes.
 
 ## Reproduce
 
 ```sh
-make setup      # uv sync (installs the pinned Python and dependencies)
-make download   # fetch freMTPL2freq / freMTPL2sev from OpenML into data/raw/
-make audit      # results/audit.json + reports/data_audit.md + results/orphan_ledger.csv
-make split      # verifies the frozen data/processed/split.parquet (never overwritten); results/split_summary.json,
-                # results/targets_summary.json (about 2.5 minutes)
-make train      # CV of the GLMs on train only: results/cv_glm.json, glm_relativities_*.csv, reports/glm_cv.md
-make gbm        # LightGBM candidates tuned in grouped CV on train only: results/cv_gbm.json, results/gbm_models.json, reports/gbm_cv.md
-make interpret  # train-only SHAP vs GLM, BonusMalus monotonicity, constraint register: results/interpretation.json,
-                # reports/interpretation.md, reports/figures/interp_*.png (commit before freeze)
-make freeze     # train only, clean committed tree: results/freeze_manifest.json (candidates, selected ids, hashes); commit it
-make rehearsal  # the identical evaluate code path on a train CV fold (no test row): outputs under data/processed/rehearsal/
-make evaluate   # the single test evaluation (protocol section 6): results/test/attempt-<n>/, results/metrics.json,
-                # results/test_access.json; one-shot, refused when the test set was already accessed; not part of `make all`
-                # recovery: `fremtpl2 evaluate --publish-only` republishes a COMPLETE attempt's staged, hashed outputs
-make report     # after evaluate: reports/test_evaluation.md + reports/figures/test_*.png from results/metrics.json only;
-                # non-zero exit and nothing written without a completed attempt; not part of `make all`
-make test lint
+make setup       # uv sync (installs the pinned Python and dependencies)
+make all         # download, audit, split, train, gbm, sensitivities, interpret, then the freeze check
+make reproduce   # rebuild the pre-test pipeline in a clean clone and compare it with the committed outputs
+make docs        # re-render reports/model_report.md and the generated blocks of this README and the model card
+make test lint   # offline unit tests and style checks
 ```
 
-The audit report documents every cleaning rule with measured counts; the judgement calls were decided
-on 2026-11-07 and are listed in its section 8. Settings (paths, seed, dataset ids, cleaning rules, split) live in `configs/default.yaml`. Data provenance and
-checksums are in `data/README.md`.
+Individual stages (`make audit`, `make split`, `make train`, `make gbm`, `make interpret`) are listed in
+the [`Makefile`](Makefile). The test set was opened once, so `make all` no longer runs `freeze` or
+`evaluate`. After test access it rebuilds the pre-test artifacts, verifies them against the published
+freeze, then validates and re-renders the published evaluation outputs. It never recomputes held-out
+metrics. Settings live in `configs/`.
+
+### Reproduction status
+
+This section does not claim that the reproduction passed. The records below are the history of
+`make reproduce`: each run rebuilds the pre-test pipeline from a fresh clone. The first run stopped
+at the strict check, so its reports and figures were not compared. The second run compared all tracked
+outputs: figures and CSV tables are byte-identical, every numeric value in the JSON results is
+identical, and the markdown reports differ only in timing values and the GLM config-hash line, both
+covered by the declared, post-hoc deviations. Three run-state fields remain uncovered (the split status text, the input hashes recorded in the interpretation results, and the rendered test report; see the records), so both the strict and
+the amended verdict are FAIL. Held-out metrics were not recomputed. The records are in [`results/reproduction/`](results/reproduction/).
+
+<!-- docs:reproduction:begin -->
+Reproduction runs (each in a fresh clone of the tested commit; the history is immutable):
+
+| Run | Date | Tested commit | Strict verdict | Amended verdict | Minutes |
+| --- | --- | --- | --- | --- | --- |
+| run-1 | 2026-11-08 | `b0008e1d` | **FAIL** | - | 29.5 |
+| run-2 | 2026-11-08 | `483d8dd7` | **FAIL** | **FAIL** | 22.6 |
+
+Latest run (run-2): machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35 (x86_64, 8 CPUs), Python 3.12.15.
+
+| Step | Minutes |
+| --- | --- |
+| setup | 0.0 |
+| download | 0.3 |
+| audit | 0.2 |
+| split | 1.7 |
+| train | 8.1 |
+| gbm | 9.2 |
+| sensitivities | 2.2 |
+| interpret | 0.8 |
+| freeze_check | 0.1 |
+| report | 0.0 |
+
+Disclosure: the first run failed the original strict policy on the two declared metadata/provenance differences (the download date of the raw-data metadata and the GLM training config echo with its hash), and its reports and figures were not compared. The exceptions are post-hoc and artifact-specific (a third one allows the timing values rendered in the markdown reports to differ). A PASS_WITH_DECLARED_DEVIATIONS is not an exact pass under the original policy. The frozen artifacts and the original failure record are unchanged. Held-out metrics were not recomputed.
+<!-- docs:reproduction:end -->
+
+## Repository map
+
+- [`reports/data_audit.md`](reports/data_audit.md): data audit and cleaning rules
+- [`reports/evaluation_protocol.md`](reports/evaluation_protocol.md): protocol written before test access
+- [`reports/glm_cv.md`](reports/glm_cv.md): GLM cross-validation
+- [`reports/gbm_cv.md`](reports/gbm_cv.md): GBM tuning
+- [`reports/glm_sensitivities.md`](reports/glm_sensitivities.md): cleaning sensitivities
+- [`reports/interpretation.md`](reports/interpretation.md): SHAP against GLM relativities
+- [`reports/test_evaluation.md`](reports/test_evaluation.md): the single test evaluation
+- [`reports/model_report.md`](reports/model_report.md): full comparison, decisions and limits
+- [`MODEL_CARD.md`](MODEL_CARD.md): intended use and caveats
+- `src/fremtpl2_pricing/`: package and `fremtpl2` CLI; `configs/`: all settings; `tests/`: offline tests;
+  `results/`: pipeline outputs; [`data/README.md`](data/README.md): data provenance
+
+Not a production tariff.

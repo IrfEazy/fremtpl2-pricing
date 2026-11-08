@@ -114,7 +114,7 @@
   fixed post-hoc disclosure once a record carries an amendment). Rule: every number in README, model card and model report goes through a docs block or the
   model report, never typed by hand; text outside the markers is preserved byte for byte, a missing or duplicated marker is an
   error, output is deterministic and `fremtpl2 docs --check` writes nothing and exits non-zero on drift. Runs after `report`
-  (`make docs`, explicit, never in `make all`); adding a block means one render function in `BLOCKS`.
+  (`make docs`, explicit, never in `make all`); adding a block means one render function in `BLOCKS`. README.md and MODEL_CARD.md prose contains no digit outside the generated blocks, commands, file names, links, figure paths and the dataset name; text that conflicts with the rendered numbers is fixed after each `make docs`. `.github/workflows/ci.yml` (push and pull_request; ruff check and format, `pytest -q`, `fremtpl2 docs --check`; offline, no secrets) must stay in step with `make test lint docs`.
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
   primary; the random split is a labelled sensitivity. Do not change the choice after seeing test
   results. `reports/evaluation_protocol.md` (2026-11-08) governs milestone 3 and the single test

@@ -64,7 +64,9 @@ freeze-check:
 	uv run fremtpl2 freeze --check
 
 # Rebuilds the pre-test pipeline in an isolated clean clone of HEAD and compares it with the committed
-# baseline; writes results/reproduction.json. Never recomputes held-out metrics. Settings: configs/reproduce.yaml `reproduce:`.
+# baseline. Appends an immutable record results/reproduction/run-<n>.json (the run history) with a strict
+# verdict and a post-hoc amended verdict; the exit code is 0 only for an exact pass or the amended pass
+# (a PORTABLE_NUMERIC_PASS or any failure exits non-zero, but the record is still written). Never recomputes held-out metrics. Settings: configs/reproduce.yaml.
 reproduce:
 	uv run fremtpl2 reproduce
 
