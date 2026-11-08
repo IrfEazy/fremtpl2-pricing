@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import math
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,9 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG = "configs/default.yaml"
+# Post-test verification policy (`freeze --check`, `reproduce`); kept out of the frozen main config.
+DEFAULT_REPRODUCE_CONFIG = "configs/reproduce.yaml"
+REPRODUCE_KEYS = ("check", "reproduce")
 REQUIRED_KEYS = ("seed", "paths", "download")
 REQUIRED_PATHS = ("raw", "processed", "results", "reports")
 
@@ -64,3 +68,37 @@ def load_config(path: str | Path = DEFAULT_CONFIG) -> dict[str, Any]:
     if "models" in cfg:
         validate_models(cfg["models"])
     return cfg
+
+
+def load_reproduce_config(path: str | Path = DEFAULT_REPRODUCE_CONFIG) -> dict[str, Any]:
+    """Load the verification policy: top-level ``check`` (``freeze --check``) and ``reproduce``."""
+    path = Path(path)
+    if not path.is_file():
+        raise ConfigError(f"reproduce config file not found: {path}")
+    with path.open(encoding="utf-8") as fh:
+        rcfg = yaml.safe_load(fh)
+    if not isinstance(rcfg, dict):
+        raise ConfigError(f"reproduce config must be a mapping: {path}")
+    for key in REPRODUCE_KEYS:
+        if not isinstance(rcfg.get(key), dict):
+            raise ConfigError(f"missing config mapping '{key}' in {path}")
+    return rcfg
+
+
+def with_reproduce(cfg: dict[str, Any], rcfg: dict[str, Any]) -> dict[str, Any]:
+    """A copy of ``cfg`` with ``freeze.check`` and ``reproduce`` taken from the reproduce config.
+
+    Raises ``ConfigError`` if ``cfg`` already has either key (never silently overrides).
+    """
+    if "check" in (cfg.get("freeze") or {}):
+        raise ConfigError(
+            "main config already defines freeze.check; it belongs in the reproduce config"
+        )
+    if "reproduce" in cfg:
+        raise ConfigError(
+            "main config already defines reproduce; it belongs in the reproduce config"
+        )
+    out = copy.deepcopy(cfg)
+    out.setdefault("freeze", {})["check"] = copy.deepcopy(rcfg["check"])
+    out["reproduce"] = copy.deepcopy(rcfg["reproduce"])
+    return out

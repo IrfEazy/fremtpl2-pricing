@@ -3,7 +3,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from fremtpl2_pricing.config import ConfigError, load_config
+from fremtpl2_pricing.config import (
+    ConfigError,
+    load_config,
+    load_reproduce_config,
+    with_reproduce,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,3 +40,31 @@ def test_l2_grid_must_be_strictly_positive(bad):
 
     with pytest.raises(ConfigError):
         validate_models(cfg["models"])
+
+
+def test_reproduce_config_is_separate_and_merged_on_a_copy():
+    cfg = load_config(ROOT / "configs" / "default.yaml")
+    assert "check" not in cfg["freeze"] and "reproduce" not in cfg
+    rcfg = load_reproduce_config(ROOT / "configs" / "reproduce.yaml")
+    assert rcfg["reproduce"]["exact_keys"] == rcfg["check"]["exact_keys"]
+    merged = with_reproduce(cfg, rcfg)
+    assert merged["freeze"]["check"] == rcfg["check"] and merged["reproduce"] == rcfg["reproduce"]
+    assert "check" not in cfg["freeze"] and "reproduce" not in cfg  # the input is untouched
+
+
+def test_with_reproduce_rejects_conflicting_main_config():
+    cfg = load_config(ROOT / "configs" / "default.yaml")
+    rcfg = load_reproduce_config(ROOT / "configs" / "reproduce.yaml")
+    with pytest.raises(ConfigError, match="freeze.check"):
+        with_reproduce({**cfg, "freeze": {**cfg["freeze"], "check": {}}}, rcfg)
+    with pytest.raises(ConfigError, match="reproduce"):
+        with_reproduce({**cfg, "reproduce": {}}, rcfg)
+
+
+def test_reproduce_config_errors(tmp_path):
+    with pytest.raises(ConfigError):
+        load_reproduce_config(tmp_path / "nope.yaml")
+    p = tmp_path / "r.yaml"
+    p.write_text(yaml.safe_dump({"check": {}}))
+    with pytest.raises(ConfigError):
+        load_reproduce_config(p)

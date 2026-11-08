@@ -15,7 +15,13 @@ import pytest
 from PIL import Image
 
 from fremtpl2_pricing import freeze, reproduce
-from synth import _DEFAULTS
+from fremtpl2_pricing.config import load_reproduce_config, with_reproduce
+from synth import _DEFAULTS as _MAIN
+
+# the verification policy lives in configs/reproduce.yaml, not in the frozen main config
+_DEFAULTS = with_reproduce(
+    _MAIN, load_reproduce_config(Path(__file__).resolve().parents[1] / "configs/reproduce.yaml")
+)
 
 PASS = {"passed": True, "numeric_only": True}
 NUMERIC = {"passed": False, "numeric_only": True}
@@ -415,6 +421,16 @@ def test_comparison_rules_come_from_the_source_snapshot_not_the_clone(repo, cfg)
     assert rec["comparison"]["categories"]["json"]["statuses"].get("fail") == 1
     assert "configs/default.yaml" in rec["comparison"]["untracked_source"]
     assert rec["tolerances"]["rtol"] == 1.0e-6
+
+
+def test_reproduce_config_change_in_the_clone_is_a_source_change(repo, cfg):
+    _write(repo, "configs/reproduce.yaml", "check: {}\nreproduce: {}\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "policy")
+    edit = lambda c: _write(c, "configs/reproduce.yaml", "check: {}\nreproduce: {rtol: 1.0}\n")  # noqa: E731
+    rec = _run(repo, cfg, runner=_runner(edit=edit))
+    assert rec["verdict"] == "FAIL"
+    assert rec["comparison"]["source_changed"] == ["configs/reproduce.yaml"]
 
 
 def test_producer_exiting_zero_without_its_outputs_fails(repo, cfg):

@@ -39,7 +39,7 @@
   `fremtpl2 evaluate --rehearsal` runs it on train fold `freeze.rehearsal.fold` with its own journal and outputs under
   `data/processed/rehearsal/` (no test row, no `results/` write); run it before the real evaluation. Agents never run
   `freeze` or `evaluate` (rehearsal included) on the real project unless the lead says so; `make all` stops at `freeze`. A crash between the journal append and the mirror write makes `evaluate` fail closed; the operator inspects both files and restores the mirror from the authoritative journal only (never the reverse), recorded as a technical note.
-- Reproduction (config `freeze.check:` and `reproduce:`). `fremtpl2 freeze --check` (module `freeze`, `run_freeze_check`) is
+- Reproduction (post-test verification policy in `configs/reproduce.yaml`, top-level `check:` and `reproduce:`; deliberately outside `configs/default.yaml`, whose sha256 must equal the `config` entry of `results/freeze_manifest.json`, guarded by `tests/test_manifest.py`; `freeze --check` and `reproduce` load it from `--reproduce-config`, default `DEFAULT_REPRODUCE_CONFIG`, merged onto a copy of the main config as `freeze.check` / `reproduce`; a change of it in the clone is a source change and fails `reproduce`). `fremtpl2 freeze --check` (module `freeze`, `run_freeze_check`) is
   strict and read-only (writes nothing, needs no clean tree, allowed after test access, exit 1 on any mismatch, structured JSON on
   stdout): the manifest is tracked and the HEAD blobs of its tracked files equal the manifest hashes; the manifest rebuilt in
   memory by `build_manifest` equals the committed one except the declared `run_specific_keys` (zero tolerance); untracked
@@ -47,7 +47,7 @@
   parsed JSON with the declared `volatile_keys` removed; once a test-state file exists the published evidence is verified
   read-only with `report.load_completed` (journal COMPLETE, `results/metrics.json` pointer, every attempt file against the COMPLETE
   hashes). `compare_values` is the one pure comparison: a float difference is "numeric" only at the config-declared
-  `freeze.check.numeric_paths` (per-fold losses, constants, stored predictions) and only outside `exact_keys`; every other
+  `check.numeric_paths` (per-fold losses, constants, stored predictions) and only outside `exact_keys`; every other
   difference (ids, strings, ints, bools, key sets, list lengths, hyperparameters, chosen powers/penalties, manifest fields) is
   structural and fails `reproduce`. `fremtpl2 reproduce [--force-clean]` (module `reproduce`) needs a clean source tree, clones
   HEAD into `paths.processed/reproduce.workdir` (real path strictly inside `paths.processed`, not a symlink, never the root or an

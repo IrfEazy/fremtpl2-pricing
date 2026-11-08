@@ -10,7 +10,14 @@ from collections.abc import Sequence
 import requests
 
 from .audit import run_audit
-from .config import DEFAULT_CONFIG, ConfigError, load_config
+from .config import (
+    DEFAULT_CONFIG,
+    DEFAULT_REPRODUCE_CONFIG,
+    ConfigError,
+    load_config,
+    load_reproduce_config,
+    with_reproduce,
+)
 from .data import DataError
 from .download import DownloadError, run_download
 from .evaluate import run_evaluate, run_publish, run_rehearsal
@@ -53,6 +60,13 @@ def build_parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="strict read-only verification of the committed manifest against the "
                 "regenerated artifacts (writes nothing; allowed after test access)",
+            )
+        if name in ("freeze", "reproduce"):
+            p.add_argument(
+                "--reproduce-config",
+                default=DEFAULT_REPRODUCE_CONFIG,
+                help="YAML verification policy used by `freeze --check` and `reproduce` "
+                "(default: %(default)s)",
             )
         if name == "reproduce":
             p.add_argument(
@@ -110,12 +124,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.check:
                 if args.force:
                     raise FreezeError("--check is read-only and cannot be combined with --force")
-                res = run_freeze_check(cfg, args.config)
+                res = run_freeze_check(
+                    with_reproduce(cfg, load_reproduce_config(args.reproduce_config)), args.config
+                )
                 print(json.dumps(res, indent=2))
                 return 0 if res["passed"] else 1
             run_freeze(cfg, args.config, force=args.force)
         elif args.command == "reproduce":
-            rec = run_reproduce(cfg, args.config, force_clean=args.force_clean)
+            rcfg = with_reproduce(cfg, load_reproduce_config(args.reproduce_config))
+            rec = run_reproduce(rcfg, args.config, force_clean=args.force_clean)
             print(f"reproduce: {rec['verdict']} ({rec['total_seconds']:.0f}s), see the record")
             return 0 if rec["verdict"] in ("EXACT_PASS", "PORTABLE_NUMERIC_PASS") else 1
         elif args.command == "evaluate":

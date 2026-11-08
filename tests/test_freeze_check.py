@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from fremtpl2_pricing import cli, freeze
+from fremtpl2_pricing.config import load_reproduce_config, with_reproduce
 from test_freeze_evaluate import (  # noqa: F401  (fixtures)
     CONFIG,
     _commit,
@@ -23,6 +24,8 @@ from test_freeze_evaluate import (  # noqa: F401  (fixtures)
     template,
 )
 
+REPRODUCE = str(Path(__file__).resolve().parents[1] / "configs" / "reproduce.yaml")
+
 
 def _snapshot(root: Path) -> dict[str, str]:
     return {
@@ -33,7 +36,12 @@ def _snapshot(root: Path) -> dict[str, str]:
 
 
 def _check(cfg) -> dict:
-    return freeze.run_freeze_check(cfg, CONFIG)
+    return freeze.run_freeze_check(with_reproduce(cfg, load_reproduce_config(REPRODUCE)), CONFIG)
+
+
+def _cli(*extra: str) -> int:
+    args = ["freeze", "--check", *extra, "--config", CONFIG, "--reproduce-config", REPRODUCE]
+    return cli.main(args)
 
 
 def _failed(res: dict) -> set[str]:
@@ -74,11 +82,11 @@ def test_check_passes_and_writes_nothing(project, cfg, frozen):
 
 
 def test_check_cli_exit_codes(project, cfg, frozen, capsys):
-    assert cli.main(["freeze", "--check", "--config", CONFIG]) == 0
+    assert _cli() == 0
     assert json.loads(capsys.readouterr().out)["passed"] is True
-    assert cli.main(["freeze", "--check", "--force", "--config", CONFIG]) == 1
+    assert _cli("--force") == 1
     (project / "results/feature_map.json").write_text("{}")
-    assert cli.main(["freeze", "--check", "--config", CONFIG]) == 1
+    assert _cli() == 1
 
 
 def test_only_declared_volatile_keys_are_ignored(project, cfg, frozen):

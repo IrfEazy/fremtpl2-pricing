@@ -1,4 +1,6 @@
 import hashlib
+import json
+from pathlib import Path
 
 from fremtpl2_pricing.manifest import (
     file_record,
@@ -41,3 +43,15 @@ def test_manifest_roundtrip(tmp_path):
     f.write_bytes(b"dat4")
     assert len(verify_manifest(tmp_path, loaded)) == 1
     assert read_manifest(tmp_path / "none.json") is None
+
+
+def test_default_config_is_the_frozen_config():
+    """Guards drift: the main config stays byte-identical to the hash in the freeze manifest
+    (post-test settings live in configs/reproduce.yaml)."""
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "results/freeze_manifest.json").read_text(encoding="utf-8"))
+    entries = [e for e in manifest["files"] if e["role"] == "config"]
+    assert [e["path"] for e in entries] == ["configs/default.yaml"]
+    data = (root / entries[0]["path"]).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == entries[0]["sha256"]
+    assert len(data) == entries[0]["bytes"]

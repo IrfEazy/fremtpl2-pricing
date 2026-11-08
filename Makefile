@@ -53,12 +53,12 @@ report:
 	uv run fremtpl2 report
 
 # Strict, read-only verification of the committed freeze manifest against the regenerated artifacts
-# (writes nothing, needs no clean tree; usable after test access).
+# (writes nothing, needs no clean tree; usable after test access). Settings: configs/reproduce.yaml `check:`.
 freeze-check:
 	uv run fremtpl2 freeze --check
 
 # Rebuilds the pre-test pipeline in an isolated clean clone of HEAD and compares it with the committed
-# baseline; writes results/reproduction.json. Never recomputes held-out metrics.
+# baseline; writes results/reproduction.json. Never recomputes held-out metrics. Settings: configs/reproduce.yaml `reproduce:`.
 reproduce:
 	uv run fremtpl2 reproduce
 

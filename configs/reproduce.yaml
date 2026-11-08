@@ -1,0 +1,68 @@
+# Post-test verification policy: the settings of `fremtpl2 freeze --check` and `fremtpl2 reproduce`.
+# Deliberately NOT part of configs/default.yaml: that file is hashed in results/freeze_manifest.json
+# and must stay byte-identical to the frozen config. This file is not a manifest input; both commands
+# load it from the declared path (`--reproduce-config`, default configs/reproduce.yaml) and `reproduce`
+# snapshots the comparison rules from the SOURCE tree before any step. A change of this file in the
+# clone is a source change and fails `reproduce`.
+
+check:                             # `fremtpl2 freeze --check`: strict, read-only verification of the committed manifest (no tolerance)
+  run_specific_keys: [created_utc, training_commit]  # top-level manifest keys that legitimately differ in a new run
+  volatile_keys: [fit_seconds, fold_seconds, timing_seconds, seconds]  # telemetry keys ignored in the parsed JSON comparison of the telemetry files
+  telemetry_files: [cv_glm.json, cv_gbm.json, gbm_models.json]  # under paths.results; tracked manifest files compared as parsed JSON against the HEAD blob (volatile keys removed, exact otherwise)
+  max_mismatches: 10             # mismatches listed per check
+  # Only a float difference at one of these paths (fnmatch on the /-joined path inside each manifest
+  # group) is "numeric" (at most PORTABLE_NUMERIC_PASS in `reproduce`; strict --check still fails).
+  # Every other difference (ids, strings, ints, bools, key sets, list lengths, hyperparameters,
+  # chosen powers/penalties, trace hashes, manifest fields) is structural.
+  numeric_paths:
+    - /selection/traces/*/steps*      # per-fold losses of the severity ladder / freq x sev vs Tweedie / GBM steps
+    - /recipes/*/value                # constant (null model) values
+    - /recipes/*/*/value
+    - /self_check/predictions/*       # stored train predictions
+    - /self_check/edge_cases/*
+  # Keys whose subtree is never numeric, in every compared file (selected ids, hyperparameters,
+  # chosen powers/penalties, row/fold assignments); shared with reproduce.exact_keys.
+  exact_keys: &exact_keys [config, chosen_hp, chosen_index, params, selected, selected_severity, selected_pure_premium_candidate, selected_powers, candidates, power, tweedie_power, tweedie_power_final, final_penalty, penalty_by_outer_fold, id]
+
+# `fremtpl2 reproduce` (fremtpl2_pricing.reproduce): rebuilds the pre-test pipeline in an isolated clean
+# clone of HEAD and compares the regenerated tracked outputs with the committed baseline. It never
+# recomputes held-out metrics: the published test evidence (journal, results/test/, metrics pointer)
+# must stay byte-identical, the report is only re-rendered from it. Tolerances are declared here
+# before any real run; they apply only to floats of the portable comparison, never to ints, strings,
+# keys, list lengths or `exact_keys` subtrees (selected ids, hyperparameters, configuration echoes).
+reproduce:
+  workdir: reproduce               # under paths.processed (git-ignored); refused if non-empty unless --force-clean (which deletes only inside it)
+  clone_dir: clone                 # inside workdir: the measured clone of HEAD
+  log_dir: logs                    # inside workdir: stdout/stderr of every step
+  record: reproduction.json        # under paths.results of the SOURCE tree; excluded from its own comparison
+  rtol: 1.0e-6
+  atol: 1.0e-9
+  max_mismatches: 10               # mismatches listed per category
+  exact_keys: *exact_keys          # the same list as check.exact_keys
+  render_suffixes: [.png]          # figures: bytes may differ only if the decoded pixels (matplotlib.image.imread) are identical (pixel_equal: portable, never exact); a pixel difference fails
+  byte_exact_paths:                # renderer outputs of committed evidence (fnmatch): any byte difference fails
+    - reports/test_evaluation.md
+  # Other bytes-different files: exact only if the sole differences are declared volatile JSON keys
+  # (same literals, key order and line count); parsed-equal formatting differences are "equivalent"
+  # (portable, never exact).
+  preserve_paths: &published       # published evidence and inputs that no step regenerates: kept in the clone; every other tracked results/ and reports/ file is deleted before the steps and must be regenerated
+    - results/freeze_manifest.json
+    - results/test_access.json
+    - results/metrics.json
+    - results/test/*
+    - reports/evaluation_protocol.md
+  protected_paths: *published      # compared byte for byte (published test evidence, freeze and protocol); any change fails
+  tool_commands: [uv, git]         # a step whose command is one of these and exits 127 (not installed) is UNSUPPORTED_ENVIRONMENT
+  transport_exit_codes: [75]       # network unavailable (download); the only other UNSUPPORTED_ENVIRONMENT cause. A checksum mismatch (exit 1) or any other failure is a FAIL
+  steps:                           # run in the clone, in order; the first failure stops the run. `outputs` (relative to the clone, ignored paths included) must exist after a successful step
+    - {name: setup, cmd: [uv, sync, --frozen]}
+    - {name: download, cmd: [uv, run, --frozen, fremtpl2, download, --config, "{config}"], outputs: [data/raw/manifest.json, data/raw/freMTPL2freq.parquet, data/raw/freMTPL2sev.parquet]}
+    - {name: audit, cmd: [uv, run, --frozen, fremtpl2, audit, --config, "{config}"], outputs: [results/audit.json, reports/data_audit.md, results/orphan_ledger.csv]}
+    - {name: split, cmd: [uv, run, --frozen, fremtpl2, split, --config, "{config}"], outputs: [data/processed/split.parquet, results/split_summary.json, results/targets_summary.json]}
+    - {name: train, cmd: [uv, run, --frozen, fremtpl2, train, --config, "{config}"], outputs: [results/cv_glm.json, results/glm_models.json, results/feature_map.json, reports/glm_cv.md, results/glm_relativities_frequency.csv, results/glm_relativities_severity.csv, results/glm_relativities_tweedie.csv]}
+    - {name: gbm, cmd: [uv, run, --frozen, fremtpl2, gbm, --config, "{config}"], outputs: [results/cv_gbm.json, results/gbm_models.json, reports/gbm_cv.md, data/processed/models/frequency.txt, data/processed/models/severity.txt, data/processed/models/tweedie.txt]}
+    - {name: sensitivities, cmd: [uv, run, --frozen, fremtpl2, sensitivities, --config, "{config}"], outputs: [results/cv_sensitivities.json, reports/glm_sensitivities.md]}
+    - {name: interpret, cmd: [uv, run, --frozen, fremtpl2, interpret, --config, "{config}"], outputs: [results/interpretation.json, reports/interpretation.md, reports/figures/interp_shap_summary.png, reports/figures/interp_dependence_frequency.png, reports/figures/interp_dependence_severity.png, reports/figures/interp_dependence_tweedie.png, reports/figures/interp_glm_comparison_frequency.png, reports/figures/interp_glm_comparison_severity.png, reports/figures/interp_glm_comparison_tweedie.png, reports/figures/interp_interaction_drivage_vehpower.png]}
+    # freeze --check: an all-numeric mismatch (exit 1 with numeric_only) records the failed strict check and continues; an integrity, structural or execution failure stops the run
+    - {name: freeze_check, cmd: [uv, run, --frozen, fremtpl2, freeze, --check, --config, "{config}"], json_result: true}
+    - {name: report, cmd: [uv, run, --frozen, fremtpl2, report, --config, "{config}"], outputs: [reports/test_evaluation.md, reports/figures/test_lorenz.png, reports/figures/test_lift.png, reports/figures/test_double_lift.png, reports/figures/test_calibration_decile.png, reports/figures/test_calibration_factor.png, reports/figures/test_bootstrap_delta.png, reports/figures/test_bootstrap_delta_policy.png]}
