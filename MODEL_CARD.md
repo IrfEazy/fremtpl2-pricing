@@ -82,4 +82,4 @@ files are verified against their recorded hashes.
 
 ## Contact
 
-The repository owner, through the repository.
+The repository owner, through the repository. The code licence is in [`LICENSE`](LICENSE).

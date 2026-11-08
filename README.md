@@ -140,6 +140,12 @@ Declared deviations of the verification policy (`configs/reproduce.yaml`):
 - The provenance hashes recorded in results/interpretation.json are derived from inputs that may differ only by the deviations above; each side is recomputed from its own input (clone and committed) and must equal the value recorded on that side; the input difference is covered by a deviation above.
 <!-- docs:reproduction:end -->
 
+## Licence
+
+The code is released under the MIT licence, see [`LICENSE`](LICENSE). The freMTPL2 data are not
+redistributed in this repository: they are downloaded from OpenML, and their licence is stated in
+[`data/README.md`](data/README.md).
+
 ## Repository map
 
 - [`reports/data_audit.md`](reports/data_audit.md): data audit and cleaning rules

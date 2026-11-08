@@ -2,6 +2,7 @@
 name = "fremtpl2-pricing"
 version = "0.1.0"
 description = "Reproducible motor insurance pricing study on freMTPL2 (frequency, severity, pure premium)."
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
