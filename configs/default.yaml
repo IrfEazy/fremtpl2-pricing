@@ -163,6 +163,11 @@ models:
     replicates: 1000
     seed: 20260102
     level: 0.95
+  sensitivities:                   # fremtpl2 sensitivities: outer CV only, train set, Tweedie power fixed at final.power_cv.power of outputs.cv_json
+    names: all                     # all | list of names declared in clean.sensitivities (primary is always run as the baseline)
+    outputs:                       # file names under paths.results / paths.reports
+      json: cv_sensitivities.json
+      report: glm_sensitivities.md
   parallel:
     n_jobs: 6                      # worker processes for the independent CV fits (results do not depend on it)
   outputs:                         # file names under paths.results / paths.reports

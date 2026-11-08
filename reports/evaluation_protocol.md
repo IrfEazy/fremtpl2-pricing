@@ -155,7 +155,9 @@ across targets. The test evaluation uses the primary definitions only.
 
 ## Amendments
 
-None. Entry template (append only; before test access, or after it only for the technical rerun of
+None before this entry. Entry template (append only; before test access, or after it only for the technical rerun of
 section 6):
 
 - Date: YYYY-MM-DD. Reason: ... Author: ... Test access: before / after. Change: before -> after.
+
+- Date: 2026-11-08. Reason: clarify the dependence unit of the bootstrap (section 6), following the wp-008 review. Author: pipeline (wp-009). Test access: before. Change: no rule changes. Rating-profile groups are resampled because identical profiles may belong to the same policyholder (renewals, duplicates; the original leakage concern), not merely because they share covariates. The train-only comparison of the group and the policy bootstrap unit (standard errors, interval widths and their ratio) is reported in `reports/glm_sensitivities.md`; it is a diagnostic and does not change the primary unit.

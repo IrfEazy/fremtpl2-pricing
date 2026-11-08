@@ -551,3 +551,246 @@ def render_report(r: dict[str, Any]) -> str:
     ]
     lines += _table(["stage", "seconds"], [[k, v] for k, v in r["timing_seconds"].items()])
     return "\n".join(lines)
+
+
+def _ms(node: dict[str, Any], pct: bool = False) -> str:
+    g = _pct if pct else _f
+    return f"{g(node['mean'])} ± {g(node['sd'])}"
+
+
+def render_sensitivities_report(r: dict[str, Any]) -> str:
+    """Render ``reports/glm_sensitivities.md`` from the parsed ``results/cv_sensitivities.json``."""
+    cfg, sens = r["config"], r["sensitivities"]
+    lines = [
+        "# GLM cleaning/target sensitivities (grouped CV, train set only)",
+        "",
+        "Rendered from `results/cv_sensitivities.json` by `fremtpl2 sensitivities`; no hand-typed "
+        "numbers. The test set is untouched: sensitivities are CV-only by protocol "
+        "(`reports/evaluation_protocol.md` section 7); the test evaluation uses the primary "
+        "definitions only.",
+        "",
+        f"Outer registered folds only ({cfg['cv_folds']}, {cfg['split_primary']} split, frozen); "
+        f"Tweedie power fixed at {_f(cfg['fixed_tweedie_power'])} (final power of "
+        f"`{cfg['power_source']}`), no nested selection, no final fit. Policies a sensitivity "
+        "drops simply drop out; the split assignment of the others never changes.",
+        "",
+        "**Comparisons are made within each target definition only. Losses of different "
+        "definitions (different targets, caps, exposures or policy sets) are not comparable and "
+        "are not ranked.**",
+        "",
+        "## Row counts (train)",
+        "",
+    ]
+    lines += _table(
+        [
+            "sensitivity",
+            "overrides",
+            "policies",
+            "exposure",
+            "claims (N)",
+            "frequency events",
+            "S_cap",
+        ],
+        [
+            [
+                n,
+                json_inline(s["overrides"]),
+                s["rows"]["policies"],
+                s["rows"]["exposure"],
+                s["rows"]["claims"],
+                s["rows"]["frequency_events"],
+                s["rows"]["s_cap"],
+            ]
+            for n, s in sens.items()
+        ],
+    )
+    lines += ["## Convergence", ""]
+    lines += _table(
+        ["sensitivity", "fits", "not converged", "max iterations"],
+        [
+            [
+                n,
+                s["convergence"]["n_fits"],
+                s["convergence"]["n_not_converged"],
+                s["convergence"]["max_n_iter"],
+            ]
+            for n, s in sens.items()
+        ],
+    )
+    lines += ["## Frequency (full GLM vs null, within definition)", ""]
+    lines += _table(
+        [
+            "sensitivity",
+            "deviance / exposure-year (null → full, pooled)",
+            "explained pooled",
+            "explained fold mean ± sd",
+            "Gini normalised pooled",
+        ],
+        [
+            [
+                n,
+                f"{_f(s['pooled']['frequency']['null']['deviance_per_exposure'])} → "
+                f"{_f(s['pooled']['frequency']['full']['deviance_per_exposure'])}",
+                _pct(s["pooled"]["frequency"]["full"]["deviance_explained"]),
+                _ms(s["fold_summary"]["frequency"]["full"]["deviance_explained"], True),
+                s["pooled"]["frequency"]["full"]["gini_normalized"],
+            ]
+            for n, s in sens.items()
+        ],
+    )
+    lines += ["## Severity (full GLM vs null, claims only, within definition)", ""]
+    lines += _table(
+        [
+            "sensitivity",
+            "Gamma deviance / claim (null → full, pooled)",
+            "explained pooled",
+            "explained fold mean ± sd",
+        ],
+        [
+            [
+                n,
+                f"{_f(s['pooled']['severity']['null']['deviance_per_claim'])} → "
+                f"{_f(s['pooled']['severity']['full']['deviance_per_claim'])}",
+                _pct(s["pooled"]["severity"]["full"]["deviance_explained"]),
+                _ms(s["fold_summary"]["severity"]["full"]["deviance_explained"], True),
+            ]
+            for n, s in sens.items()
+        ],
+    )
+    p = _f(cfg["reference_power"])
+    lines += [
+        f"## Pure premium (common Tweedie deviance at reference power {p}, within definition)",
+        "",
+        f"The `tweedie` model is fitted at the fixed power {_f(cfg['fixed_tweedie_power'])}; "
+        "the deviance is always evaluated at the reference power.",
+        "",
+    ]
+    for n, s in sens.items():
+        pool, fs = s["pooled"]["pure_premium"], s["fold_summary"]["pure_premium"]
+        lines += [f"### {n}", ""]
+        if not s["freq_x_sev_valid"]:
+            lines += [f"Frequency x severity not computed: {s['freq_x_sev_note']}.", ""]
+        rows = []
+        for m, v in pool.items():
+            rows.append(
+                [
+                    m,
+                    v["tweedie_ref_deviance_per_exposure"],
+                    _pct(v["tweedie_ref_deviance_explained"]),
+                    _ms(fs[m]["tweedie_ref_deviance_explained"], True),
+                    _pct(v["poisson_deviance_explained"]),
+                    v["gini_normalized"],
+                    v["totals"]["observed"],
+                    v["totals"]["predicted"],
+                    v["totals"]["ratio"],
+                ]
+            )
+        lines += _table(
+            [
+                "model",
+                "Tweedie dev. / exposure-year",
+                "explained pooled",
+                "explained fold mean ± sd",
+                "Poisson explained pooled",
+                "Gini normalised",
+                "observed S_cap",
+                "predicted",
+                "obs / pred",
+            ],
+            rows,
+        )
+    lines += [
+        "## Differences inside each definition",
+        "",
+        "Tweedie minus frequency x severity (negative deviance difference favours the Tweedie), "
+        "pooled and fold mean ± sd of the per-fold differences.",
+        "",
+    ]
+    rows = []
+    for n, s in sens.items():
+        c, cf = s["comparisons"]["pooled"], s["comparisons"]["fold_summary"]
+        if s["freq_x_sev_valid"]:
+            t, tf = c["tweedie_minus_freq_x_sev"], cf["tweedie_minus_freq_x_sev"]
+            t_cells = [
+                t["tweedie_ref_deviance_per_exposure"],
+                _ms(tf["tweedie_ref_deviance_per_exposure"]),
+                t["gini_normalized"],
+            ]
+        else:
+            t_cells = ["not computed"] * 3
+        f_, ff = c["frequency_full_minus_null"], cf["frequency_full_minus_null"]
+        v_, vf = c["severity_full_minus_null"], cf["severity_full_minus_null"]
+        rows.append(
+            [
+                n,
+                *t_cells,
+                f_["deviance_per_exposure"],
+                _ms(ff["deviance_per_exposure"]),
+                v_["deviance_per_claim"],
+                _ms(vf["deviance_per_claim"]),
+            ]
+        )
+    lines += _table(
+        [
+            "sensitivity",
+            "Tweedie - freq x sev: deviance pooled",
+            "fold mean ± sd",
+            "Gini norm. pooled",
+            "frequency full - null: deviance pooled",
+            "fold mean ± sd",
+            "severity full - null: deviance pooled",
+            "fold mean ± sd",
+        ],
+        rows,
+    )
+    invalid = [n for n, s in sens.items() if not s["freq_x_sev_valid"]]
+    for n in invalid:
+        lines += ["", f"`{n}`: {sens[n]['freq_x_sev_note']}."]
+    lines += [""]
+    b = r["bootstrap_unit_diagnostic"]
+    lines += [
+        "## Bootstrap unit diagnostic (train only, primary definition)",
+        "",
+        b["label"] + ".",
+        "",
+        f"Paired bootstrap of the primary out-of-fold predictions; loss: {b['loss']}; "
+        f"{b['replicates']} replicates, seed {b['seed']}, {_pct(b['level'])} percentile intervals. "
+        "The rating-profile groups are resampled because identical profiles may belong to the "
+        "same policyholder (renewals, duplicates), not merely because they share covariates.",
+        "",
+    ]
+    rows = []
+    for k in b["ratio_group_over_policy"]:
+        for u in ("group", "policy"):
+            m = b["units"][u]["metrics"][k]
+            rows.append(
+                [
+                    k,
+                    u,
+                    b["units"][u]["n_units"],
+                    m["point"],
+                    m["se"],
+                    m["lower"],
+                    m["upper"],
+                    m["width"],
+                ]
+            )
+    lines += _table(["quantity", "unit", "units", "point", "SE", "lower", "upper", "width"], rows)
+    lines += _table(
+        ["quantity", "SE ratio group / policy", "interval width ratio group / policy"],
+        [[k, v["se"], v["width"]] for k, v in b["ratio_group_over_policy"].items()],
+    )
+    lines += ["## Timing (seconds)", ""]
+    lines += _table(["stage", "seconds"], [[k, v] for k, v in r["timing_seconds"].items()])
+    return "\n".join(lines)
+
+
+def json_inline(d: Any) -> str:
+    """Compact one-line rendering of a (nested) override mapping."""
+    if not d:
+        return "none (primary rules)"
+    if isinstance(d, dict):
+        return ", ".join(
+            f"{k}: {json_inline(v)}" if isinstance(v, dict) else f"{k}: {v}" for k, v in d.items()
+        )
+    return str(d)
