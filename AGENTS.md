@@ -1,9 +1,9 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `interpret`, `freeze`, `evaluate`, `report`, `reproduce`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `interpret`, `freeze`, `evaluate`, `report`, `reproduce`, `docs`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
-  `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`), `interpret` (train-only interpretation), `report` (test report), `figures` (deterministic matplotlib helpers)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
+  `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`), `interpret` (train-only interpretation), `report` (test report), `docs_render` (generated documents), `figures` (deterministic matplotlib helpers)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
   `data/raw` and `data/processed` (git-ignored, regenerated), `results/` and `reports/` (tracked
   pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`,
   `cv_glm.json`, `glm_relativities_*.csv`, `feature_map.json`, `glm_models.json`, `glm_cv.md`,
@@ -83,6 +83,16 @@
   `freeze --check` or `make all` on the real project unless the lead says so. `make all` ends with `freeze --check` instead of
   `freeze` once `results/test_access.json` exists, then `report` when `results/metrics.json` exists; `make freeze-check`,
   `make reproduce`.
+- Generated documents (`fremtpl2 docs`, module `docs_render`, config `configs/docs.yaml` loaded by `config.load_docs_config`
+  like `reproduce.yaml`; a `docs` key in `default.yaml` is a ConfigError, which stays frozen). It renders `reports/model_report.md`
+  (fully generated) and the blocks between `<!-- docs:NAME:begin -->` / `<!-- docs:NAME:end -->` markers in `README.md`
+  (`results`, `reproduction`, `drivers`) and `MODEL_CARD.md` (`metrics`) only from tracked pipeline files: `results/metrics.json`
+  and the completed attempt it points to (verified by `report.load_completed`), `cv_glm/cv_gbm/cv_sensitivities/interpretation/
+  audit/split_summary/targets_summary.json`, the GLM relativity tables, `gbm_models.json` and `reproduction.json` when present
+  (absent -> "not yet recorded"). Rule: every number in README, model card and model report goes through a docs block or the
+  model report, never typed by hand; text outside the markers is preserved byte for byte, a missing or duplicated marker is an
+  error, output is deterministic and `fremtpl2 docs --check` writes nothing and exits non-zero on drift. Runs after `report`
+  (`make docs`, explicit, never in `make all`); adding a block means one render function in `BLOCKS`.
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
   primary; the random split is a labelled sensitivity. Do not change the choice after seeing test
   results. `reports/evaluation_protocol.md` (2026-11-08) governs milestone 3 and the single test
@@ -120,6 +130,6 @@
   Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
   `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
   reported (separate block), never part of a CV target. The bootstrap block is not applied in train/CV; `fremtpl2 evaluate` applies it to the test set (paired group bootstrap, `metrics.ratio_bootstrap`).
-- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make interpret` (train-only interpretation; before `freeze`), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`), `make report` (test report after `evaluate`; explicit), `make freeze-check`, `make reproduce` (see Reproduction).
+- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make interpret` (train-only interpretation; before `freeze`), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`), `make report` (test report after `evaluate`; explicit), `make docs` (model report and README / model card blocks after `report`; explicit), `make freeze-check`, `make reproduce` (see Reproduction).
   Tests are offline; only `fremtpl2 download` touches the network.
 - Commits: small and focused, one line `type(scope): summary`, no footer. Do not push unless explicitly asked.

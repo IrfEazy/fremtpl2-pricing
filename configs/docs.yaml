@@ -1,0 +1,58 @@
+# Rendering policy of `fremtpl2 docs` (fremtpl2_pricing.docs_render). Deliberately NOT part of
+# configs/default.yaml (frozen; hashed in results/freeze_manifest.json). The command loads this file
+# from `--docs-config`; a `docs` key in the main config is a conflict and raises ConfigError.
+# No number of the generated text lives here: every number is read from the tracked pipeline files.
+
+docs:
+  outputs:
+    model_report: reports/model_report.md     # fully generated
+  blocks:                                      # file -> generated blocks between the markers below
+    README.md: [results, reproduction, drivers]
+    MODEL_CARD.md: [metrics]
+  markers:                                     # {name} is the block name; a missing/duplicated marker is an error
+    begin: "<!-- docs:{name}:begin -->"
+    end: "<!-- docs:{name}:end -->"
+  inputs:                                      # file names under paths.results
+    sensitivities: cv_sensitivities.json
+    interpretation: interpretation.json
+    split_summary: split_summary.json
+    targets_summary: targets_summary.json
+    reproduction: reproduction.json            # optional: absent renders "not yet recorded"
+    relativities: [glm_relativities_frequency.csv, glm_relativities_severity.csv, glm_relativities_tweedie.csv]
+  decimals:                                    # digits per quantity kind
+    loss: 3
+    gini: 4
+    ratio: 4
+    delta: 5
+    share: 4
+    money: 0
+    count: 0
+    loading: 2
+    contribution: 4
+    minutes: 1
+    exposure: 1
+    sci: 2
+  short_commit: 8                              # characters of a commit hash shown in the documents
+  top_drivers: 3                               # risk drivers per component (mean |SHAP| contribution)
+  candidates: all                              # "all" or a list of candidate ids (test tables)
+  columns:                                     # test table columns in order -> header
+    candidate: Candidate
+    loss: Primary loss (Tweedie {power})
+    loss_ci: 95% CI (group bootstrap)
+    gini: Normalised Gini
+    gini_ci: Gini 95% CI
+    ratio: Observed / predicted
+  model_card_columns: [candidate, loss, loss_ci, gini, gini_ci, ratio]
+  results_columns: [candidate, loss, loss_ci, gini, gini_ci, ratio]
+  links:                                       # detailed reports (relative to the reports directory)
+    - [data_audit.md, Data audit]
+    - [glm_cv.md, GLM cross-validation]
+    - [gbm_cv.md, GBM tuning]
+    - [glm_sensitivities.md, Cleaning sensitivities]
+    - [interpretation.md, Interpretation]
+    - [test_evaluation.md, Test evaluation]
+    - [evaluation_protocol.md, Evaluation protocol]
+  figures:                                     # figure files (relative to the reports directory)
+    - [figures/interp_shap_summary.png, Mean absolute SHAP contribution]
+    - [figures/test_lorenz.png, Lorenz curves on the test set]
+    - [figures/test_bootstrap_delta.png, Bootstrap distribution of Delta]

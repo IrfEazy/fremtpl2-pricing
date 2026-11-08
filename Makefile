@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split train sensitivities gbm interpret freeze freeze-check reproduce rehearsal evaluate report all
+.PHONY: setup lint test download audit split train sensitivities gbm interpret freeze freeze-check reproduce rehearsal evaluate report docs all
 
 setup:
 	uv sync
@@ -51,6 +51,12 @@ evaluate:
 # never part of `all`.
 report:
 	uv run fremtpl2 report
+
+# Renders reports/model_report.md and the generated blocks of README.md / MODEL_CARD.md only from the
+# tracked pipeline files (settings: configs/docs.yaml); `uv run fremtpl2 docs --check` writes nothing and
+# exits non-zero on drift. Explicit, after `report`, never part of `all`.
+docs:
+	uv run fremtpl2 docs
 
 # Strict, read-only verification of the committed freeze manifest against the regenerated artifacts
 # (writes nothing, needs no clean tree; usable after test access). Settings: configs/reproduce.yaml `check:`.

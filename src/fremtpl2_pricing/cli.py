@@ -12,13 +12,17 @@ import requests
 from .audit import run_audit
 from .config import (
     DEFAULT_CONFIG,
+    DEFAULT_DOCS_CONFIG,
     DEFAULT_REPRODUCE_CONFIG,
     ConfigError,
     load_config,
+    load_docs_config,
     load_reproduce_config,
+    with_docs,
     with_reproduce,
 )
 from .data import DataError
+from .docs_render import run_docs
 from .download import DownloadError, run_download
 from .evaluate import run_evaluate, run_publish, run_rehearsal
 from .freeze import FreezeError, run_freeze, run_freeze_check
@@ -40,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     names = (
         "download", "audit", "split", "train", "sensitivities", "gbm", "interpret", "freeze",
-        "evaluate", "report", "reproduce",
+        "evaluate", "report", "reproduce", "docs",
     )  # fmt: skip
     for name in names:
         p = sub.add_parser(name, help=f"{name} step")
@@ -73,6 +77,17 @@ def build_parser() -> argparse.ArgumentParser:
                 "--force-clean",
                 action="store_true",
                 help="delete a non-empty reproduce.workdir (only inside paths.processed) first",
+            )
+        if name == "docs":
+            p.add_argument(
+                "--docs-config",
+                default=DEFAULT_DOCS_CONFIG,
+                help="YAML rendering policy of the generated documents (default: %(default)s)",
+            )
+            p.add_argument(
+                "--check",
+                action="store_true",
+                help="render to memory and exit non-zero if a target differs (writes nothing)",
             )
         if name == "evaluate":
             p.add_argument(
@@ -120,6 +135,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         elif args.command == "report":
             run_report(cfg)
+        elif args.command == "docs":
+            res = run_docs(with_docs(cfg, load_docs_config(args.docs_config)), check=args.check)
+            if args.check:
+                print(
+                    "docs: "
+                    + (f"drift in {', '.join(res['drift'])}" if res["drift"] else "up to date")
+                )
+                return 1 if res["drift"] else 0
+            print(f"docs: wrote {', '.join(res['written']) or 'nothing (up to date)'}")
         elif args.command == "freeze":
             if args.check:
                 if args.force:

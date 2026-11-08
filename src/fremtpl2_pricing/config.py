@@ -13,6 +13,8 @@ DEFAULT_CONFIG = "configs/default.yaml"
 # Post-test verification policy (`freeze --check`, `reproduce`); kept out of the frozen main config.
 DEFAULT_REPRODUCE_CONFIG = "configs/reproduce.yaml"
 REPRODUCE_KEYS = ("check", "reproduce")
+# Rendering policy of `fremtpl2 docs`; also outside the frozen main config.
+DEFAULT_DOCS_CONFIG = "configs/docs.yaml"
 REQUIRED_KEYS = ("seed", "paths", "download")
 REQUIRED_PATHS = ("raw", "processed", "results", "reports")
 
@@ -101,4 +103,28 @@ def with_reproduce(cfg: dict[str, Any], rcfg: dict[str, Any]) -> dict[str, Any]:
     out = copy.deepcopy(cfg)
     out.setdefault("freeze", {})["check"] = copy.deepcopy(rcfg["check"])
     out["reproduce"] = copy.deepcopy(rcfg["reproduce"])
+    return out
+
+
+def load_docs_config(path: str | Path = DEFAULT_DOCS_CONFIG) -> dict[str, Any]:
+    """Load the rendering policy of ``fremtpl2 docs`` (top-level mapping ``docs``)."""
+    path = Path(path)
+    if not path.is_file():
+        raise ConfigError(f"docs config file not found: {path}")
+    with path.open(encoding="utf-8") as fh:
+        dcfg = yaml.safe_load(fh)
+    if not isinstance(dcfg, dict) or not isinstance(dcfg.get("docs"), dict):
+        raise ConfigError(f"missing config mapping 'docs' in {path}")
+    return dcfg
+
+
+def with_docs(cfg: dict[str, Any], dcfg: dict[str, Any]) -> dict[str, Any]:
+    """A copy of ``cfg`` with ``docs`` taken from the docs config.
+
+    Raises ``ConfigError`` if ``cfg`` already has a ``docs`` key (never silently overrides).
+    """
+    if "docs" in cfg:
+        raise ConfigError("main config already defines docs; it belongs in the docs config")
+    out = copy.deepcopy(cfg)
+    out["docs"] = copy.deepcopy(dcfg["docs"])
     return out
