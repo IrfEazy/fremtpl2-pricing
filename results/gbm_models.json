@@ -1,0 +1,224 @@
+{
+  "tweedie_power": 1.5,
+  "selected_pure_premium_candidate": "gbm_freq_x_sev",
+  "encoding": {
+    "numeric": [
+      "DrivAge",
+      "VehAge",
+      "VehPower",
+      "BonusMalus",
+      "Density"
+    ],
+    "categorical": [
+      "Area",
+      "VehGas",
+      "VehBrand",
+      "Region"
+    ],
+    "levels": {
+      "Area": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "VehGas": [
+        "Diesel",
+        "Regular"
+      ],
+      "VehBrand": [
+        "B1",
+        "B10",
+        "B11",
+        "B12",
+        "B13",
+        "B14",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6"
+      ],
+      "Region": [
+        "R11",
+        "R21",
+        "R22",
+        "R23",
+        "R24",
+        "R25",
+        "R26",
+        "R31",
+        "R41",
+        "R42",
+        "R43",
+        "R52",
+        "R53",
+        "R54",
+        "R72",
+        "R73",
+        "R74",
+        "R82",
+        "R83",
+        "R91",
+        "R93",
+        "R94"
+      ]
+    },
+    "unseen_level": "missing"
+  },
+  "models": {
+    "frequency": {
+      "file": "frequency.txt",
+      "sha256": "651a91ebf032d1d831af73a89adf93f2793e07d9a8909fefeda86c6a5aebcf6c",
+      "params": {
+        "verbosity": -1,
+        "max_bin": 255,
+        "feature_fraction": 1.0,
+        "bagging_fraction": 1.0,
+        "lambda_l2": 1.0,
+        "cat_smooth": 20.0,
+        "min_data_per_group": 200,
+        "monotone_constraints_method": "basic",
+        "deterministic": true,
+        "force_row_wise": true,
+        "num_threads": 1,
+        "seed": 20260109,
+        "objective": "poisson",
+        "learning_rate": 0.025,
+        "min_child_samples": 2000,
+        "num_leaves": 16,
+        "monotone_constraints": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "rounds": 772,
+      "feature_names": [
+        "DrivAge",
+        "VehAge",
+        "VehPower",
+        "BonusMalus",
+        "Density",
+        "Area",
+        "VehGas",
+        "VehBrand",
+        "Region"
+      ],
+      "monotone_constraints": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fit_seconds": 23.20907205803087
+    },
+    "severity": {
+      "file": "severity.txt",
+      "sha256": "486bc3d2e33cd2b4462881ebb3cefb38c9626ad28ea95a25fedb1c274a54ca53",
+      "params": {
+        "verbosity": -1,
+        "max_bin": 255,
+        "feature_fraction": 1.0,
+        "bagging_fraction": 1.0,
+        "lambda_l2": 1.0,
+        "cat_smooth": 20.0,
+        "min_data_per_group": 200,
+        "monotone_constraints_method": "basic",
+        "deterministic": true,
+        "force_row_wise": true,
+        "num_threads": 1,
+        "seed": 20260109,
+        "objective": "gamma",
+        "learning_rate": 0.05,
+        "min_child_samples": 100,
+        "num_leaves": 4
+      },
+      "rounds": 46,
+      "feature_names": [
+        "DrivAge",
+        "VehAge",
+        "VehPower",
+        "BonusMalus",
+        "Density",
+        "Area",
+        "VehGas",
+        "VehBrand",
+        "Region"
+      ],
+      "monotone_constraints": null,
+      "fit_seconds": 0.10379197698784992
+    },
+    "tweedie": {
+      "file": "tweedie.txt",
+      "sha256": "93ddf4060ebe9901826d2e9c5ccc1aa67ffb10c5b68c135f1cd120dbe2109b3a",
+      "params": {
+        "verbosity": -1,
+        "max_bin": 255,
+        "feature_fraction": 1.0,
+        "bagging_fraction": 1.0,
+        "lambda_l2": 1.0,
+        "cat_smooth": 20.0,
+        "min_data_per_group": 200,
+        "monotone_constraints_method": "basic",
+        "deterministic": true,
+        "force_row_wise": true,
+        "num_threads": 1,
+        "seed": 20260109,
+        "objective": "tweedie",
+        "learning_rate": 0.025,
+        "min_child_samples": 500,
+        "num_leaves": 8,
+        "tweedie_variance_power": 1.5,
+        "monotone_constraints": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "rounds": 224,
+      "feature_names": [
+        "DrivAge",
+        "VehAge",
+        "VehPower",
+        "BonusMalus",
+        "Density",
+        "Area",
+        "VehGas",
+        "VehBrand",
+        "Region"
+      ],
+      "monotone_constraints": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "fit_seconds": 5.982455824967474
+    }
+  }
+}
