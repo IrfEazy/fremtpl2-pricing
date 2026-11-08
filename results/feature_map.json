@@ -72,6 +72,12 @@
         ],
         "bonus_malus_only": [
           "BonusMalus"
+        ],
+        "severity_simplified": [
+          "BonusMalus",
+          "DrivAge",
+          "VehAge",
+          "VehGas"
         ]
       }
     },
@@ -260,6 +266,12 @@
         ],
         "bonus_malus_only": [
           "BonusMalus"
+        ],
+        "severity_simplified": [
+          "BonusMalus",
+          "DrivAge",
+          "VehAge",
+          "VehGas"
         ]
       }
     },

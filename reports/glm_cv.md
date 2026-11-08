@@ -12,7 +12,7 @@ Rendered from `cv_glm.json` by `fremtpl2 train`; every number below comes from t
 - Inference: coefficient standard errors in the relativity tables are policy-level sandwich standard errors, conditional on the chosen specification (they do not account for the power selection or the level pooling). Relativities are adjusted multiplicative effects versus the stated reference level, not causal effects.
 - Targets: frequency count `sev_rows`, per-claim cap 100,000; the excess loading (`flat_per_exposure_year`) is in no CV target or prediction.
 - Bootstrap confidence intervals are not part of this milestone (applied: False); they come in milestone 3.
-- Config hash `fcf3a1b904659ff237f8dbe36af04149de2d95e2ebfc244ea61851c57fbcedd7`, seed 20260101.
+- Config hash `75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe`, seed 20260101.
 
 ## Data
 
@@ -180,7 +180,7 @@ The per-claim cap makes S_cap a censored amount: a capped claim sits exactly at 
 
 ## Solver convergence
 
-glum solver settings: max_iter 1000, gradient_tol 1e-07 (family tweedie: gradient_tol 1e-05). Fits: 244; **not converged: 0**; maximum iterations used 65.
+glum solver settings: max_iter 1000, gradient_tol 1e-07 (family tweedie: gradient_tol 1e-05). Fits: 551; **not converged: 0**; maximum iterations used 65.
 
 ### Solver accuracy check (real data)
 
@@ -206,6 +206,8 @@ The final full-train frequency, severity and Tweedie models and, per outer fold,
 | final | n/a | frequency | n/a | 0 | 0 | 0 | 6 / 6 |
 | final | n/a | severity | n/a | 0 | 0 | 0 | 4 / 4 |
 | final | n/a | tweedie | 1.5 | 2.9285e-07 | 0 | 1.7505e-07 | 3 / 4 |
+| final | n/a | severity_simplified | n/a | 0 | 0 | 0 | 4 / 4 |
+| final | n/a | severity_l2 | n/a | 0 | 0 | 0 | 3 / 3 |
 
 
 Combined out-of-fold pure premium (frequency x severity) per policy, pipeline solver against tight solver: maximum relative difference 0 (limit 0.0002) at prediction quantile 0.32684; maximum absolute difference 0 at prediction quantile 0.32684.
@@ -249,6 +251,82 @@ Groups are the tuples of all rating factors; sizes are policies per group. The l
 | fold 2 | 84,564 | 108,481 | 1 | 2 | 4 | 15 | 846 | 5.05% | 1.34% |
 | fold 3 | 84,600 | 108,482 | 1 | 2 | 4 | 14 | 846 | 5.03% | 1.32% |
 | fold 4 | 84,635 | 108,482 | 1 | 2 | 4 | 13 | 847 | 5.04% | 1.28% |
+
+## Severity ladder and GLM pure premium selection
+
+Rule version `protocol-2026-11-08-s4-v1` (protocol section 4). Primary loss: exposure-weighted Tweedie deviance of S_cap / Exposure per exposure-year at power 1.5; the frequency model is full GLM frequency fixed for every severity candidate. The rule is a paired-fold complexity heuristic: the mean fold difference is compared with sd/sqrt(K). It is a heuristic, not a significance test and not a valid standard error (training sets overlap across folds and K is small); a difference within the threshold is reported as inconclusive, not as a win.
+
+### Candidates (ordered simplest to most complex)
+
+| candidate | kind | feature set | loss fold 0 | loss fold 1 | loss fold 2 | loss fold 3 | loss fold 4 | mean loss | severity deviance per claim (mean) |
+|---|---|---|---|---|---|---|---|---|---|
+| constant | constant |  | 74.95 | 72.282 | 73.499 | 74.064 | 75.385 | 74.036 | 1.3154 |
+| simplified | glm | severity_simplified | 74.803 | 72.131 | 73.386 | 74.223 | 75.258 | 73.96 | 1.311 |
+| l2 | glm_l2 | full | 74.779 | 72.189 | 73.385 | 74.029 | 75.234 | 73.923 | 1.309 |
+| full | glm | full | 74.824 | 72.198 | 73.514 | 74.353 | 75.33 | 74.044 | 1.32 |
+
+Severity Gamma deviance per claim (weight N) per fold, reported alongside:
+
+| candidate | fold 0 | fold 1 | fold 2 | fold 3 | fold 4 |
+|---|---|---|---|---|---|
+| constant | 1.377 | 1.2217 | 1.2925 | 1.2953 | 1.3903 |
+| simplified | 1.3733 | 1.2162 | 1.2854 | 1.3049 | 1.3754 |
+| l2 | 1.3728 | 1.2203 | 1.2866 | 1.2894 | 1.376 |
+| full | 1.3917 | 1.2184 | 1.2999 | 1.3133 | 1.3766 |
+
+### Ladder steps (comparison always against the current incumbent)
+
+| incumbent | next | mean d | sd d | sd/sqrt(K) | decision | inconclusive | reason |
+|---|---|---|---|---|---|---|---|
+| constant | simplified | 0.075672 | 0.13229 | 0.059164 | replace | False | mean(d) > sd/sqrt(K): the next rung improves on the incumbent |
+| simplified | l2 | 0.036906 | 0.094186 | 0.042121 | keep | True | mean(d) > 0 but <= sd/sqrt(K): inconclusive, the simpler candidate is kept |
+| simplified | full | -0.083562 | 0.045861 | 0.02051 | keep | False | mean(d) <= 0: no improvement, the simpler candidate is kept |
+
+Selected severity candidate: **simplified**.
+
+### Frequency x severity vs GLM Tweedie (step 6)
+
+d_k = loss(Tweedie) - loss(frequency x simplified); the Tweedie of each outer fold uses the power chosen by its inner CV (final power 1.5).
+
+| fold | loss freq x sev | loss Tweedie | d_k |
+|---|---|---|---|
+| 0 | 74.803 | 74.803 | -0.00010273 |
+| 1 | 72.131 | 72.198 | 0.06717 |
+| 2 | 73.386 | 73.581 | 0.19577 |
+| 3 | 74.223 | 74.435 | 0.21133 |
+| 4 | 75.258 | 75.468 | 0.21012 |
+
+mean d = 0.13686, sd = 0.097465, sd/sqrt(K) = 0.043588: frequency x severity has the lower mean loss and |mean(d)| > sd/sqrt(K). Winner: **freq_x_sev** (inconclusive: False).
+
+Selected GLM pure premium candidate: **freq_x_sev[simplified]**.
+
+### L2 penalty
+
+Grid: 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10 (strictly positive). Convention: glum alpha with l1_ratio=0 (pure L2, ridge): minimise sum(w*unit_deviance)/(2*sum(w)) + alpha/2 * sum(beta^2) over the dummy and numeric design columns (unstandardised); intercept unpenalised; sample weights are normalised to sum 1 by glum, so alpha does not depend on the scale of the weights (verified: scaling all weights leaves the fit unchanged). Tie rule: first minimum in grid order.
+
+| outer fold | penalty (inner CV) | on grid edge |
+|---|---|---|
+| 0 | 0.1 | False |
+| 1 | 0.1 | False |
+| 2 | 0.1 | False |
+| 3 | 0.1 | False |
+| 4 | 0.1 | False |
+
+| penalty | outer CV mean loss | fold 0 | fold 1 | fold 2 | fold 3 | fold 4 |
+|---|---|---|---|---|---|---|
+| 0.0001 | 74.042 | 74.822 | 72.198 | 73.513 | 74.349 | 75.329 |
+| 0.0003 | 74.039 | 74.819 | 72.197 | 73.51 | 74.343 | 75.327 |
+| 0.001 | 74.03 | 74.808 | 72.196 | 73.502 | 74.323 | 75.321 |
+| 0.003 | 74.01 | 74.787 | 72.194 | 73.485 | 74.277 | 75.308 |
+| 0.01 | 73.972 | 74.757 | 72.185 | 73.45 | 74.185 | 75.281 |
+| 0.03 | 73.934 | 74.748 | 72.176 | 73.41 | 74.089 | 75.247 |
+| 0.1 | 73.923 | 74.779 | 72.189 | 73.385 | 74.029 | 75.234 |
+| 0.3 | 73.947 | 74.83 | 72.222 | 73.399 | 74.025 | 75.26 |
+| 1 | 73.977 | 74.874 | 72.258 | 73.422 | 74.037 | 75.295 |
+| 3 | 73.991 | 74.889 | 72.277 | 73.432 | 74.043 | 75.313 |
+| 10 | 73.995 | 74.891 | 72.286 | 73.434 | 74.046 | 75.321 |
+
+Final full-train penalty (plain CV over the registered folds): **0.1**; on the grid edge: False (diagnostic only: a grid-edge penalty is flagged, not a failure).
 
 ## Findings
 
@@ -657,10 +735,11 @@ Refitted on the full training set (Tweedie power 1.5); files: `glm_relativities_
 
 | stage | seconds |
 |---|---|
-| coverage_check | 13.542 |
-| cv_fits | 214.75 |
-| cv_metrics | 5.3277 |
-| solver_check_cv | 108.9 |
-| final_fit | 25.577 |
-| total | 368.96 |
-| load_and_clean | 0.77785 |
+| coverage_check | 17.626 |
+| cv_fits | 286.15 |
+| selection_ladder | 8.5063 |
+| cv_metrics | 15.453 |
+| solver_check_cv | 130.09 |
+| final_fit | 34.148 |
+| total | 486.93 |
+| load_and_clean | 3.2667 |
