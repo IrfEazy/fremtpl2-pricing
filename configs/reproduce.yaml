@@ -44,9 +44,12 @@ reproduce:
   render_suffixes: [.png]          # figures: bytes may differ only if the decoded pixels (matplotlib.image.imread) are identical (pixel_equal: portable, never exact); a pixel difference fails
   byte_exact_paths:                # renderer outputs of committed evidence (fnmatch): any byte difference fails
     - reports/test_evaluation.md
+    - README.md                    # declared docs outputs (docs_outputs): any byte difference fails
+    - MODEL_CARD.md
   # Other bytes-different files: exact only if the sole differences are declared volatile JSON keys
   # (same literals, key order and line count); parsed-equal formatting differences are "equivalent"
   # (portable, never exact).
+  docs_outputs: [README.md, MODEL_CARD.md]  # tracked files outside results/ and reports/ that the `docs` step rewrites (generated blocks): written in the clone, never purged, compared byte for byte with HEAD (any difference fails); not source changes. reports/model_report.md is a regular reports/ output
   preserve_paths: &published       # published evidence and inputs that no step regenerates: kept in the clone; every other tracked results/ and reports/ file is deleted before the steps and must be regenerated
     - results/freeze_manifest.json
     - results/test_access.json
@@ -68,6 +71,7 @@ reproduce:
     # freeze --check: an all-numeric mismatch (exit 1 with numeric_only) records the failed strict check and continues; an integrity, structural or execution failure stops the run
     - {name: freeze_check, cmd: [uv, run, --frozen, fremtpl2, freeze, --check, --config, "{config}"], json_result: true}
     - {name: report, cmd: [uv, run, --frozen, fremtpl2, report, --config, "{config}"], outputs: [reports/test_evaluation.md, reports/figures/test_lorenz.png, reports/figures/test_lift.png, reports/figures/test_double_lift.png, reports/figures/test_calibration_decile.png, reports/figures/test_calibration_factor.png, reports/figures/test_bootstrap_delta.png, reports/figures/test_bootstrap_delta_policy.png]}
+    - {name: docs, cmd: [uv, run, --frozen, fremtpl2, docs, --config, "{config}"], outputs: [reports/model_report.md, README.md, MODEL_CARD.md]}
 
 # ---------------------------------------------------------------------------------------------
 # Amendments: dated, explicitly POST-HOC exceptions to the policy above, added after the first
@@ -158,3 +162,14 @@ amendments:
           - {path: reports/glm_cv.md, json: results/cv_glm.json, renderer: cv_report, heading: "## Timing (seconds)", cells: {style: table, column: 1, header: "| stage | seconds |"}}
           - {path: reports/glm_sensitivities.md, json: results/cv_sensitivities.json, renderer: cv_report, heading: "## Timing (seconds)", cells: {style: table, column: 1, header: "| stage | seconds |"}}
           - {path: reports/gbm_cv.md, json: results/cv_gbm.json, renderer: gbm_report, heading: "## Checks and timings", cells: {style: bullet_seconds, after: "- passed: "}}
+    # Dated 2026-11-08, added after run-3 (committed in results/reproduction/run-3.json): derived
+    # provenance hashes. No observed value is pinned: every hash is recomputed on each run with the
+    # producer's own function (interpret.source_entry_from_bytes) from the clone input and from the
+    # HEAD blob of that input, and the input must itself differ only by a satisfied deviation above.
+    # (A separate key, not a declared deviation kind: docs_render describes declared deviations.)
+    derived_hashes:
+      - id: D4
+        kind: derived_provenance_hash
+        artifact: results/interpretation.json        # its `sources` record the provenance hashes of its inputs
+        sources_pointer: /sources                    # only /sources/<key>/<field> of a key present on both sides
+        field: sha256                                # the recorded hash (canonical-JSON hash for a JSON input with telemetry, bytes otherwise)

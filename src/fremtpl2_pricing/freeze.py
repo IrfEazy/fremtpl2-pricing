@@ -1561,6 +1561,96 @@ def _verify_markdown_telemetry(dev, cfg: dict[str, Any], root: Path, manifest: d
     return res
 
 
+def _verify_derived_hash(dev: dict[str, Any], cfg: dict[str, Any], root: Path,
+                         prior: list[dict[str, Any]]):  # fmt: skip
+    """D4: a provenance hash recorded in a derived artifact (``interpretation.json`` /sources/<key>)
+    for an input that itself differs only by satisfied deviations. A difference of the recorded
+    ``field`` of a source entry is covered only if (a) the new value equals the hash recomputed by
+    the producer's own function (``interpret.source_entry_from_bytes``) from the clone's input file,
+    (b) the committed value equals the same recomputation from the HEAD blob of that input, and
+    (c) the input file is covered as a whole by a satisfied earlier deviation. Every other byte of
+    the artifact must equal the committed bytes once the covered hashes are put back. A key outside
+    the pinned sources pointer, a missing blob or any broken pin covers nothing."""
+    from .interpret import source_entry_from_bytes  # the producer's normalisation, not a copy
+
+    res = _new_result(dev)
+    problems = res["problems"]
+    rel, field = dev["artifact"], dev["field"]
+    file = root / rel
+    if not file.is_file():
+        return res
+    try:
+        base_bytes = git_blob(root, "HEAD", rel)
+    except FreezeError:
+        return res
+    new_bytes = file.read_bytes()
+    if new_bytes == base_bytes:
+        return res
+    try:
+        base_src = _ptr_get(strict_json_loads(base_bytes.decode("utf-8")), dev["sources_pointer"])
+        new_src = _ptr_get(strict_json_loads(new_bytes.decode("utf-8")), dev["sources_pointer"])
+        if not isinstance(base_src, dict) or not isinstance(new_src, dict):
+            raise TypeError("the sources are not mappings")
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        problems.append(f"{rel}: unreadable sources ({exc})")
+        res["satisfied"] = False
+        return res
+    covering: dict[str, set[str]] = {}
+    for r in prior:
+        if r["satisfied"]:
+            for f in r["covers_files"]:
+                covering.setdefault(f, set()).add(r["id"])
+    volatile = sorted(cfg["freeze"]["check"]["volatile_keys"])
+    text = new_bytes.decode("utf-8")
+    for key in sorted(set(base_src) & set(new_src)):
+        be, ne = base_src[key], new_src[key]
+        if not (isinstance(be, dict) and isinstance(ne, dict)) or be.get(field) == ne.get(field):
+            continue
+        place = f"{rel} {dev['sources_pointer']}/{key}/{field}"
+        inp = be.get("path")
+        if not isinstance(inp, str) or inp != ne.get("path"):
+            problems.append(f"{place}: the input path is not the same on both sides")
+            continue
+        try:
+            head_bytes = git_blob(root, "HEAD", inp)
+        except FreezeError:
+            problems.append(f"{place}: {inp} is not a tracked input")
+            continue
+        if not (root / inp).is_file():
+            problems.append(f"{place}: {inp} is missing")
+            continue
+        clone_bytes = (root / inp).read_bytes()
+        now = source_entry_from_bytes(clone_bytes, inp, volatile).get(field)
+        was = source_entry_from_bytes(head_bytes, inp, volatile).get(field)
+        if ne.get(field) != now:
+            problems.append(f"{place}: the new value is not the recomputation from the clone input")
+        if be.get(field) != was:
+            problems.append(f"{place}: the committed value is not the recomputation from HEAD")
+        if clone_bytes == head_bytes:
+            problems.append(f"{place}: the input is unchanged")
+        ids = sorted(covering.get(inp, ()))
+        if not ids:
+            problems.append(f"{place}: the differences of {inp} are not covered by a deviation")
+        if text.count(f'"{ne.get(field)}"') != 1:
+            problems.append(f"{place}: the new value is not a unique token of {rel}")
+        if any(m.startswith(place) for m in problems):
+            continue
+        text = text.replace(f'"{ne[field]}"', f'"{be[field]}"')
+        res["applied"].append(
+            {"place": place, "key": key, "base": be[field], "new": ne[field], "covered_by": ids}
+        )
+    if not res["applied"] and not problems:
+        return res
+    if text.encode("utf-8") != base_bytes:
+        problems.append(f"{rel}: differs from the committed file outside the covered hashes")
+    if problems:
+        res["satisfied"] = False
+        res["covers_files"] = []
+    else:
+        res["covers_files"] = [rel]
+    return res
+
+
 _VERIFIERS = {
     "download_metadata": _verify_download_metadata,
     "glm_config_echo": _verify_glm_config_echo,
@@ -1594,6 +1684,8 @@ def verify_amendment(
             out.append(verifier(dev, cfg, root, manifest, out))  # after D2: its hash substitution
         else:
             out.append(verifier(dev, cfg, root, manifest))
+    for dev in amendment.get("derived_hashes", []):  # after the deviations they depend on
+        out.append(_verify_derived_hash(dev, cfg, root, out))
     return out
 
 

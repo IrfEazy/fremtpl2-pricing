@@ -437,7 +437,7 @@ def _amendment(cfg, **over) -> dict:
     from fremtpl2_pricing.train import config_summary
 
     am = load_reproduce_config(REPRODUCE)["amendments"][0]
-    d1, d2, _d3 = am["declared_deviations"]
+    d1, d2, *_ = am["declared_deviations"]
     d2["old_config_sha256"] = OLD_HASH
     d2["new_config_sha256"] = config_summary(cfg)["config_sha256"]
     d2["added_value_sha256"] = {
@@ -873,3 +873,139 @@ def test_d3_anchors_must_exist_exactly_once(project, cfg, frozen):
     (project / "reports/glm_cv.md").write_text(base.replace("1.5", "7.25"))
     _write_timing(project, glm_t=(7.25, 3.5))
     assert not _d3_result(cfg)["satisfied"]
+
+
+# --------------------------------------------------------------------------- D4: derived hashes
+
+IN_REL, ART_REL = "results/cv_glm.json", "results/interpretation.json"
+D2_PRIOR = {"id": "D2", "satisfied": True, "covers_files": [IN_REL]}
+
+
+def _d4_spec() -> dict:
+    return load_reproduce_config(REPRODUCE)["amendments"][0]["derived_hashes"][0]
+
+
+def _src_hash(cfg, data: bytes, rel: str = IN_REL) -> str:
+    """The recorded hash, from the producer's own function."""
+    from fremtpl2_pricing.interpret import source_entry_from_bytes
+
+    vol = sorted(cfg["freeze"]["check"]["volatile_keys"])
+    return source_entry_from_bytes(data, rel, vol)["sha256"]
+
+
+def _interp(cfg, data: bytes, key="cv_glm", rel=IN_REL, extra=None) -> str:
+    entry = {"path": rel, "sha256": _src_hash(cfg, data, rel)}
+    return json.dumps({"sources": {key: entry, **(extra or {})}, "other": 1}, indent=2) + "\n"
+
+
+def _d4_project(project, cfg, old=b'{"config": {"h": 1}, "timing_seconds": {"t": 1}}',
+                new=b'{"config": {"h": 2}, "timing_seconds": {"t": 9}}'):  # fmt: skip
+    """HEAD: input and artifact in step; working tree: the regenerated input and artifact."""
+    merged = with_reproduce(cfg, load_reproduce_config(REPRODUCE))
+    (project / "results").mkdir(exist_ok=True)
+    (project / IN_REL).write_bytes(old)
+    (project / ART_REL).write_text(_interp(merged, old))
+    if freeze.git(project, "status", "--porcelain", "--", "results").strip():
+        _commit(project, "d4 base")
+    (project / IN_REL).write_bytes(new)
+    (project / ART_REL).write_text(_interp(merged, new))
+    return merged
+
+
+def _d4(merged, prior=(D2_PRIOR,), root=None):
+    return freeze._verify_derived_hash(_d4_spec(), merged, root, list(prior))
+
+
+def test_d4_spec_is_declared_in_the_policy_without_observed_values():
+    spec = _d4_spec()
+    assert spec["artifact"] == ART_REL and spec["sources_pointer"] == "/sources"
+    assert not any(len(str(v)) == 64 for v in spec.values())  # no pinned hash
+
+
+def test_d4_derived_hash_is_covered_when_its_input_differs_only_by_a_covered_deviation(
+    project, cfg
+):
+    merged = _d4_project(project, cfg)
+    res = _d4(merged, root=project)
+    assert res["satisfied"], res["problems"]
+    assert res["covers_files"] == [ART_REL]
+    [app] = res["applied"]
+    assert app["key"] == "cv_glm" and app["covered_by"] == ["D2"]
+    assert app["base"] != app["new"]
+    assert app["base"] == _src_hash(merged, freeze.git_blob(project, "HEAD", IN_REL))
+    assert app["new"] == _src_hash(merged, (project / IN_REL).read_bytes())
+
+
+def test_d4_nothing_changed_applies_nothing(project, cfg):
+    merged = _d4_project(project, cfg)
+    freeze.git(project, "checkout", "--", ART_REL)
+    res = _d4(merged, root=project)
+    assert res["satisfied"] and not res["applied"] and res["covers_files"] == []
+
+
+def test_d4_not_covered_when_the_input_has_an_uncovered_difference(project, cfg):
+    merged = _d4_project(project, cfg)
+    for prior in ((), ({**D2_PRIOR, "satisfied": False},), ({**D2_PRIOR, "covers_files": []},)):
+        res = _d4(merged, prior, root=project)
+        assert not res["satisfied"] and res["covers_files"] == []
+        assert any("not covered" in p for p in res["problems"])
+
+
+def test_d4_not_covered_when_the_recorded_hash_does_not_match_the_recomputation(project, cfg):
+    merged = _d4_project(project, cfg)
+    art = project / ART_REL
+    doc = json.loads(art.read_text())
+    doc["sources"]["cv_glm"]["sha256"] = "9" * 64  # not what the producer computes from the file
+    art.write_text(json.dumps(doc, indent=2) + "\n")
+    res = _d4(merged, root=project)
+    assert not res["satisfied"] and any(
+        "recomputation from the clone" in p for p in res["problems"]
+    )
+    # the committed (HEAD) value is not the recomputation from the HEAD blob either
+    merged = _d4_project(project, cfg, old=b'{"config": {"h": 3}}', new=b'{"config": {"h": 4}}')
+    doc = json.loads(freeze.git_blob(project, "HEAD", ART_REL))
+    doc["sources"]["cv_glm"]["sha256"] = "8" * 64
+    (project / ART_REL).write_text(_interp(merged, (project / IN_REL).read_bytes()))
+    _commit_bytes = (json.dumps(doc, indent=2) + "\n").encode()
+    (project / ART_REL).write_bytes(_commit_bytes)
+    _commit(project, "bad head hash")
+    (project / ART_REL).write_text(_interp(merged, (project / IN_REL).read_bytes()))
+    res = _d4(merged, root=project)
+    assert not res["satisfied"] and any("recomputation from HEAD" in p for p in res["problems"])
+
+
+def test_d4_not_covered_for_a_key_or_path_outside_the_sources(project, cfg):
+    merged = _d4_project(project, cfg)
+    art = project / ART_REL
+    doc = json.loads(art.read_text())
+    doc["other"] = 2  # a difference outside /sources
+    art.write_text(json.dumps(doc, indent=2) + "\n")
+    res = _d4(merged, root=project)
+    assert not res["satisfied"] and any("outside the covered hashes" in p for p in res["problems"])
+    # the hash moves under a key that is only on one side: nothing is substituted
+    merged = _d4_project(project, cfg)
+    doc = json.loads(art.read_text())
+    doc["sources"]["new_key"] = doc["sources"].pop("cv_glm")
+    art.write_text(json.dumps(doc, indent=2) + "\n")
+    res = _d4(merged, root=project)
+    assert not res["applied"] and res["covers_files"] == []  # the difference stays unmatched
+    # an untracked input is not a covered input
+    merged = _d4_project(project, cfg)
+    doc = json.loads(art.read_text())
+    doc["sources"]["cv_glm"]["path"] = "results/untracked.json"
+    art.write_text(json.dumps(doc, indent=2) + "\n")
+    assert not _d4(merged, root=project)["satisfied"]
+
+
+def test_d4_uses_the_producers_function_not_a_copy():
+    import inspect
+
+    src = inspect.getsource(freeze._verify_derived_hash)
+    assert "source_entry_from_bytes" in src and "hashlib" not in src and "sort_keys" not in src
+
+
+def test_d4_runs_after_the_deviations_it_depends_on(project, cfg, frozen):
+    merged = _d4_project(project, cfg)
+    am = {**load_reproduce_config(REPRODUCE)["amendments"][0], "declared_deviations": []}
+    res = freeze.verify_amendment(am, merged, project)
+    assert [r["id"] for r in res] == ["D4"] and not res[0]["satisfied"]  # no covering deviation

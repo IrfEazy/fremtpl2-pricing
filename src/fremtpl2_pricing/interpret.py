@@ -38,7 +38,6 @@ import pandas as pd
 
 from . import features, figures, freeze, gbm
 from .config import DEFAULT_REPRODUCE_CONFIG, load_reproduce_config
-from .manifest import sha256_file
 from .train import assert_train_only, load_train
 
 COMPONENTS = gbm.COMPONENTS
@@ -892,11 +891,13 @@ def _drop_keys(obj: Any, drop: set[str]) -> Any:
     return obj
 
 
-def _source_entry(file: Path, rel: str, volatile: list[str]) -> dict[str, Any]:
-    """Provenance of an input: a JSON file that carries telemetry is hashed as canonical JSON with
-    the volatile telemetry keys removed (so a rerun gives the same hash); other files by bytes."""
-    if file.suffix == ".json":
-        doc = json.loads(file.read_text(encoding="utf-8"))
+def source_entry_from_bytes(data: bytes, rel: str, volatile: list[str]) -> dict[str, Any]:
+    """Provenance of an input given its bytes: a JSON file that carries telemetry is hashed as
+    canonical JSON with the volatile telemetry keys removed (so a rerun gives the same hash);
+    other files by bytes. The one normalisation, also used by the reproduction verifier to
+    recompute a recorded hash from a file or a git blob."""
+    if rel.endswith(".json"):
+        doc = json.loads(data.decode("utf-8"))
         if _drop_keys(doc, set(volatile)) != doc:
             canon = json.dumps(
                 _drop_keys(doc, set(volatile)), sort_keys=True, separators=(",", ":"),
@@ -907,7 +908,12 @@ def _source_entry(file: Path, rel: str, volatile: list[str]) -> dict[str, Any]:
                 "content_sha256_excluding": volatile,
                 "sha256": hashlib.sha256(canon.encode("utf-8")).hexdigest(),
             }
-    return {"path": rel, "sha256": sha256_file(file)}
+    return {"path": rel, "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _source_entry(file: Path, rel: str, volatile: list[str]) -> dict[str, Any]:
+    """Provenance of an input file (:func:`source_entry_from_bytes` on its bytes)."""
+    return source_entry_from_bytes(file.read_bytes(), rel, volatile)
 
 
 def _sources(root: Path, cfg: dict[str, Any], inputs: dict[str, Any]) -> dict[str, Any]:

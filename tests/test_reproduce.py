@@ -976,3 +976,79 @@ def test_a_markdown_timing_deviation_covers_only_the_files_it_names(repo, acfg, 
     )  # an unsatisfied D3 covers nothing
     rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit), force_clean=True)
     assert rec["amended_verdict"] == "FAIL"
+
+
+# --------------------------------------------------------------------------- docs step
+
+
+DOCS_OUT = ["reports/model_report.md", "README.md", "MODEL_CARD.md"]
+
+
+@pytest.fixture
+def dcfg(cfg, repo):
+    """The steps of ``cfg`` plus a ``docs`` step after ``report``; README and the model card are
+    tracked, outside the output roots and declared docs outputs (as in configs/reproduce.yaml)."""
+    cfg = copy.deepcopy(cfg)
+    cfg["reproduce"]["steps"].append({"name": "docs", "cmd": ["docs"], "outputs": DOCS_OUT})
+    cfg["reproduce"]["docs_outputs"] = ["README.md", "MODEL_CARD.md"]
+    cfg["reproduce"]["byte_exact_paths"] = [
+        *cfg["reproduce"]["byte_exact_paths"], "README.md", "MODEL_CARD.md",
+    ]  # fmt: skip
+    _write(repo, "README.md", "# R\n\n<!-- docs:x:begin -->\nvalue 1.5\n<!-- docs:x:end -->\n")
+    _write(repo, "MODEL_CARD.md", "# Card\n\nvalue 2.5\n")
+    _write(repo, "reports/model_report.md", "# Model report\n\nvalue 3.5\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "docs files")
+    return cfg
+
+
+def _docs_runner(edit=None, **kw):
+    inner = _runner(**kw)
+
+    def run(cmd, cwd):
+        if cmd[0] == "docs" and edit:
+            edit(cwd)
+        return inner(cmd, cwd)
+
+    return run
+
+
+def test_docs_step_regenerating_every_output_gives_an_exact_pass(repo, dcfg):
+    rules = reproduce.snapshot_rules(dcfg, repo, freeze.head_commit(repo))
+    assert {"README.md", "MODEL_CARD.md", "reports/model_report.md"} <= set(rules["compared"])
+    assert "README.md" not in rules["purge"] and "MODEL_CARD.md" not in rules["purge"]
+    assert "reports/model_report.md" in rules["purge"]
+    rec = _run(repo, dcfg, runner=_docs_runner())
+    assert rec["strict_verdict"] == "EXACT_PASS"
+    assert [s["name"] for s in rec["steps"]][-1] == "docs"
+    assert rec["comparison"]["source_changed"] == []
+
+
+def test_docs_step_missing_output_fails(repo, dcfg):
+    rec = _run(repo, dcfg, runner=_docs_runner(edit=lambda c: (c / "MODEL_CARD.md").unlink()))
+    assert rec["strict_verdict"] == "FAIL"
+    assert rec["failure"]["step"] == "docs"
+    assert rec["failure"]["missing_outputs"] == ["MODEL_CARD.md"]
+
+
+@pytest.mark.parametrize("rel", ["README.md", "MODEL_CARD.md"])
+def test_docs_output_difference_fails_byte_exactly_and_is_not_a_source_change(repo, dcfg, rel):
+    # a difference too small for any tolerance rule: the docs outputs are byte-exact
+    rec = _run(repo, dcfg, runner=_docs_runner(edit=lambda c: _write(c, rel, "# x\n\nvalue 9.5\n")))
+    assert rec["strict_verdict"] == "FAIL" and rec["amended_verdict"] == "FAIL"
+    files = {f["path"]: f["status"] for f in rec["comparison"]["files"]}
+    assert files[rel] == "fail"
+    assert rel not in rec["comparison"]["source_changed"]
+
+
+def test_default_policy_has_the_docs_step_after_the_report_and_declares_the_docs_outputs():
+    rp = load_reproduce_config(Path(__file__).resolve().parents[1] / "configs/reproduce.yaml")[
+        "reproduce"
+    ]
+    names = [s["name"] for s in rp["steps"]]
+    assert names.index("docs") == names.index("report") + 1
+    step = rp["steps"][names.index("docs")]
+    assert step["cmd"][:4] == ["uv", "run", "--frozen", "fremtpl2"] and step["cmd"][4] == "docs"
+    assert step["outputs"] == DOCS_OUT
+    assert rp["docs_outputs"] == ["README.md", "MODEL_CARD.md"]
+    assert {"README.md", "MODEL_CARD.md"} <= set(rp["byte_exact_paths"])

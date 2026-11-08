@@ -1,7 +1,8 @@
 """Reproduction of the pre-test pipeline in an isolated clean clone of HEAD.
 
 ``fremtpl2 reproduce`` runs the steps of ``reproduce.steps`` (setup, download, audit, split, train,
-gbm, sensitivities, interpret, the strict ``freeze --check`` and the report re-render) in a fresh
+gbm, sensitivities, interpret, the strict ``freeze --check``, the report re-render and the docs
+re-render) in a fresh
 clone under ``paths.processed/reproduce.workdir``; the clone starts with no ``data/`` so a stale
 artifact cannot pass. Afterwards every tracked file under ``results/`` and ``reports/`` of the clone
 is compared with the HEAD blob (exact bytes, or JSON whose only differences are declared volatile
@@ -14,6 +15,10 @@ the output roots, or any new untracked file under them that is not a declared st
 the run. The record is written to ``results/reproduction/run-<n>.json`` of the SOURCE tree (one
 immutable record per run; an existing record is never overwritten and the directory is excluded
 from the comparison).
+
+The ``docs`` step rewrites ``reports/model_report.md`` and the generated blocks of ``README.md`` and
+``MODEL_CARD.md`` (``reproduce.docs_outputs``): those two are declared docs outputs, written in the
+clone, never purged and compared byte for byte (``byte_exact_paths``), not source changes.
 
 Reproduction never recomputes held-out metrics: ``freeze`` and ``evaluate`` are not steps and
 ``report`` only re-renders the published evaluation.
@@ -220,6 +225,9 @@ def snapshot_rules(cfg: dict[str, Any], root: Path, commit: str) -> dict[str, An
     is_in = lambda p, pats: any(fnmatch.fnmatch(p, pat) for pat in pats)  # noqa: E731
     tracked = git_tracked(root, commit)
     outputs = sorted(p for p in tracked if p.startswith(roots) and not p.startswith(history))
+    # declared docs outputs outside the output roots (README, model card): never purged (their
+    # generated blocks sit between hand-written text), compared byte for byte, not source changes
+    docs = sorted(p for p in rp.get("docs_outputs", []) if p in tracked and p not in outputs)
     return {
         "rp": rp,
         "roots": roots,
@@ -228,7 +236,7 @@ def snapshot_rules(cfg: dict[str, Any], root: Path, commit: str) -> dict[str, An
         "policy_sha256": cfg.get("reproduce_policy_sha256"),
         "drop": frozenset(cfg["freeze"]["check"]["volatile_keys"]),
         "purge": [p for p in outputs if not is_in(p, rp["preserve_paths"])],
-        "compared": [p for p in outputs if not is_in(p, rp["protected_paths"])],
+        "compared": [p for p in outputs if not is_in(p, rp["protected_paths"])] + docs,
         "preserved": [p for p in outputs if is_in(p, rp["protected_paths"])],
     }
 
