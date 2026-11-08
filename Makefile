@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split train sensitivities gbm freeze rehearsal evaluate all
+.PHONY: setup lint test download audit split train sensitivities gbm interpret freeze rehearsal evaluate report all
 
 setup:
 	uv sync
@@ -28,6 +28,12 @@ sensitivities:
 gbm:
 	uv run fremtpl2 gbm
 
+# Train-only interpretation of the frozen candidates (SHAP vs GLM, BonusMalus monotonicity, constraint
+# register): results/interpretation.json, reports/interpretation.md, reports/figures/interp_*.png. Never
+# fits, never reads a test row; commit its outputs before `freeze` (which needs a clean tree).
+interpret:
+	uv run fremtpl2 interpret
+
 # Train only; needs a clean committed work tree. Commit results/freeze_manifest.json afterwards.
 freeze:
 	uv run fremtpl2 freeze
@@ -40,4 +46,10 @@ rehearsal:
 evaluate:
 	uv run fremtpl2 evaluate
 
-all: download audit split train gbm sensitivities freeze
+# Renders reports/test_evaluation.md and figures only from results/metrics.json and the completed
+# attempt it points to; exits non-zero (writing nothing) if no completed attempt exists. Explicit,
+# never part of `all`.
+report:
+	uv run fremtpl2 report
+
+all: download audit split train gbm sensitivities interpret freeze

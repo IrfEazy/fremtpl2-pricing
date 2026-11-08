@@ -426,7 +426,6 @@ def test_cli_train_is_wired(monkeypatch, tmp_path):
     called = []
     monkeypatch.setattr(cli, "run_train", lambda c: called.append(c))
     assert cli.main(["train"]) == 0 and called
-    assert cli.main(["report"]) == 2  # stub; never call the real evaluate on the project
 
 
 def test_selection_block(result, cfg):

@@ -319,3 +319,53 @@ freeze:
       recomputing and fails closed on a hash mismatch. Completion is never inferred from a
       directory or pointer. `fremtpl2 evaluate --rehearsal` runs the identical code path on a train
       CV fold before test access.
+
+# Figures of `fremtpl2 interpret` and `fremtpl2 report` (fremtpl2_pricing.figures): Agg backend, PNG,
+# fixed size and dpi, no metadata (deterministic for fixed data and library versions).
+figures:
+  dir: figures                     # under paths.reports
+  dpi: 110
+  width: 9.0                       # inches; the height is `height` per row of panels
+  height: 3.6
+
+# Milestone 3c: train-only interpretation of the frozen candidates (fremtpl2_pricing.interpret,
+# `fremtpl2 interpret`, run BEFORE the freeze). Never fits, never reads a test row; descriptive.
+interpret:
+  sample:                          # fixed train sample (rows sorted by IDpol, drawn without replacement); the ids are recorded
+    size: 20000
+    seed: 20260113
+  contributions:
+    tolerance: 1.0e-9              # max |sum of the contributions (incl. the base value) - raw score| over the sample rows
+  dependence:                      # SHAP dependence plots (LightGBM pred_contrib) per GBM component
+    factors: [BonusMalus, DrivAge, VehAge, Density, VehPower, Region, Area]
+    numeric_bins: 20               # quantile bins of a numeric factor with more distinct values than this
+    max_points: 3000               # points drawn (by seed) in the scatter of a dependence plot
+    point_seed: 20260114
+  glm_comparison:
+    numeric_bins: 10               # exposure quantile bins for the factors that are continuous terms in the GLM (BonusMalus, Density); the severity component is evaluated on claim rows (N > 0) weighted by N
+  interaction:                     # descriptive, exploratory, train only: DrivAge contribution of the GBM frequency model by VehPower band
+    component: frequency
+    reference_drivage_band: "41-50"   # the bands are those of features.definitions.DrivAge
+    young_drivage_bands: ["18-20", "21-25"]
+    vehpower_bands: {lower_edges: [4, 6, 8, 10]}
+    min_exposure_years: 50.0       # a table cell below this exposure is flagged as thin
+  monotonicity:                    # BonusMalus sweep of the pure premium of the six candidates (protocol amendment 2026-11-08, PM-M3-1)
+    feature: BonusMalus
+    rows: 2000                     # rows of the sample (drawn by seed) swept
+    seed: 20260115
+    max_points: 300                # sweep points: the distinct BonusMalus values of the TRAIN set; if there are more, max_points equally spaced values from the train minimum to maximum
+    tolerance: 1.0e-12             # a relative decrease of the pure premium larger than this counts as a decrease
+  outputs:                         # file names under paths.results / paths.reports
+    json: interpretation.json
+    report: interpretation.md
+    figure_prefix: interp_
+    staging_dir: interpret_staging # under paths.processed (git-ignored): outputs are written here and moved only when all succeeded
+
+# Milestone 3d: the report of the single test evaluation (fremtpl2_pricing.report, `fremtpl2 report`),
+# rendered only from results/metrics.json and the completed attempt it points to.
+report:
+  outputs:                         # file names under paths.reports
+    markdown: test_evaluation.md
+    figure_prefix: test_
+    staging_dir: report_staging    # under paths.processed (git-ignored)
+  bootstrap_histogram_bins: 40

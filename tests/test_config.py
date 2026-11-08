@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-from fremtpl2_pricing.cli import main
 from fremtpl2_pricing.config import ConfigError, load_config
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,11 +25,6 @@ def test_missing_key(tmp_path):
     p.write_text(yaml.safe_dump({"seed": 1, "paths": {"raw": "x"}, "download": {}}))
     with pytest.raises(ConfigError):
         load_config(p)
-
-
-@pytest.mark.parametrize("cmd", ["report"])  # evaluate is real: never call it on the project
-def test_stubs_exit_2(cmd):
-    assert main([cmd, "--config", str(ROOT / "configs" / "default.yaml")]) == 2
 
 
 @pytest.mark.parametrize("bad", [[0.0, 0.1], [-0.1], [], [float("nan")], [0.1, 0.1]])

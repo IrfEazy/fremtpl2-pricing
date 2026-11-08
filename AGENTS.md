@@ -1,14 +1,26 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `freeze`, `evaluate`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `interpret`, `freeze`, `evaluate`, `report`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
-  `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
+  `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`), `interpret` (train-only interpretation), `report` (test report), `figures` (deterministic matplotlib helpers)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
   `data/raw` and `data/processed` (git-ignored, regenerated), `results/` and `reports/` (tracked
   pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`,
   `cv_glm.json`, `glm_relativities_*.csv`, `feature_map.json`, `glm_models.json`, `glm_cv.md`,
   `cv_sensitivities.json`, `glm_sensitivities.md`). `fremtpl2 train` runs the grouped CV of the GLMs on train only; `fremtpl2 gbm` (module `gbm`, report `gbm_report`; config `models.gbm`) tunes the LightGBM frequency/severity/Tweedie candidates on the same registered folds, refits on train, selects the GBM pure-premium candidate by protocol section 4 and runs the CV-only monotonicity diagnostic (outputs `cv_gbm.json`, `gbm_models.json`, `gbm_cv.md`, model files in git-ignored `data/processed/models/`);
   `fremtpl2 sensitivities` runs the declared `clean.sensitivities` in CV only.
+  `fremtpl2 interpret` (module `interpret`; config `interpret:`, `figures:`) runs BEFORE the freeze, on a fixed train sample
+  (config size/seed, ids recorded, `cv_fold >= 0` asserted), loads the frozen artifacts through the freeze loaders and never
+  refits: LightGBM `pred_contrib` contributions of each GBM component (per-row sum = raw score, tolerance recorded; the
+  exposure offset is outside the contributions), group means of contributions against the log relativities (stored coefficients) of the GLM of the SELECTED GLM candidate for
+  the same component, other GLMs as labelled extra columns, on the aligned log scale (never contributions as coefficients; the
+  severity comparison uses claim rows only, weighted by N), an exploratory DrivAge x VehPower note, the BonusMalus pure-premium
+  monotonicity sweep (distinct train BonusMalus values) of the six candidates (PM-M3-1: only the frequency and Tweedie GBMs are constrained; freq x sev is not
+  guaranteed monotone; a limit, never retuned) and the constraint register from `cv_gbm.json`. Outputs
+  `results/interpretation.json`, `reports/interpretation.md`, `reports/figures/interp_*.png`; commit them before `freeze`.
+  `fremtpl2 report` (module `report`; config `report:`) renders `reports/test_evaluation.md` and `reports/figures/test_*.png`
+  only from `results/metrics.json` and the completed attempt it points to (files checked against the COMPLETE hashes); with no
+  completed attempt it exits non-zero and writes nothing. It runs only after the real `evaluate` (explicit, never in `make all`).
 - Freeze and test evaluation (config `freeze:`, protocol section 6). `fremtpl2 freeze` (module `freeze`, train only,
   clean committed tree) recomputes both selections from the recorded per-fold losses, checks the config against the
   training records and the feature-map level coverage against `results/audit.json`, and writes
@@ -64,6 +76,6 @@
   Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
   `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
   reported (separate block), never part of a CV target. The bootstrap block is not applied in train/CV; `fremtpl2 evaluate` applies it to the test set (paired group bootstrap, `metrics.ratio_bootstrap`).
-- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`).
+- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make interpret` (train-only interpretation; before `freeze`), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`), `make report` (test report after `evaluate`; explicit).
   Tests are offline; only `fremtpl2 download` touches the network.
 - Commits: small and focused, one line `type(scope): summary`, no footer. Do not push unless explicitly asked.

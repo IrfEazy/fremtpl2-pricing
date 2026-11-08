@@ -13,18 +13,21 @@ from .download import DownloadError, run_download
 from .evaluate import run_evaluate, run_publish, run_rehearsal
 from .freeze import FreezeError, run_freeze
 from .gbm import run_gbm
+from .interpret import run_interpret
+from .report import run_report
 from .sensitivities import run_sensitivities
 from .split import run_split
 from .train import run_train
-
-STUBS = ("report",)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fremtpl2", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    names = ("download", "audit", "split", "train", "sensitivities", "gbm", "freeze", "evaluate")
-    for name in (*names, *STUBS):
+    names = (
+        "download", "audit", "split", "train", "sensitivities", "gbm", "interpret", "freeze",
+        "evaluate", "report",
+    )  # fmt: skip
+    for name in names:
         p = sub.add_parser(name, help=f"{name} step")
         p.add_argument(
             "--config", default=DEFAULT_CONFIG, help="YAML config (default: %(default)s)"
@@ -65,9 +68,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    if args.command in STUBS:
-        print(f"{args.command}: not implemented yet", file=sys.stderr)
-        return 2
     try:
         if args.command == "audit":
             run_audit(cfg)
@@ -79,6 +79,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_gbm(cfg)
         elif args.command == "sensitivities":
             run_sensitivities(cfg)
+        elif args.command == "interpret":
+            res = run_interpret(cfg)
+            print(
+                "interpret: " + ", ".join(f"{k} {v:.1f}s" for k, v in res["timing_seconds"].items())
+            )
+        elif args.command == "report":
+            run_report(cfg)
         elif args.command == "freeze":
             run_freeze(cfg, args.config, force=args.force)
         elif args.command == "evaluate":

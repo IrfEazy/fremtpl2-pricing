@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "glum>=3.4.1",
     "lightgbm>=4.7.0",
+    "matplotlib>=3.11.2",
     "numpy",
     "pandas",
     "pyarrow",
@@ -45,3 +46,4 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/fremtpl2_pricing/audit.py" = ["E501"]  # report prose templates
+"tests/test_interpret_report.py" = ["F811"]  # fixtures imported from test_freeze_evaluate
