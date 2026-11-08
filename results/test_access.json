@@ -1,0 +1,43 @@
+{
+  "description": "authoritative append-only test access journal (fremtpl2 evaluate); never edit or reset",
+  "events": [
+    {
+      "event": "FROZEN",
+      "timestamp": "2026-11-08T14:59:18.643377+00:00",
+      "manifest_sha256": "d4359feab2b44c2dd417095adecc7defc0a78af5d3de4940515f3716b68dc753",
+      "commit": "6f716c76c870c323708f203b69dc15a0ef50009e"
+    },
+    {
+      "event": "TEST_OPENED",
+      "timestamp": "2026-11-08T14:59:18.661442+00:00",
+      "attempt": 1,
+      "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+      "manifest_sha256": "d4359feab2b44c2dd417095adecc7defc0a78af5d3de4940515f3716b68dc753",
+      "commit": "6f716c76c870c323708f203b69dc15a0ef50009e",
+      "runtime_sha256": "90c81937cef028549469a57a84315474726b6467d09f347877e8b708f852930b",
+      "population": {
+        "kind": "test",
+        "rows": "primary_set == 'test' (cv_fold == -1)"
+      },
+      "technical_rerun": false,
+      "reason": null,
+      "rerun_of": null,
+      "original_attempt_id": null
+    },
+    {
+      "event": "COMPLETE",
+      "timestamp": "2026-11-08T15:00:07.963528+00:00",
+      "attempt": 1,
+      "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+      "staging_dir": "data/processed/evaluate_staging/attempt-1",
+      "publish_dir": "results/test/attempt-1",
+      "staged": {
+        "metrics.json": "1b338a3b3ddc294594fcf48d72c3e6e8ff24d119cb5e31391fed9f69f4a8876f",
+        "tables.json": "bcecd2cc5691746db5c1773ce9bee12304373f3ffb4bb229573547070bcb4296",
+        "bootstrap_replicates_group.csv": "9dd5f2ad22d58909a0ba246e0e95d8b8e8ad421552a7d5fa307ef9f56fed315f",
+        "bootstrap_replicates_policy.csv": "9cdfe3501a59e03a4f987ca27bd621e15582972a21f2fe391d760de326002cda"
+      },
+      "outputs_sha256": "7eb661ee684cb0e83872fb9f3cf1303be10c6f71c952a45729004120f238a3e7"
+    }
+  ]
+}

@@ -1,0 +1,411 @@
+{
+  "source": {
+    "attempt_dir": "results/test/attempt-1",
+    "attempt": 1,
+    "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+    "metrics_sha256": "1b338a3b3ddc294594fcf48d72c3e6e8ff24d119cb5e31391fed9f69f4a8876f",
+    "outputs_sha256": "7eb661ee684cb0e83872fb9f3cf1303be10c6f71c952a45729004120f238a3e7",
+    "note": "the completed attempt of the single test evaluation (journal COMPLETE)"
+  },
+  "attempt": 1,
+  "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+  "population": {
+    "kind": "test",
+    "rows": "primary_set == 'test' (cv_fold == -1)"
+  },
+  "manifest_sha256": "d4359feab2b44c2dd417095adecc7defc0a78af5d3de4940515f3716b68dc753",
+  "runtime_sha256": "90c81937cef028549469a57a84315474726b6467d09f347877e8b708f852930b",
+  "commit": "6f716c76c870c323708f203b69dc15a0ef50009e",
+  "training_commit": "73c74ec506668611984fdb64dfa7d1bf23d2c6ea",
+  "selected_glm_id": "glm_freq_x_sev[simplified]",
+  "selected_gbm_id": "gbm_freq_x_sev",
+  "candidates_order": [
+    "pp_null",
+    "bonus_malus_only",
+    "glm_freq_x_sev[simplified]",
+    "glm_tweedie",
+    "gbm_freq_x_sev",
+    "gbm_tweedie"
+  ],
+  "technical_rerun": false,
+  "rerun_of": null,
+  "self_check": {
+    "rows": 547,
+    "max_rel_diff": 0.0,
+    "rtol": 1e-10,
+    "determinism": {
+      "repeat": "identical",
+      "permuted_row_order": "identical",
+      "rows": 547
+    },
+    "passed": true
+  },
+  "access_log": [
+    {
+      "attempt": 1,
+      "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+      "opened_utc": "2026-11-08T14:59:18.661442+00:00",
+      "technical_rerun": false,
+      "reason": null,
+      "rerun_of": null,
+      "status": "this attempt",
+      "error_type": null
+    }
+  ],
+  "conditional_on": "frozen fitted models; retraining, tuning and selection variability are not included",
+  "rows": {
+    "policies": 135602,
+    "exposure": 71737.2096930908,
+    "claims": 5321,
+    "claim_policies": 4978
+  },
+  "groups": {
+    "groups": 105759,
+    "policies": 135602,
+    "exposure": 71737.2096930908,
+    "size_quantiles": {
+      "0.5": 1.0,
+      "0.9": 2.0,
+      "0.99": 4.0
+    },
+    "max_group_size": 22,
+    "top_share": 0.01,
+    "top_groups": 1058,
+    "top_policy_share": 0.05048598103272813,
+    "top_exposure_share": 0.013757577765546402
+  },
+  "candidates": {
+    "pp_null": {
+      "primary_loss": 78.19709296729405,
+      "tweedie_deviance_per_exposure": 78.19709296729405,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1192.7644886532803,
+      "gini": 0.0,
+      "gini_normalized": 0.0,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9843847.005908832,
+        "ratio": 1.0129712727162992
+      },
+      "frequency": {
+        "poisson_deviance_per_exposure": 0.4834782748750974,
+        "gini": 0.0,
+        "gini_normalized": 0.0,
+        "calibration_totals": {
+          "observed": 5321.0,
+          "predicted": 5286.755184985908,
+          "ratio": 1.006477473197803
+        }
+      },
+      "severity": {
+        "gamma_deviance_per_claim": 1.3232289691366097,
+        "calibration_totals": {
+          "observed": 9971534.23,
+          "predicted": 9907610.26105288,
+          "ratio": 1.0064520068172653
+        }
+      }
+    },
+    "bonus_malus_only": {
+      "primary_loss": 75.50990643706413,
+      "tweedie_deviance_per_exposure": 75.50990643706413,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1157.6115506972983,
+      "gini": 0.2607615333893426,
+      "gini_normalized": 0.26525045736872926,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9844685.799044847,
+        "ratio": 1.0128849648982663
+      },
+      "frequency": {
+        "poisson_deviance_per_exposure": 0.469456523687841,
+        "gini": 0.21643025524253334,
+        "gini_normalized": 0.22416308574358632,
+        "calibration_totals": {
+          "observed": 5321.0,
+          "predicted": 5287.205668821982,
+          "ratio": 1.0063917186685776
+        }
+      },
+      "severity": {
+        "gamma_deviance_per_claim": 1.3232289691366097,
+        "calibration_totals": {
+          "observed": 9971534.23,
+          "predicted": 9907610.26105288,
+          "ratio": 1.0064520068172653
+        }
+      }
+    },
+    "glm_freq_x_sev[simplified]": {
+      "primary_loss": 74.56746407709697,
+      "tweedie_deviance_per_exposure": 74.56746407709697,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1147.0913155047192,
+      "gini": 0.3083053521274628,
+      "gini_normalized": 0.3136127272995202,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9826256.41406846,
+        "ratio": 1.0147846554994782
+      },
+      "frequency": {
+        "poisson_deviance_per_exposure": 0.4636945634634749,
+        "gini": 0.2787521430720802,
+        "gini_normalized": 0.28871167055018687,
+        "calibration_totals": {
+          "observed": 5321.0,
+          "predicted": 5282.943507636247,
+          "ratio": 1.007203653097699
+        }
+      },
+      "severity": {
+        "gamma_deviance_per_claim": 1.3330204289129355,
+        "calibration_totals": {
+          "observed": 9971534.23,
+          "predicted": 9878807.341431752,
+          "ratio": 1.0093864456875632
+        }
+      }
+    },
+    "glm_tweedie": {
+      "primary_loss": 74.41482740234493,
+      "tweedie_deviance_per_exposure": 74.41482740234493,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1146.6196575754227,
+      "gini": 0.31383460578631517,
+      "gini_normalized": 0.319237165240405,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9891241.04797548,
+        "ratio": 1.0081176044173905
+      }
+    },
+    "gbm_freq_x_sev": {
+      "primary_loss": 73.18824593906487,
+      "tweedie_deviance_per_exposure": 73.18824593906487,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1129.8577435005436,
+      "gini": 0.366222347953451,
+      "gini_normalized": 0.3725267451478829,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9677927.23067271,
+        "ratio": 1.0303377977876036
+      },
+      "frequency": {
+        "poisson_deviance_per_exposure": 0.45642921742298226,
+        "gini": 0.31919329839884725,
+        "gini_normalized": 0.33059774677795367,
+        "calibration_totals": {
+          "observed": 5321.0,
+          "predicted": 5281.484211446439,
+          "ratio": 1.0074819476820398
+        }
+      },
+      "severity": {
+        "gamma_deviance_per_claim": 1.3230235442068483,
+        "calibration_totals": {
+          "observed": 9971534.23,
+          "predicted": 9746676.608634625,
+          "ratio": 1.0230701838579699
+        }
+      }
+    },
+    "gbm_tweedie": {
+      "primary_loss": 73.50381093594326,
+      "tweedie_deviance_per_exposure": 73.50381093594326,
+      "tweedie_power": 1.5,
+      "poisson_deviance_per_exposure": 1134.2210515930392,
+      "gini": 0.35115595031257185,
+      "gini_normalized": 0.35720098443004206,
+      "calibration_totals": {
+        "observed": 9971534.23,
+        "predicted": 9292421.895091206,
+        "ratio": 1.073082382889604
+      }
+    }
+  },
+  "loaded_premium": {
+    "label": "loaded premium = capped prediction + training-only flat excess loading per exposure-year; reported separately, never compared with capped targets, no claim of predictive adequacy",
+    "loading_per_exposure_year": 35.505395347655835,
+    "observed_uncapped_total": 10401895.45,
+    "by_candidate": {
+      "pp_null": {
+        "predicted_loaded_total": 12390904.997199709,
+        "ratio_observed_uncapped_to_loaded": 0.8394782667085885
+      },
+      "bonus_malus_only": {
+        "predicted_loaded_total": 12391743.790335724,
+        "ratio_observed_uncapped_to_loaded": 0.8394214426957729
+      },
+      "glm_freq_x_sev[simplified]": {
+        "predicted_loaded_total": 12373314.405359337,
+        "ratio_observed_uncapped_to_loaded": 0.8406717156960432
+      },
+      "glm_tweedie": {
+        "predicted_loaded_total": 12438299.039266357,
+        "ratio_observed_uncapped_to_loaded": 0.8362795762637919
+      },
+      "gbm_freq_x_sev": {
+        "predicted_loaded_total": 12224985.221963586,
+        "ratio_observed_uncapped_to_loaded": 0.850871822021658
+      },
+      "gbm_tweedie": {
+        "predicted_loaded_total": 11839479.886382082,
+        "ratio_observed_uncapped_to_loaded": 0.8785770616464655
+      }
+    }
+  },
+  "bootstrap": {
+    "group": {
+      "label": "primary: rating-profile groups",
+      "unit_column": "group_id",
+      "n_units": 105759,
+      "replicates": 1000,
+      "seed": 20260102,
+      "level": 0.95,
+      "quantile_method": "linear",
+      "delta": {
+        "definition": "L(gbm_freq_x_sev) - L(glm_freq_x_sev[simplified])",
+        "point": -1.3792181380321062,
+        "lower": -2.1240585324265813,
+        "upper": -0.7757098166066512,
+        "decision": "improvement"
+      },
+      "gini_difference": {
+        "definition": "normalised Gini(gbm_freq_x_sev) - normalised Gini(glm_freq_x_sev[simplified])",
+        "point": 0.0589140178483627,
+        "lower": 0.026161348307281066,
+        "upper": 0.10615176759357109
+      },
+      "intervals": {
+        "loss:pp_null": {
+          "point": 78.197092967294,
+          "lower": 74.50047463714881,
+          "upper": 81.95831666430072
+        },
+        "loss:bonus_malus_only": {
+          "point": 75.50990643706409,
+          "lower": 71.95524454823298,
+          "upper": 79.2299489102604
+        },
+        "loss:glm_freq_x_sev[simplified]": {
+          "point": 74.56746407709693,
+          "lower": 70.84867448736021,
+          "upper": 78.5036478378144
+        },
+        "loss:glm_tweedie": {
+          "point": 74.41482740234484,
+          "lower": 70.73896740092957,
+          "upper": 78.29816648747367
+        },
+        "loss:gbm_freq_x_sev": {
+          "point": 73.18824593906496,
+          "lower": 69.63109265111648,
+          "upper": 76.97152164995518
+        },
+        "loss:gbm_tweedie": {
+          "point": 73.50381093594315,
+          "lower": 69.81174987763757,
+          "upper": 77.36035754348339
+        },
+        "delta": {
+          "point": -1.3792181380321062,
+          "lower": -2.1240585324265813,
+          "upper": -0.7757098166066512
+        },
+        "gini_normalized:gbm": {
+          "point": 0.3725267451478829,
+          "lower": 0.3270658950894882,
+          "upper": 0.4161492963174306
+        },
+        "gini_normalized:glm": {
+          "point": 0.3136127272995202,
+          "lower": 0.2577091035157126,
+          "upper": 0.36465350613159436
+        },
+        "gini_difference": {
+          "point": 0.0589140178483627,
+          "lower": 0.026161348307281066,
+          "upper": 0.10615176759357109
+        }
+      }
+    },
+    "policy": {
+      "label": "labelled sensitivity: policies as the resampling unit",
+      "unit_column": "IDpol",
+      "n_units": 135602,
+      "replicates": 1000,
+      "seed": 20260102,
+      "level": 0.95,
+      "quantile_method": "linear",
+      "delta": {
+        "definition": "L(gbm_freq_x_sev) - L(glm_freq_x_sev[simplified])",
+        "point": -1.3792181380321074,
+        "lower": -1.8928560581852703,
+        "upper": -0.9237222679972836,
+        "decision": "improvement"
+      },
+      "gini_difference": {
+        "definition": "normalised Gini(gbm_freq_x_sev) - normalised Gini(glm_freq_x_sev[simplified])",
+        "point": 0.0589140178483627,
+        "lower": 0.0356436023965963,
+        "upper": 0.08519608370682087
+      },
+      "intervals": {
+        "loss:pp_null": {
+          "point": 78.19709296729421,
+          "lower": 74.76497938986435,
+          "upper": 81.79792252846725
+        },
+        "loss:bonus_malus_only": {
+          "point": 75.50990643706413,
+          "lower": 72.2325812801124,
+          "upper": 79.09978089645148
+        },
+        "loss:glm_freq_x_sev[simplified]": {
+          "point": 74.56746407709703,
+          "lower": 71.26766240913624,
+          "upper": 78.20356484313236
+        },
+        "loss:glm_tweedie": {
+          "point": 74.41482740234497,
+          "lower": 71.02147299147947,
+          "upper": 77.9535358073399
+        },
+        "loss:gbm_freq_x_sev": {
+          "point": 73.18824593906497,
+          "lower": 69.89638504386276,
+          "upper": 76.5818690511113
+        },
+        "loss:gbm_tweedie": {
+          "point": 73.50381093594336,
+          "lower": 70.14638227752944,
+          "upper": 76.87284783711101
+        },
+        "delta": {
+          "point": -1.3792181380321074,
+          "lower": -1.8928560581852703,
+          "upper": -0.9237222679972836
+        },
+        "gini_normalized:gbm": {
+          "point": 0.3725267451478829,
+          "lower": 0.3318451551648793,
+          "upper": 0.4168258607982932
+        },
+        "gini_normalized:glm": {
+          "point": 0.3136127272995202,
+          "lower": 0.26752351060219326,
+          "upper": 0.3612938218331631
+        },
+        "gini_difference": {
+          "point": 0.0589140178483627,
+          "lower": 0.0356436023965963,
+          "upper": 0.08519608370682087
+        }
+      }
+    }
+  },
+  "tables_file": "tables.json"
+}
