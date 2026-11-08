@@ -1,14 +1,19 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
   `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
   `data/raw` and `data/processed` (git-ignored, regenerated), `results/` and `reports/` (tracked
-  pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`).
+  pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`,
+  `cv_glm.json`, `glm_relativities_*.csv`, `feature_map.json`, `glm_models.json`, `glm_cv.md`,
+  `cv_sensitivities.json`, `glm_sensitivities.md`). `fremtpl2 train` runs the grouped CV of the GLMs on train only;
+  `fremtpl2 sensitivities` runs the declared `clean.sensitivities` in CV only.
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
   primary; the random split is a labelled sensitivity. Do not change the choice after seeing test
-  results. Cleaning runs on the full data before splitting; severity joins by IDpol after assignment.
+  results. `reports/evaluation_protocol.md` (2026-11-08) governs milestone 3 and the single test
+  evaluation; it must not be changed after test access except by a dated, reasoned amendment made
+  before the test evaluation. Cleaning runs on the full data before splitting; severity joins by IDpol after assignment.
 - Target definitions (config `clean.targets`, fixed by the human decision of 2026-11-07, see section 8
   of `reports/data_audit.md`): one policy-level target table built by `targets.build_target_table`
   from matched severity rows: `N` (number of matched rows, the frequency target; `frequency_count:

@@ -9,7 +9,9 @@ complete, with the post-audit, pre-model amendments of 2026-11-07 applied (match
 per-claim cap 100000, no ClaimNb clipping; see section 8 of `reports/data_audit.md`). Milestone 2
 (grouped cross-validation of the frequency, severity and Tweedie GLMs on the training set only, with
 baselines and final refits) is implemented as `fremtpl2 train`; its outputs are `results/cv_glm.json`,
-`results/glm_relativities_*.csv` and `reports/glm_cv.md`. The test set is not touched yet.
+`results/glm_relativities_*.csv` and `reports/glm_cv.md`. The declared cleaning sensitivities are run in CV only
+(`fremtpl2 sensitivities`). The test set is untouched. Milestone 3 (gradient boosting and the single final test evaluation) is
+pre-registered in [`reports/evaluation_protocol.md`](reports/evaluation_protocol.md), written before any test access.
 
 ## Reproduce
 
