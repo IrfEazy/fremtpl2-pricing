@@ -1,0 +1,445 @@
+{
+  "tested_commit": "b0008e1d07492a6e687758a90b0214e10ecc2d57",
+  "clone_commit": "b0008e1d07492a6e687758a90b0214e10ecc2d57",
+  "start_utc": "2026-11-08T16:45:18+00:00",
+  "end_utc": "2026-11-08T17:13:26+00:00",
+  "total_seconds": 1772.684,
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "cpu_count": 8,
+  "python": "3.12.15",
+  "tool_versions": {
+    "python": "3.12.15",
+    "uv": "uv 0.13.7 (x86_64-unknown-linux-gnu)",
+    "git": "git version 2.34.1"
+  },
+  "download_included": true,
+  "scope": "EXACT_PASS = exact reproduction of the declared recomputable artifacts plus verification of preserved published evidence; held-out metrics are not recomputed",
+  "preserved_evidence": {
+    "identity": {
+      "journal_sha256": "ac548a1b1b407e72d0d6a83c4ccd8e10f6cf3e07af44beaff5a0599308c76bd9",
+      "pointer_sha256": "5ea1387da39e052bc456f69286033803cab479aba0f055bf0dc1bbd3e64c9a89",
+      "manifest_sha256": "d4359feab2b44c2dd417095adecc7defc0a78af5d3de4940515f3716b68dc753",
+      "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+      "attempt": 1
+    },
+    "paths": [
+      "reports/evaluation_protocol.md",
+      "results/freeze_manifest.json",
+      "results/metrics.json",
+      "results/test/attempt-1/bootstrap_replicates_group.csv",
+      "results/test/attempt-1/bootstrap_replicates_policy.csv",
+      "results/test/attempt-1/metrics.json",
+      "results/test/attempt-1/tables.json",
+      "results/test_access.json"
+    ]
+  },
+  "recomputable_inventory": {
+    "compared": [
+      "reports/data_audit.md",
+      "reports/figures/interp_dependence_frequency.png",
+      "reports/figures/interp_dependence_severity.png",
+      "reports/figures/interp_dependence_tweedie.png",
+      "reports/figures/interp_glm_comparison_frequency.png",
+      "reports/figures/interp_glm_comparison_severity.png",
+      "reports/figures/interp_glm_comparison_tweedie.png",
+      "reports/figures/interp_interaction_drivage_vehpower.png",
+      "reports/figures/interp_shap_summary.png",
+      "reports/figures/test_bootstrap_delta.png",
+      "reports/figures/test_bootstrap_delta_policy.png",
+      "reports/figures/test_calibration_decile.png",
+      "reports/figures/test_calibration_factor.png",
+      "reports/figures/test_double_lift.png",
+      "reports/figures/test_lift.png",
+      "reports/figures/test_lorenz.png",
+      "reports/gbm_cv.md",
+      "reports/glm_cv.md",
+      "reports/glm_sensitivities.md",
+      "reports/interpretation.md",
+      "reports/test_evaluation.md",
+      "results/audit.json",
+      "results/cv_gbm.json",
+      "results/cv_glm.json",
+      "results/cv_sensitivities.json",
+      "results/feature_map.json",
+      "results/gbm_models.json",
+      "results/glm_models.json",
+      "results/glm_relativities_frequency.csv",
+      "results/glm_relativities_severity.csv",
+      "results/glm_relativities_tweedie.csv",
+      "results/interpretation.json",
+      "results/orphan_ledger.csv",
+      "results/split_summary.json",
+      "results/targets_summary.json"
+    ],
+    "purged": [
+      "reports/data_audit.md",
+      "reports/figures/interp_dependence_frequency.png",
+      "reports/figures/interp_dependence_severity.png",
+      "reports/figures/interp_dependence_tweedie.png",
+      "reports/figures/interp_glm_comparison_frequency.png",
+      "reports/figures/interp_glm_comparison_severity.png",
+      "reports/figures/interp_glm_comparison_tweedie.png",
+      "reports/figures/interp_interaction_drivage_vehpower.png",
+      "reports/figures/interp_shap_summary.png",
+      "reports/figures/test_bootstrap_delta.png",
+      "reports/figures/test_bootstrap_delta_policy.png",
+      "reports/figures/test_calibration_decile.png",
+      "reports/figures/test_calibration_factor.png",
+      "reports/figures/test_double_lift.png",
+      "reports/figures/test_lift.png",
+      "reports/figures/test_lorenz.png",
+      "reports/gbm_cv.md",
+      "reports/glm_cv.md",
+      "reports/glm_sensitivities.md",
+      "reports/interpretation.md",
+      "reports/test_evaluation.md",
+      "results/audit.json",
+      "results/cv_gbm.json",
+      "results/cv_glm.json",
+      "results/cv_sensitivities.json",
+      "results/feature_map.json",
+      "results/gbm_models.json",
+      "results/glm_models.json",
+      "results/glm_relativities_frequency.csv",
+      "results/glm_relativities_severity.csv",
+      "results/glm_relativities_tweedie.csv",
+      "results/interpretation.json",
+      "results/orphan_ledger.csv",
+      "results/split_summary.json",
+      "results/targets_summary.json"
+    ]
+  },
+  "steps": [
+    {
+      "name": "setup",
+      "cmd": [
+        "uv",
+        "sync",
+        "--frozen"
+      ],
+      "exit_code": 0,
+      "seconds": 1.286
+    },
+    {
+      "name": "download",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "download",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 57.399
+    },
+    {
+      "name": "audit",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "audit",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 15.549
+    },
+    {
+      "name": "split",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "split",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 154.227
+    },
+    {
+      "name": "train",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "train",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 545.473
+    },
+    {
+      "name": "gbm",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "gbm",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 688.283
+    },
+    {
+      "name": "sensitivities",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "sensitivities",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 216.284
+    },
+    {
+      "name": "interpret",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "interpret",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 87.837
+    },
+    {
+      "name": "freeze_check",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "freeze",
+        "--check",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 1,
+      "seconds": 6.088
+    }
+  ],
+  "failure": {
+    "step": "freeze_check",
+    "exit_code": 1,
+    "environment": false,
+    "reason": "integrity or structural mismatch in the strict check"
+  },
+  "verdict": "FAIL",
+  "freeze_check": {
+    "mode": "freeze-check",
+    "passed": false,
+    "numeric_only": false,
+    "tolerance": {
+      "rtol": 0.0,
+      "atol": 0.0
+    },
+    "manifest": "results/freeze_manifest.json",
+    "head": "b0008e1d07492a6e687758a90b0214e10ecc2d57",
+    "checks": [
+      {
+        "name": "original_bytes",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "selection",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "recipes",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "self_check",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "manifest_fields",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 1,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "/training_record/glm_config_sha256_at_training",
+            "kind": "structural",
+            "base": "'75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe'",
+            "new": "'cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793'"
+          }
+        ]
+      },
+      {
+        "name": "file_list",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "telemetry:results/cv_glm.json",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 4,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "/config/models/gbm",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "{'seed': 20260109, 'features': {'numeric': ['DrivAge', 'VehAge', 'VehPower', ..."
+          },
+          {
+            "path": "/config/models/bootstrap/interval",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "'two_sided'"
+          },
+          {
+            "path": "/config/models/bootstrap/quantile_method",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "'linear'"
+          },
+          {
+            "path": "/config/models/evaluation/lorenz_points",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "101"
+          }
+        ]
+      },
+      {
+        "name": "telemetry:results/cv_gbm.json",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "telemetry:results/gbm_models.json",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "files",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 1,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "sha256 mismatch: data/raw/manifest.json",
+            "kind": "structural"
+          }
+        ]
+      },
+      {
+        "name": "model_files",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "published_evidence",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      }
+    ]
+  },
+  "comparison": null,
+  "tolerances": {
+    "rtol": 1e-06,
+    "atol": 1e-09,
+    "formula": "|a - b| <= atol + rtol * |a|, a = committed value"
+  }
+}
