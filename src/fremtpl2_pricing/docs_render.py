@@ -6,7 +6,8 @@ and the completed attempt it points to (verified by :func:`report.load_completed
 as ``fremtpl2 report``), ``cv_glm.json``, ``cv_gbm.json``, ``cv_sensitivities.json``,
 ``interpretation.json``, ``audit.json``, ``split_summary.json``, ``targets_summary.json``, the GLM
 relativity tables, ``gbm_models.json`` and, when present, the run records
-``reproduction/run-<n>.json``. Every rendered number
+``reproduction/run-<n>.json`` (only the latest is rendered) and the declared deviations of
+``configs/reproduce.yaml``. Every rendered number
 is read from those files and only formatted (digits per quantity kind come from ``configs/docs.yaml``);
 text outside the markers is preserved byte for byte. Output is deterministic; ``--check`` renders to
 memory and reports drift without writing anything. No model is loaded and no data row is read.
@@ -22,6 +23,7 @@ from typing import Any
 
 import pandas as pd
 
+from .config import load_reproduce_config
 from .freeze import project_paths
 from .report import DECISION_RULE, PRIMARY_CONTRAST, _table, load_completed
 
@@ -50,6 +52,11 @@ def _runs(directory: Path) -> list[dict[str, Any]]:
     return [{**json.loads(files[n].read_text(encoding="utf-8")), "run": n} for n in sorted(files)]
 
 
+def _policy(path: Path) -> dict[str, Any]:
+    """The verification policy (declared deviations); optional like the run records."""
+    return load_reproduce_config(path) if path.is_file() else {}
+
+
 def load_inputs(cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     """Every input file, the attempt verified by the report loader; reproduction is optional."""
     dc, paths = cfg["docs"], project_paths(cfg, root)
@@ -67,6 +74,7 @@ def load_inputs(cfg: dict[str, Any], root: Path) -> dict[str, Any]:
         "targets": _json(res / ins["targets_summary"]),
         "relativities": {f: _csv(res / f) for f in ins["relativities"]},
         "reproduction": _runs(repro),
+        "policy": _policy(root / ins["reproduce_policy"]),
         "dc": dc,
     }
 
@@ -179,15 +187,19 @@ def block_metrics(i: dict[str, Any], f: _Fmt) -> list[str]:
     return [*_contrast_lines(i, f), *_test_table(i, f, i["dc"]["model_card_columns"])][:-1]
 
 
-REPRODUCTION_DISCLOSURE = (
-    "Disclosure: the first run failed the original strict policy on the two declared "
-    "metadata/provenance differences (the download date of the raw-data metadata and the GLM "
-    "training config echo with its hash), and its reports and figures were not compared. The "
-    "exceptions are post-hoc and artifact-specific (a third one allows the timing values rendered in "
-    "the markdown reports to differ). A PASS_WITH_DECLARED_DEVIATIONS is not an exact "
-    "pass under the original policy. The frozen artifacts and the original failure record are "
-    "unchanged. Held-out metrics were not recomputed."
-)
+def _policy_items(i: dict[str, Any]) -> list[str]:
+    """The declared deviations of the verification policy as plain one-line items (what each
+    covers, text from the docs config by deviation kind); no history, no dates."""
+    out = []
+    for amendment in i["policy"].get("amendments", []):
+        for dev in amendment.get("declared_deviations", []):
+            text = i["dc"]["deviation_items"].get(dev.get("kind"))
+            if text is None:
+                raise DocsError(
+                    f"no description for the declared deviation kind {dev.get('kind')!r}"
+                )
+            out.append(f"- {text}")
+    return out
 
 
 def block_reproduction(i: dict[str, Any], f: _Fmt) -> list[str]:
@@ -196,30 +208,27 @@ def block_reproduction(i: dict[str, Any], f: _Fmt) -> list[str]:
         return ["Reproduction: not yet recorded (`results/reproduction/` has no run record)."]
     n = i["dc"]["short_commit"]
     mins = lambda s: f("minutes", s / 60)  # noqa: E731
-    rows = [
-        [
-            f"run-{r['run']}",
-            r["start_utc"][:10],
-            f"`{r['tested_commit'][:n]}`",
-            f"**{r.get('strict_verdict', r.get('verdict'))}**",
-            f"**{r['amended_verdict']}**" if r.get("amendment") else "-",
-            mins(r["total_seconds"]),
-        ]
-        for r in runs
-    ]
-    head = ["Run", "Date", "Tested commit", "Strict verdict", "Amended verdict", "Minutes"]
     last = runs[-1]
+    verdict = f"**{last.get('strict_verdict', last.get('verdict'))}**"
+    if last.get("amendment"):
+        verdict += f" (with declared deviations: **{last['amended_verdict']}**)"
     out = [
-        "Reproduction runs (each in a fresh clone of the tested commit; the history is immutable):",
-        "",
-        *_table(head, rows),
-        f"Latest run (run-{last['run']}): machine {last['platform']} ({last['machine']}, "
-        f"{last['cpu_count']} CPUs), Python {last['python']}.",
+        f"Latest reproduction (fresh clone of the tested commit): commit `{last['tested_commit'][:n]}`, "
+        f"{last['start_utc'][:10]}, verdict {verdict}, {mins(last['total_seconds'])} minutes in "
+        f"total; machine {last['platform']} ({last['machine']}, {last['cpu_count']} CPUs), "
+        f"Python {last['python']}.",
         "",
         *_table(["Step", "Minutes"], [[s["name"], mins(s["seconds"])] for s in last["steps"]]),
     ]
-    if any(r.get("amendment") for r in runs):
-        return [*out, REPRODUCTION_DISCLOSURE]
+    items = _policy_items(i)
+    if items:
+        out = [
+            *out,
+            "Declared deviations of the verification policy (`configs/reproduce.yaml`):",
+            "",
+            *items,
+            "",
+        ]
     return out[:-1]
 
 

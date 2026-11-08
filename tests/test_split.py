@@ -191,3 +191,21 @@ def test_frozen_split_verification_detects_difference(tmp_path):
     with pytest.raises(ValueError, match="never overwritten"):
         verify_frozen_split(other, path)
     assert path.read_bytes() == before
+
+
+def test_split_summary_is_identical_on_first_and_verify_runs(tmp_path, monkeypatch, capsys):
+    from fremtpl2_pricing import split as split_mod
+
+    cfg = make_cfg()
+    cfg["paths"] = {"processed": str(tmp_path / "proc"), "results": str(tmp_path / "res")}
+    monkeypatch.setattr(split_mod, "load_raw", lambda c: (freq, make_sev(freq)))
+    summary = tmp_path / "res/split_summary.json"
+    split_mod.run_split(cfg)
+    first, out1 = summary.read_bytes(), capsys.readouterr().out
+    stored = (tmp_path / "proc/split.parquet").read_bytes()
+    split_mod.run_split(cfg)
+    second, out2 = summary.read_bytes(), capsys.readouterr().out
+    assert first == second  # no run-state text in the file
+    assert "written (first run)" in out1 and "verified identical" in out2
+    assert b"first run" not in first and b"verified" not in first
+    assert (tmp_path / "proc/split.parquet").read_bytes() == stored  # never overwritten

@@ -232,47 +232,42 @@ def test_reproduction_block_reads_the_record(proj, dcfg):
     _record(proj, 1)
     docs_render.run_docs(dcfg, root=proj)
     text = (proj / "README.md").read_text()
-    assert "| run-1 | 2026-11-09 | `01234567` | **EXACT_PASS** | - | 1.5 |" in text
+    assert "commit `01234567`, 2026-11-09, verdict **EXACT_PASS**, 1.5 minutes" in text
     assert "0123456789" not in text and "not yet recorded" not in text
-    assert "Latest run (run-1): machine Linux-x (x86_64, 8 CPUs), Python 3.13.1" in text
+    assert "machine Linux-x (x86_64, 8 CPUs), Python 3.13.1" in text
     assert "| train | 0.5 |" in text and "| gbm | 1.0 |" in text
     assert "Disclosure" not in text  # no amendment, no disclosure
 
 
-def test_reproduction_block_shows_the_history_amended_verdict_and_the_disclosure(proj, dcfg):
-    # run-1 is a v1 record: only `verdict`, neither `strict_verdict` nor an amendment
+def test_reproduction_block_shows_only_the_latest_run_and_the_policy_items(proj, dcfg):
     _record(proj, 1, tested_commit="aaaaaaaaaaaaaaaa", verdict="FAIL", total_seconds=60.0)
-    path = proj / "results/reproduction/run-1.json"
-    rec1 = json.loads(path.read_text())
-    del rec1["strict_verdict"]
-    path.write_text(json.dumps(rec1))
     _record(
         proj, 2, tested_commit="bbbbbbbbbbbbbbbb", strict_verdict="FAIL", verdict="FAIL",
         amended_verdict="PASS_WITH_DECLARED_DEVIATIONS", amendment={"id": "A1"},
         total_seconds=120.0, steps=[{"name": "setup", "seconds": 240.0}],
     )  # fmt: skip
+    (proj / "configs").mkdir(exist_ok=True)
+    shutil.copy(REPO / "configs/reproduce.yaml", proj / "configs/reproduce.yaml")
     docs_render.run_docs(dcfg, root=proj)
     text = (proj / "README.md").read_text()
-    assert "| run-1 | 2026-11-09 | `aaaaaaaa` | **FAIL** | - | 1.0 |" in text
-    assert (
-        "| run-2 | 2026-11-09 | `bbbbbbbb` | **FAIL** | **PASS_WITH_DECLARED_DEVIATIONS** | 2.0 |"
-        in text
+    assert "`bbbbbbbb`" in text and "2026-11-09" in text and "| setup | 4.0 |" in text
+    assert "**FAIL**" in text and "**PASS_WITH_DECLARED_DEVIATIONS**" in text
+    assert "aaaaaaaa" not in text and "run-" not in text and "Disclosure" not in text
+    assert "| train |" not in text
+    items = [ln for ln in text.splitlines() if ln.startswith("- ")]
+    assert len(items) == 3 and all(
+        ln[2:] in dcfg["docs"]["deviation_items"].values() for ln in items
     )
-    assert "Latest run (run-2)" in text and "| setup | 4.0 |" in text and "| train |" not in text
-    assert "first run failed the original strict policy" in text
-    assert "post-hoc and artifact-specific" in text
-    assert "is not an exact pass under the original policy" in text
-    assert "frozen artifacts and the original failure record are unchanged" in text
-    assert "Held-out metrics were not recomputed" in text
+    for word in ("post-hoc", "first run", "revealed", "added"):
+        assert word not in text
 
 
 def test_reproduction_runs_are_ordered_numerically(proj, dcfg):
     for n in (10, 2, 1):
-        _record(proj, n, tested_commit=f"{n:016d}")
+        _record(proj, n, tested_commit=f"{n:08d}aaaaaaaa")
     docs_render.run_docs(dcfg, root=proj)
     text = (proj / "README.md").read_text()
-    assert text.index("run-1 |") < text.index("run-2 |") < text.index("run-10 |")
-    assert "Latest run (run-10)" in text
+    assert "`00000010`" in text and "`00000002`" not in text and "run-" not in text
 
 
 # --------------------------------------------------------------------------- verification, config

@@ -254,9 +254,9 @@ def run_split(cfg: dict[str, Any]) -> dict[str, Any]:
     summary["frozen_split"] = {
         "file": str(stored),
         "sha256": digest,
-        "status": status,
         "recomputed_identical": True,
     }
+    print(f"frozen split {stored}: {status}")
     (results / "split_summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )

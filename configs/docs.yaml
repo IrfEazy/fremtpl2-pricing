@@ -17,8 +17,13 @@ docs:
     interpretation: interpretation.json
     split_summary: split_summary.json
     targets_summary: targets_summary.json
-    reproduction: reproduction                 # directory of the run records run-<n>.json (reproduce history); empty or absent renders "not yet recorded"
+    reproduction: reproduction                 # directory of the run records run-<n>.json; only the latest is rendered; empty or absent renders "not yet recorded"
+    reproduce_policy: configs/reproduce.yaml   # path under the project root; its declared deviations are listed (absent file: no list)
     relativities: [glm_relativities_frequency.csv, glm_relativities_severity.csv, glm_relativities_tweedie.csv]
+  deviation_items:                             # one line per declared-deviation kind of the policy: what it covers
+    download_metadata: "The download date recorded in the raw-data metadata (data/raw/manifest.json) may differ; the raw data files must be byte-identical."
+    glm_config_echo: "The echo of the GLM training config and its hash (cv_glm.json, glm_cv.md) may differ in the pinned config keys that the GLM training modules do not read."
+    markdown_telemetry: "The timing values rendered in the markdown reports (glm_cv.md, glm_sensitivities.md, gbm_cv.md) may differ; every other byte must be identical."
   decimals:                                    # digits per quantity kind
     loss: 3
     gini: 4

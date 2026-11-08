@@ -18,6 +18,7 @@
   monotonicity sweep (distinct train BonusMalus values) of the six candidates (PM-M3-1: only the frequency and Tweedie GBMs are constrained; freq x sev is not
   guaranteed monotone; a limit, never retuned) and the constraint register from `cv_gbm.json`. Outputs
   `results/interpretation.json`, `reports/interpretation.md`, `reports/figures/interp_*.png`; commit them before `freeze`.
+  Tracked outputs are run-state independent so a fresh clone regenerates them byte for byte: the test report states a fixed journal-check sentence (the git-ignored mirror is still checked when present, never rendered); `results/interpretation.json` `sources` hash a JSON input carrying telemetry as canonical JSON without `check.volatile_keys` of `configs/reproduce.yaml` (`content_sha256_excluding`), model files by bytes; `results/split_summary.json` holds no run-status text (printed to stdout only).
   `fremtpl2 report` (module `report`; config `report:`) renders `reports/test_evaluation.md` and `reports/figures/test_*.png`
   only from `results/metrics.json` and the completed attempt it points to (files checked against the COMPLETE hashes); with no
   completed attempt it exits non-zero and writes nothing. It runs only after the real `evaluate` (explicit, never in `make all`).
@@ -110,8 +111,9 @@
   (`results`, `reproduction`, `drivers`) and `MODEL_CARD.md` (`metrics`) only from tracked pipeline files: `results/metrics.json`
   and the completed attempt it points to (verified by `report.load_completed`), `cv_glm/cv_gbm/cv_sensitivities/interpretation/
   audit/split_summary/targets_summary.json`, the GLM relativity tables, `gbm_models.json` and the run records `reproduction/run-<n>.json` when present
-  (none -> "not yet recorded"; the block shows the run history and, for the latest run, the per-step minutes and machine, plus the
-  fixed post-hoc disclosure once a record carries an amendment). Rule: every number in README, model card and model report goes through a docs block or the
+  (none -> "not yet recorded"; the block renders only the LATEST run record: tested commit, date, verdict(s) as recorded, total and per-step minutes,
+  machine; plus the declared deviations of `configs/reproduce.yaml` as plain one-line policy items (text per deviation kind in `docs.yaml:deviation_items`);
+  no history table, no run numbers, no narrative; earlier records stay in `results/reproduction/`). Rule: every number in README, model card and model report goes through a docs block or the
   model report, never typed by hand; text outside the markers is preserved byte for byte, a missing or duplicated marker is an
   error, output is deterministic and `fremtpl2 docs --check` writes nothing and exits non-zero on drift. Runs after `report`
   (`make docs`, explicit, never in `make all`); adding a block means one render function in `BLOCKS`. README.md and MODEL_CARD.md prose contains no digit outside the generated blocks, commands, file names, links, figure paths and the dataset name; text that conflicts with the rendered numbers is fixed after each `make docs`. `.github/workflows/ci.yml` (push and pull_request; ruff check and format, `pytest -q`, `fremtpl2 docs --check`; offline, no secrets) must stay in step with `make test lint docs`.

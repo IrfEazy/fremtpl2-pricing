@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 
 from . import features, figures, freeze, gbm
+from .config import DEFAULT_REPRODUCE_CONFIG, load_reproduce_config
 from .manifest import sha256_file
 from .train import assert_train_only, load_train
 
@@ -877,10 +878,43 @@ def compute(
     return {"result": jsonable(res), "timing_seconds": timing}
 
 
+def _policy_path(root: Path) -> Path:
+    """The verification policy of the project, else the one shipped with the source tree."""
+    own = root / DEFAULT_REPRODUCE_CONFIG
+    return own if own.is_file() else Path(__file__).resolve().parents[2] / DEFAULT_REPRODUCE_CONFIG
+
+
+def _drop_keys(obj: Any, drop: set[str]) -> Any:
+    if isinstance(obj, dict):
+        return {k: _drop_keys(v, drop) for k, v in obj.items() if k not in drop}
+    if isinstance(obj, list):
+        return [_drop_keys(v, drop) for v in obj]
+    return obj
+
+
+def _source_entry(file: Path, rel: str, volatile: list[str]) -> dict[str, Any]:
+    """Provenance of an input: a JSON file that carries telemetry is hashed as canonical JSON with
+    the volatile telemetry keys removed (so a rerun gives the same hash); other files by bytes."""
+    if file.suffix == ".json":
+        doc = json.loads(file.read_text(encoding="utf-8"))
+        if _drop_keys(doc, set(volatile)) != doc:
+            canon = json.dumps(
+                _drop_keys(doc, set(volatile)), sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False,
+            )  # fmt: skip
+            return {
+                "path": rel,
+                "content_sha256_excluding": volatile,
+                "sha256": hashlib.sha256(canon.encode("utf-8")).hexdigest(),
+            }
+    return {"path": rel, "sha256": sha256_file(file)}
+
+
 def _sources(root: Path, cfg: dict[str, Any], inputs: dict[str, Any]) -> dict[str, Any]:
     paths = freeze.project_paths(cfg, root)
     files = {k: paths[k] for k in ("cv_glm", "glm_models", "feature_map", "cv_gbm", "gbm_models")}
-    out = {k: {"path": p, "sha256": sha256_file(root / p)} for k, p in files.items()}
+    volatile = sorted(load_reproduce_config(_policy_path(root))["check"]["volatile_keys"])
+    out = {k: _source_entry(root / p, p, volatile) for k, p in files.items()}
     for comp, meta in inputs["gbm_models"]["models"].items():
         out[f"gbm_model_{comp}"] = {
             "path": f"{paths['model_dir']}/{meta['file']}",

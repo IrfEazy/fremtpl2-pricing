@@ -49,6 +49,12 @@ DECISION_RULE = (
 )
 
 
+JOURNAL_CHECK = (
+    "the journal (results/test_access.json) is authoritative, the attempt files were checked "
+    "against the COMPLETE hashes and the pointer against the COMPLETE event"
+)
+
+
 class ReportError(ValueError):
     """Raised when there is no completed attempt or the evaluation outputs are inconsistent."""
 
@@ -57,24 +63,25 @@ class ReportError(ValueError):
 
 
 def _journal_events(sink: dict[str, Path]) -> tuple[list[dict[str, Any]], str]:
-    """Journal events; checked against the git-ignored mirror when that exists."""
+    """Journal events; checked against the git-ignored mirror when that exists (the rendered
+    report never depends on the mirror being present)."""
     if not sink["state"].exists():
         raise ReportError(
             "no test-access journal (results/test_access.json): the test evaluation was not run "
             "(`fremtpl2 evaluate`); nothing was written"
         )
     if sink["mirror"].exists():
-        return read_events(sink), "journal checked against its mirror"
+        return read_events(sink), JOURNAL_CHECK
     events = parse_journal(sink["state"])
     validate_events(events)
-    return events, "journal only (the git-ignored mirror is not present)"
+    return events, JOURNAL_CHECK
 
 
 def load_completed(cfg: dict[str, Any], root: Path) -> dict[str, Any]:
     """The completed attempt, verified: journal COMPLETE, pointer, attempt files and hashes."""
     paths = project_paths(cfg, root)
     sink = real_sink(root, paths)
-    events, journal_check = _journal_events(sink)
+    events, _ = _journal_events(sink)
     done = [e for e in events if e["event"] == "COMPLETE"]
     if not done:
         listing = "; ".join(f"attempt {a['attempt']}: {a['status']}" for a in access_log(events))
@@ -120,7 +127,6 @@ def load_completed(cfg: dict[str, Any], root: Path) -> dict[str, Any]:
         },
         "complete": complete,
         "attempts": access_log(events),
-        "journal_check": journal_check,
         "pointer_sha256": sha256_file(pointer_path),
     }
 
@@ -314,7 +320,7 @@ def render_report(
         f"points to (`{c['publish_dir']}`, attempt {m['attempt']}, id `{m['attempt_id']}`). The "
         "attempt files were checked against the sha256 values of the journal COMPLETE event "
         f"(`{c['outputs_sha256'][:16]}...`); the pointer file has sha256 "
-        f"`{data['pointer_sha256'][:16]}...`; {data['journal_check']}. No number in this report "
+        f"`{data['pointer_sha256'][:16]}...`; {JOURNAL_CHECK}. No number in this report "
         "is typed by hand.",
         "",
         f"Population: the primary grouped test fold ({rows['policies']} policies, "

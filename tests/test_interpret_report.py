@@ -444,3 +444,44 @@ def test_cli_wires_interpret_and_report(monkeypatch):
 
     monkeypatch.setattr(cli, "run_report", boom)
     assert cli.main(["report", "--config", "configs/default.yaml"]) == 1
+
+
+# --------------------------------------------------------------------------- run-state independence
+
+
+def test_report_does_not_depend_on_the_mirror_but_still_checks_it(project, icfg, evaluated):
+    from fremtpl2_pricing.freeze import project_paths
+
+    mirror = project / project_paths(icfg, project)["mirror"]
+    assert mirror.is_file()
+    report.run_report(icfg, root=project)
+    with_mirror = (project / "reports/test_evaluation.md").read_bytes()
+    saved = mirror.read_bytes()
+    mirror.write_bytes(saved + b'{"event": "FORGED"}\n')  # a disagreeing mirror still fails
+    with pytest.raises(Exception):  # noqa: B017
+        report.run_report(icfg, root=project)
+    mirror.unlink()
+    report.run_report(icfg, root=project)
+    assert (project / "reports/test_evaluation.md").read_bytes() == with_mirror
+    assert report.JOURNAL_CHECK.encode() in with_mirror
+
+
+def test_interpret_source_hash_ignores_volatile_keys_only(tmp_path):
+    vol = interpret.load_reproduce_config(interpret._policy_path(tmp_path))["check"][
+        "volatile_keys"
+    ]
+    key = vol[0]
+
+    def entry(doc):
+        f = tmp_path / "x.json"
+        f.write_text(json.dumps(doc))
+        return interpret._source_entry(f, "x.json", sorted(vol))
+
+    base = {"loss": 1.5, "folds": [{"a": 1, key: 3.0}], key: 9.0}
+    a = entry(base)
+    b = entry({"loss": 1.5, "folds": [{"a": 1, key: 77.0}], key: 0.1})
+    c = entry({"loss": 1.6, "folds": [{"a": 1, key: 3.0}], key: 9.0})
+    assert a["sha256"] == b["sha256"] and a["sha256"] != c["sha256"]
+    assert a["content_sha256_excluding"] == sorted(vol)
+    plain = entry({"loss": 1.5})  # no telemetry: byte hash
+    assert "content_sha256_excluding" not in plain
