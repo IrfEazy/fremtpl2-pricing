@@ -114,6 +114,16 @@ class GLMModel:
         (severity) or pure premium per exposure-year (tweedie)."""
         return np.exp(self._eta(X))
 
+    def predict_rate_rowwise(self, X: pd.DataFrame) -> np.ndarray:
+        """``predict_rate`` with a per-row reduction ``sum_j D_ij coef_j`` instead of a BLAS
+        matrix-vector product, so that every row's prediction is bit-identical whatever the
+        row order or batch (used by the frozen test-evaluation recipes; equal to
+        ``predict_rate`` up to floating-point rounding)."""
+        D, _ = _design(X, self.features)
+        if not self.features:
+            return np.exp(np.full(len(X), self.intercept))
+        return np.exp(self.intercept + np.add.reduce(D * np.asarray(self.coef), axis=1))
+
     def predict_count(self, X: pd.DataFrame, exposure) -> np.ndarray:
         """Predicted claim counts = rate * exposure (frequency models only)."""
         if self.kind != "frequency":

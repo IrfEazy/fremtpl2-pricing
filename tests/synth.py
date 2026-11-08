@@ -119,3 +119,57 @@ def make_sev(freq: pd.DataFrame, seed: int = 1) -> pd.DataFrame:
             "ClaimAmount": np.concatenate([amount, [50.0, 5000.0]]),
         }
     )
+
+
+def tiny_gbm_block():
+    comp = lambda obj, metric, mono: {  # noqa: E731
+        "objective": obj,
+        "metric": metric,
+        "monotone": mono,
+        "params": {},
+        "grid": {"num_leaves": [3, 5], "min_child_samples": [20], "learning_rate": [0.2]},
+    }
+    return {
+        "seed": 11,
+        "features": {
+            "numeric": ["DrivAge", "VehAge", "VehPower", "BonusMalus", "Density"],
+            "categorical": ["Area", "VehGas", "VehBrand", "Region"],
+        },
+        "unseen_level": "missing",
+        "deterministic": {"deterministic": True, "force_row_wise": True, "num_threads": 1},
+        "base_params": {
+            "verbosity": -1,
+            "max_bin": 63,
+            "min_data_per_group": 10,
+            "cat_smooth": 5.0,
+            "monotone_constraints_method": "basic",
+        },
+        "early_stopping": {
+            "round_cap": 25,
+            "patience": 5,
+            "min_improvement": 0.0,
+            "round_rounding": "nearest",
+            "at_cap": "record_use_cap",
+        },
+        "components": {
+            "frequency": comp("poisson", "poisson", {"BonusMalus": 1}),
+            "severity": comp("gamma", "gamma_deviance", {}),
+            "tweedie": comp("tweedie", "tweedie", {"BonusMalus": 1}),
+        },
+        "diagnostic": {"enabled": True, "components": ["frequency", "tweedie"], "ablation": True},
+        "checks": {
+            "reload_rows": 500,
+            "reload_tolerance": 1e-9,
+            "sweep_rows": 50,
+            "sweep_points": 8,
+            "monotone_tolerance": 1e-12,
+        },
+        "outputs": {
+            "cv_json": "cv_gbm.json",
+            "models_json": "gbm_models.json",
+            "report": "gbm_cv.md",
+            "model_dir": "models",
+            "staging_dir": "gbm_staging",
+            "failure_diagnostic": "gbm_FAILED.json",
+        },
+    }

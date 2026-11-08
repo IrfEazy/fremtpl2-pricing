@@ -447,12 +447,34 @@ def calibration_totals(observed, predicted, weight=None) -> dict[str, float]:
 # --------------------------------------------------------------------------- bootstrap
 
 
-def percentile_ci(values, level: float = 0.95) -> tuple[float, float]:
-    """Two-sided percentile interval of replicate values."""
+def percentile_ci(values, level: float = 0.95, method: str = "linear") -> tuple[float, float]:
+    """Two-sided percentile interval of replicate values: the ``(1 - level) / 2`` and
+    ``(1 + level) / 2`` quantiles (``numpy.nanquantile`` with ``method``)."""
     if not 0 < level < 1:
         raise ValueError("level must be in (0, 1)")
-    lo, hi = np.nanquantile(np.asarray(values, dtype=float), [(1 - level) / 2, (1 + level) / 2])
+    lo, hi = np.nanquantile(
+        np.asarray(values, dtype=float), [(1 - level) / 2, (1 + level) / 2], method=method
+    )
     return float(lo), float(hi)
+
+
+def unit_index(unit_ids) -> tuple[np.ndarray, np.ndarray]:
+    """Distinct resampling units (sorted, as ``np.unique``) and the unit index of every row."""
+    uniq, inverse = np.unique(np.asarray(unit_ids), return_inverse=True)
+    return uniq, inverse.ravel()
+
+
+def multiplicity_draws(n_units: int, replicates: int, seed: int):
+    """Yield ``replicates`` multiplicity vectors k (length ``n_units``, sum ``n_units``): each
+    replicate draws ``n_units`` units uniformly with replacement and counts them. Deterministic
+    for a seed; shared by every model of a paired comparison."""
+    if replicates < 1:
+        raise ValueError("replicates must be >= 1")
+    if n_units < 1:
+        raise ValueError("at least one resampling unit is needed")
+    rng = np.random.default_rng(seed)
+    for _ in range(replicates):
+        yield np.bincount(rng.integers(0, n_units, size=n_units), minlength=n_units)
 
 
 def paired_bootstrap(
@@ -462,6 +484,7 @@ def paired_bootstrap(
     replicates: int,
     seed: int,
     level: float = 0.95,
+    method: str = "linear",
 ) -> dict:
     """Paired bootstrap by multiplicity weights over resampling units.
 
@@ -477,19 +500,132 @@ def paired_bootstrap(
     unit_ids = np.asarray(unit_ids)
     if len(unit_ids) != n:
         raise ValueError("unit_ids length must equal n")
-    if replicates < 1:
-        raise ValueError("replicates must be >= 1")
-    _, inverse = np.unique(unit_ids, return_inverse=True)
+    _, inverse = unit_index(unit_ids)
     k = int(inverse.max()) + 1
-    rng = np.random.default_rng(seed)
-    rows = []
-    for _ in range(replicates):
-        counts = np.bincount(rng.integers(0, k, size=k), minlength=k)
-        rows.append(metric_fn(counts[inverse].astype(float)))
+    rows = [
+        metric_fn(counts[inverse].astype(float))
+        for counts in multiplicity_draws(k, replicates, seed)
+    ]
     reps = pd.DataFrame(rows)
     ci = pd.DataFrame(
-        {c: percentile_ci(reps[c].to_numpy(), level) for c in reps.columns},
+        {c: percentile_ci(reps[c].to_numpy(), level, method) for c in reps.columns},
         index=["lower", "upper"],
     ).T
     point = {k_: float(v) for k_, v in metric_fn(np.ones(n)).items()}
     return {"point": point, "replicates": reps, "ci": ci, "level": level}
+
+
+class WeightedGini:
+    """Raw and normalised Gini of fixed predictions for any non-negative row weights.
+
+    Equal to ``gini(observed_loss, predicted_rate, exposure, weight=w)``: a positive multiplicity
+    weight changes neither the order by predicted rate nor the oracle order by observed rate
+    (loss * w / (exposure * w)), so both rankings (ties aggregated) are computed once and only the
+    cumulative exposure and loss shares are recomputed from the weights; zero-weight rows form
+    empty segments. Rows with exposure <= 0 are dropped, as in ``gini``."""
+
+    def __init__(self, observed_loss, predicted_rate, exposure):
+        loss = _vec(observed_loss, "observed_loss")
+        rate = _vec(predicted_rate, "predicted_rate")
+        expo = _vec(exposure, "exposure")
+        _check_len(len(loss), rate, expo)
+        self.n = len(loss)
+        self._keep = expo > 0
+        if not self._keep.any():
+            raise ValueError("total exposure must be > 0")
+        self._loss, self._expo = loss[self._keep], expo[self._keep]
+        self._model = np.unique(rate[self._keep], return_inverse=True)
+        self._oracle = np.unique(self._loss / self._expo, return_inverse=True)
+
+    @staticmethod
+    def _area(levels, loss: np.ndarray, expo: np.ndarray) -> float:
+        uniq, inv = levels
+        e = np.bincount(inv, weights=expo, minlength=len(uniq))
+        lo = np.bincount(inv, weights=loss, minlength=len(uniq))
+        total_e, total_l = e.sum(), lo.sum()
+        if total_e <= 0:
+            raise ValueError("total exposure must be > 0")
+        if total_l <= 0:
+            return float("nan")
+        x = np.concatenate([[0.0], np.cumsum(e)]) / total_e
+        y = np.concatenate([[0.0], np.cumsum(lo)]) / total_l
+        return _gini_from_points(x, y)
+
+    def __call__(self, weight=None) -> dict[str, float]:
+        w = _weights(weight, self.n)[self._keep]
+        loss, expo = self._loss * w, self._expo * w
+        raw = self._area(self._model, loss, expo)
+        oracle = self._area(self._oracle, loss, expo)
+        norm = float("nan") if not np.isfinite(oracle) or oracle == 0 else raw / oracle
+        return {"gini": raw, "gini_normalized": float(norm)}
+
+
+def ratio_bootstrap(
+    unit_ids,
+    numerators: dict[str, np.ndarray],
+    denominator,
+    replicates: int,
+    seed: int,
+    level: float = 0.95,
+    method: str = "linear",
+    row_metric_fn: Callable[[np.ndarray], dict[str, float]] | None = None,
+) -> dict:
+    """Paired unit bootstrap of ratios of sums, aggregated by unit.
+
+    For every name, ``A_g = sum_{i in g} numerators[name]_i`` and ``D_g = sum_{i in g}
+    denominator_i`` are summed once per unit; replicate b with multiplicities ``k^(b)`` (from
+    :func:`multiplicity_draws`, the draw of :func:`paired_bootstrap` for the same seed) gives
+    ``sum_g k_g A_g / sum_g k_g D_g`` for every name, with the denominator recomputed per
+    replicate. This equals the row-level computation with row weights ``k_g`` (and literal row
+    replication). ``row_metric_fn(row_weights)`` adds metrics that are not ratios of sums (e.g.
+    Gini); it receives the same multiplicities expanded to rows. Point estimates use k = 1.
+
+    Fails closed (``ValueError``): non-finite numerators or denominator, a zero or non-finite
+    denominator sum in the point estimate or any replicate, and any non-finite replicate value
+    (ratio or row metric) abort; nothing is dropped.
+
+    Returns {"point", "replicates" (DataFrame), "ci" (DataFrame metric x [lower, upper]),
+    "level", "method", "n_units"}."""
+    uniq, inv = unit_index(unit_ids)
+    n, g = len(inv), len(uniq)
+    den = _vec(denominator, "denominator")
+    _check_len(n, den)
+    names = list(numerators)
+    if not np.isfinite(den).all():
+        raise ValueError("ratio_bootstrap: non-finite denominator values")
+    for k in names:
+        if not np.isfinite(_vec(numerators[k], k)).all():
+            raise ValueError(f"ratio_bootstrap: non-finite numerator values ({k})")
+    num = np.column_stack(
+        [np.bincount(inv, weights=_vec(numerators[k], k), minlength=g) for k in names]
+    )
+    den_g = np.bincount(inv, weights=den, minlength=g)
+
+    def one(counts: np.ndarray) -> dict[str, float]:
+        c = counts.astype(float)
+        d = float(c @ den_g)
+        if not (np.isfinite(d) and d != 0):
+            raise ValueError("ratio_bootstrap: zero or non-finite denominator in a replicate")
+        vals = (c @ num) / d
+        out = {k: float(v) for k, v in zip(names, vals, strict=True)}
+        if row_metric_fn is not None:
+            out.update({k: float(v) for k, v in row_metric_fn(c[inv]).items()})
+        bad = [k for k, v in out.items() if not np.isfinite(v)]
+        if bad:
+            raise ValueError(f"ratio_bootstrap: non-finite replicate values {bad}")
+        return out
+
+    rows = [one(counts) for counts in multiplicity_draws(g, replicates, seed)]
+    reps = pd.DataFrame(rows)
+    ci = pd.DataFrame(
+        {c: percentile_ci(reps[c].to_numpy(), level, method) for c in reps.columns},
+        index=["lower", "upper"],
+    ).T
+    return {
+        "point": one(np.ones(g, dtype=int)),
+        "replicates": reps,
+        "ci": ci,
+        "level": level,
+        "method": method,
+        "n_units": int(g),
+    }

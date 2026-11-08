@@ -10,7 +10,7 @@ per-claim cap 100000, no ClaimNb clipping; see section 8 of `reports/data_audit.
 (grouped cross-validation of the frequency, severity and Tweedie GLMs on the training set only, with
 baselines and final refits) is implemented as `fremtpl2 train`; its outputs are `results/cv_glm.json`,
 `results/glm_relativities_*.csv` and `reports/glm_cv.md`. The declared cleaning sensitivities are run in CV only
-(`fremtpl2 sensitivities`). The LightGBM candidates (tuning, refit, monotonicity diagnostic) are implemented as `fremtpl2 gbm`. The test set is untouched. Milestone 3 (gradient boosting and the single final test evaluation) is
+(`fremtpl2 sensitivities`). The LightGBM candidates (tuning, refit, monotonicity diagnostic) are implemented as `fremtpl2 gbm`. The freeze stage (`fremtpl2 freeze`) and the one-shot, fit-free test evaluation (`fremtpl2 evaluate`) are implemented and rehearsed on synthetic data only. The test set is untouched. Milestone 3 (gradient boosting and the single final test evaluation) is
 pre-registered in [`reports/evaluation_protocol.md`](reports/evaluation_protocol.md), written before any test access.
 
 ## Reproduce
@@ -23,6 +23,11 @@ make split      # verifies the frozen data/processed/split.parquet (never overwr
                 # results/targets_summary.json (about 2.5 minutes)
 make train      # CV of the GLMs on train only: results/cv_glm.json, glm_relativities_*.csv, reports/glm_cv.md
 make gbm        # LightGBM candidates tuned in grouped CV on train only: results/cv_gbm.json, results/gbm_models.json, reports/gbm_cv.md
+make freeze     # train only, clean committed tree: results/freeze_manifest.json (candidates, selected ids, hashes); commit it
+make rehearsal  # the identical evaluate code path on a train CV fold (no test row): outputs under data/processed/rehearsal/
+make evaluate   # the single test evaluation (protocol section 6): results/test/attempt-<n>/, results/metrics.json,
+                # results/test_access.json; one-shot, refused when the test set was already accessed; not part of `make all`
+                # recovery: `fremtpl2 evaluate --publish-only` republishes a COMPLETE attempt's staged, hashed outputs
 make test lint
 ```
 

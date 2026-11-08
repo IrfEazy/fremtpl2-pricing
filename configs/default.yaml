@@ -155,6 +155,7 @@ models:
     fixed_power_sensitivities: [1.3, 1.7]  # further fixed powers in the out-of-fold pure premium comparison (labelled `tweedie_fixed_<p>`); the common deviance stays at reference_power
   evaluation:
     n_bins: 10                     # lift / double-lift / calibration bins of ~equal exposure
+    lorenz_points: 101             # test evaluation: Lorenz curves stored at this many equally spaced cumulative-exposure shares (linear interpolation)
     calibration_factors:
       BonusMalus: {kind: edges, lower_edges: [50, 60, 70, 80, 100, 125]}  # last band open; values below the first edge join the first band
       DrivAge: {kind: feature_band}  # the bands of features.definitions
@@ -163,13 +164,15 @@ models:
   group_summary:                   # train-only description of the rating-profile groups (the bootstrap unit), per CV fold and overall
     size_quantiles: [0.5, 0.9, 0.99]
     top_share: 0.01                # exposure share of the largest groups (by policy count) making up this fraction of the groups
-  bootstrap:                       # recorded only: applied to the test set in milestone 3, not here
+  bootstrap:                       # never applied in train/CV (applied: false); `fremtpl2 evaluate` applies it to the test set (protocol section 6)
     applied: false
     unit: group                    # rating-profile groups (primary), paired across models
     sensitivity_unit: policy
     replicates: 1000
     seed: 20260102
     level: 0.95
+    interval: two_sided            # percentile interval [(1-level)/2, (1+level)/2]; the decision uses its endpoints
+    quantile_method: linear        # numpy.quantile method of the percentile endpoints
   sensitivities:                   # fremtpl2 sensitivities: outer CV only, train set, Tweedie power fixed at final.power_cv.power of outputs.cv_json
     names: all                     # all | list of names declared in clean.sensitivities (primary is always run as the baseline)
     outputs:                       # file names under paths.results / paths.reports
@@ -261,3 +264,58 @@ models:
       model_dir: models            # under paths.processed (git-ignored): one LightGBM text file per component
       staging_dir: gbm_staging     # under paths.processed: artifacts are promoted only if every check passes
       failure_diagnostic: gbm_FAILED.json  # under paths.processed (git-ignored)
+
+# Milestone 3b: freeze stage and the single test evaluation (fremtpl2_pricing.freeze / .evaluate).
+# `fremtpl2 freeze` (train only) writes the manifest; `fremtpl2 evaluate` is the only code path that
+# reads test rows. Declared before any test access.
+freeze:
+  manifest: freeze_manifest.json   # under paths.results; committed before `fremtpl2 evaluate`
+  test_state: test_access.json     # under paths.results; the single authoritative journal (tracked, append-only): FROZEN -> TEST_OPENED -> COMPLETE | FAILED; fsynced with its directory on every append
+  test_state_mirror: test_access_mirror.jsonl  # under paths.processed (git-ignored); only a check: any disagreement with the journal, a torn record or a missing journal fails closed
+  lock: evaluate.lock              # under paths.processed; created with O_EXCL, prevents concurrent evaluations (a stale lock is removed by hand)
+  attempts_dir: test               # under paths.results: attempt-<n>/ published only after the COMPLETE event, never overwritten
+  metrics_pointer: metrics.json    # under paths.results; written only for the completed attempt, after COMPLETE
+  staging_dir: evaluate_staging    # under paths.processed (git-ignored, private): attempt outputs are written, validated and hashed here before COMPLETE; failed attempts keep their error.txt here
+  rehearsal:                       # `fremtpl2 evaluate --rehearsal`: the identical evaluate code path on a registered TRAIN CV fold (no test row, no journal or results/ write)
+    fold: 0                        # cv_fold of the train rows that replace the test population (models were fitted on them: in-sample, a code rehearsal only)
+    dir: rehearsal                 # under paths.processed (git-ignored): one run-<utc>-<id>/ per rehearsal with its own journal, staging and published outputs
+  protocol: evaluation_protocol.md # under paths.reports; hashed (a technical rerun may only append amendments)
+  audit: audit.json                # under paths.results; full-data factor domains (no outcomes) for the level-coverage check
+  hashed_project_files: [uv.lock]  # project-relative files hashed in the manifest besides the inputs and models
+  hashed_raw_files: [manifest.json, freMTPL2freq.parquet, freMTPL2sev.parquet]  # under paths.raw
+  environment_packages: [numpy, pandas, scipy, scikit-learn, glum, lightgbm, pyarrow]  # versions recorded at freeze (runtime identity); evaluate refuses on a difference
+  runtime:                         # runtime identity (python, the packages above, lock file hash, threads); asserted equal before any test access and for a technical rerun
+    lock_file: uv.lock             # project-relative
+    num_threads: 1                 # BLAS/OpenMP threads (threadpoolctl) and LightGBM num_threads of every prediction in freeze and evaluate
+  evaluation_only_model_keys: [evaluation, bootstrap]  # models.* keys that may differ from the training record (they configure the evaluation only)
+  post_freeze_paths:               # only these project paths may change between the training commit and the evaluated commit (fnmatch)
+    - results/freeze_manifest.json
+    - results/test_access.json
+    - results/metrics.json
+    - results/test/*
+    - reports/evaluation_protocol.md   # append-only, and only for a technical rerun (checked by hash prefix)
+  self_check:                      # before test access: stored train predictions are reproduced from the loaded artifacts
+    rows: 500                      # train rows (fixed sample by seed)
+    seed: 20260111
+    rtol: 1.0e-10                  # max relative difference of every stored prediction
+    extreme_columns: [Exposure, BonusMalus, Density, DrivAge, VehAge, VehPower]  # the train rows with the min and max of each are added to the sample
+    level_columns: [Area, VehPower, VehGas, VehBrand, Region]  # one train row (lowest IDpol) of every level present in train is added to the sample
+    permutation_seed: 20260112     # determinism check: predicting twice and on this permuted row order must give identical results
+  technical_rerun:
+    policy: >-
+      A technical rerun (protocol section 6) is allowed only after an attempt that has TEST_OPENED
+      but no COMPLETE (a crash, I/O error or environment problem), only with the same manifest
+      digest and the same runtime identity, as a deterministic replay with no model, config or
+      code-path change; it needs --technical-rerun --reason, is recorded linked to the failed
+      attempt and is logged as an amendment of the protocol. A completed attempt is never rerun.
+      Every attempt, failed ones included (error type only, no metric), is listed in the journal
+      and reported.
+  recovery:
+    policy: >-
+      Outputs are written to a private staging directory, validated (finite values, expected keys)
+      and hashed; the COMPLETE event records the hashes; only then are they published to
+      results/test/attempt-<n>/ and the results/metrics.json pointer. If publication fails after
+      COMPLETE, `fremtpl2 evaluate --publish-only` republishes the staged outputs without
+      recomputing and fails closed on a hash mismatch. Completion is never inferred from a
+      directory or pointer. `fremtpl2 evaluate --rehearsal` runs the identical code path on a train
+      CV fold before test access.

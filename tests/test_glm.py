@@ -254,3 +254,16 @@ def test_l2_must_be_positive(bad):
     X, _, _, ncl, _, _ = make_data()
     with pytest.raises(ValueError, match="l2"):
         glm.fit_severity(X, np.ones(len(X)), ncl, l2=bad)
+
+
+def test_predict_rate_rowwise_equals_predict_rate():
+    X, count, expo, *_ = make_data()
+    m = glm.fit_frequency(X, count, expo)
+    np.testing.assert_allclose(m.predict_rate_rowwise(X), m.predict_rate(X), rtol=1e-12)
+    perm = np.random.default_rng(1).permutation(len(X))
+    full = m.predict_rate_rowwise(X)
+    np.testing.assert_array_equal(m.predict_rate_rowwise(X.iloc[perm]), full[perm])
+    np.testing.assert_array_equal(m.predict_rate_rowwise(X.iloc[:37]), full[:37])
+    empty = glm.GLMModel("frequency", "poisson", None, "log", -1.2, [], [])
+    X0 = X.iloc[:, :0]
+    np.testing.assert_allclose(empty.predict_rate_rowwise(X0), empty.predict_rate(X0), rtol=1e-12)

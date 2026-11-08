@@ -806,6 +806,28 @@ def _component_block(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def load_frozen_booster(path: Path, meta: dict[str, Any]) -> lgb.Booster:
+    """Prediction adapter of a stored final model (no fitting): the file must match the recorded
+    sha256 and feature order. Use with :func:`raw_score` and :func:`annual_rate` (or
+    :func:`expected_counts`); the booster never adds an init score."""
+    if not path.is_file() or _sha256(path) != meta["sha256"]:
+        raise ValueError(f"model file {path} does not match its recorded sha256")
+    booster = lgb.Booster(model_file=str(path))
+    check_feature_order(booster, list(meta["feature_names"]))
+    return booster
+
+
+def predict_annual_rate(
+    booster: lgb.Booster, df: pd.DataFrame, enc: dict[str, Any], num_threads: int | None = None
+) -> np.ndarray:
+    """Annual rate exp(raw score) of a frozen booster for the rows of ``df`` (stored encoding);
+    ``num_threads`` is passed to LightGBM's predict when given."""
+    X = encode(df, enc)
+    if num_threads is None:
+        return annual_rate(raw_score(booster, X))
+    return annual_rate(booster.predict(X, raw_score=True, num_threads=int(num_threads)))
+
+
 def verify_staged_hashes(model_dir: Path, models: dict[str, Any]) -> None:
     """Every model file named in the results metadata must exist with the recorded sha256."""
     for comp, m in models.items():

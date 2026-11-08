@@ -28,7 +28,7 @@ def test_missing_key(tmp_path):
         load_config(p)
 
 
-@pytest.mark.parametrize("cmd", ["evaluate", "report"])
+@pytest.mark.parametrize("cmd", ["report"])  # evaluate is real: never call it on the project
 def test_stubs_exit_2(cmd):
     assert main([cmd, "--config", str(ROOT / "configs" / "default.yaml")]) == 2
 

@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split train sensitivities gbm all
+.PHONY: setup lint test download audit split train sensitivities gbm freeze rehearsal evaluate all
 
 setup:
 	uv sync
@@ -28,4 +28,16 @@ sensitivities:
 gbm:
 	uv run fremtpl2 gbm
 
-all: download audit split train gbm sensitivities
+# Train only; needs a clean committed work tree. Commit results/freeze_manifest.json afterwards.
+freeze:
+	uv run fremtpl2 freeze
+
+# The evaluate code path on the train fold freeze.rehearsal.fold (no test row, no results/ write).
+rehearsal:
+	uv run fremtpl2 evaluate --rehearsal
+
+# The single, one-shot test evaluation (protocol section 6). Never part of `all`.
+evaluate:
+	uv run fremtpl2 evaluate
+
+all: download audit split train gbm sensitivities freeze

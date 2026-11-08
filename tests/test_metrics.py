@@ -292,3 +292,130 @@ def test_dispersion_unresolvable_bound_raises():
     mu = np.full(len(y), 20.0)
     with pytest.raises(ValueError, match="bracket bound"):
         m.tweedie_mle_dispersion_fit(y, mu, 1.5, log_range=0.3, max_expansions=1)
+
+
+# --------------------------------------------------------------------------- paired group bootstrap
+
+
+def _group_data(seed=5):
+    """Unequal group sizes, zero-loss rows and positive pure-premium predictions."""
+    r = np.random.default_rng(seed)
+    sizes = r.integers(1, 9, size=40)
+    groups = np.repeat(np.arange(40) * 7 + 3, sizes)  # non-contiguous group labels
+    n = len(groups)
+    e = r.uniform(0.1, 1.0, n)
+    s = np.where(r.random(n) < 0.3, r.gamma(2.0, 500.0, n), 0.0)
+    mu_a = r.uniform(50, 400, n)
+    mu_b = mu_a * r.uniform(0.7, 1.3, n)
+    return groups, e, s, mu_a, mu_b
+
+
+def _num(e, s, mu, p=1.5):
+    return e * m.tweedie_unit_deviance(s / e, mu, p)
+
+
+def _delta_boot(groups, e, s, mu_a, mu_b, reps=200, seed=9):
+    nums = {"a": _num(e, s, mu_a), "b": _num(e, s, mu_b)}
+    nums["delta"] = nums["a"] - nums["b"]
+    return m.ratio_bootstrap(groups, nums, e, reps, seed, 0.9)
+
+
+def test_ratio_bootstrap_identical_predictions_give_zero_differences():
+    groups, e, s, mu_a, _ = _group_data()
+    res = _delta_boot(groups, e, s, mu_a, mu_a.copy())
+    assert (res["replicates"]["delta"] == 0).all()
+    assert res["point"]["delta"] == 0
+    assert res["ci"].loc["delta", "lower"] == 0 and res["ci"].loc["delta", "upper"] == 0
+
+
+def test_ratio_bootstrap_swapping_models_negates_differences_and_interval():
+    groups, e, s, mu_a, mu_b = _group_data()
+    ab = _delta_boot(groups, e, s, mu_a, mu_b)
+    ba = _delta_boot(groups, e, s, mu_b, mu_a)
+    np.testing.assert_array_equal(ab["replicates"]["delta"], -ba["replicates"]["delta"])
+    lo, hi = ab["ci"].loc["delta"]
+    lo2, hi2 = ba["ci"].loc["delta"]
+    assert lo2 == pytest.approx(-hi, abs=1e-12) and hi2 == pytest.approx(-lo, abs=1e-12)
+
+
+def test_ratio_bootstrap_multiplicities_equal_literal_row_replication():
+    groups, e, s, mu_a, mu_b = _group_data()
+    uniq, inv = m.unit_index(groups)
+    res = _delta_boot(groups, e, s, mu_a, mu_b, reps=25)
+    draws = list(m.multiplicity_draws(len(uniq), 25, 9))
+    assert any((k > 1).any() for k in draws)  # repeated groups occur
+    for b, k in enumerate(draws):
+        rows = np.repeat(np.arange(len(groups)), k[inv])  # literal replication of whole groups
+        ee, ss = e[rows], s[rows]
+        la = m.tweedie_deviance(ss / ee, mu_a[rows], 1.5, ee) / ee.sum()
+        lb = m.tweedie_deviance(ss / ee, mu_b[rows], 1.5, ee) / ee.sum()
+        assert res["replicates"]["a"][b] == pytest.approx(la, rel=1e-12)
+        assert res["replicates"]["delta"][b] == pytest.approx(la - lb, rel=1e-9, abs=1e-12)
+
+
+def test_ratio_bootstrap_aggregated_equals_direct_weighted_and_paired_bootstrap():
+    groups, e, s, mu_a, mu_b = _group_data()
+
+    def direct(w):
+        ew = e * w
+        la = m.tweedie_deviance(s / e, mu_a, 1.5, ew) / ew.sum()
+        lb = m.tweedie_deviance(s / e, mu_b, 1.5, ew) / ew.sum()
+        return {"a": la, "b": lb, "delta": la - lb}
+
+    agg = _delta_boot(groups, e, s, mu_a, mu_b, reps=60, seed=4)
+    ref = m.paired_bootstrap(direct, len(groups), groups, 60, seed=4, level=0.9)
+    for c in ("a", "b", "delta"):
+        np.testing.assert_allclose(agg["replicates"][c], ref["replicates"][c], rtol=1e-10)
+        assert agg["point"][c] == pytest.approx(ref["point"][c], rel=1e-12)
+    np.testing.assert_allclose(agg["ci"].to_numpy(), ref["ci"].to_numpy(), rtol=1e-9)
+
+
+def test_weighted_gini_equals_gini_with_weights_and_bootstrap_rows():
+    groups, e, s, mu_a, _ = _group_data()
+    wg = m.WeightedGini(s, mu_a, e)
+    assert wg() == pytest.approx(m.gini(s, mu_a, e))
+    _, inv = m.unit_index(groups)
+    for k in m.multiplicity_draws(inv.max() + 1, 10, 2):
+        w = k[inv].astype(float)
+        got, ref = wg(w), m.gini(s, mu_a, e, weight=w)
+        assert got["gini"] == pytest.approx(ref["gini"], abs=1e-12)
+        assert got["gini_normalized"] == pytest.approx(ref["gini_normalized"], abs=1e-12)
+    tied = m.WeightedGini(s, np.ones_like(s), e)()
+    assert tied["gini"] == pytest.approx(0.0, abs=1e-15)
+
+
+def test_ratio_bootstrap_row_metric_shares_the_draws():
+    groups, e, s, mu_a, mu_b = _group_data()
+    seen = []
+
+    def fn(w):
+        seen.append(w.copy())
+        return {"wsum": float(w.sum())}
+
+    res = m.ratio_bootstrap(groups, {"a": _num(e, s, mu_a)}, e, 5, 3, row_metric_fn=fn)
+    _, inv = m.unit_index(groups)
+    for k, w in zip(m.multiplicity_draws(inv.max() + 1, 5, 3), seen[:5], strict=True):
+        np.testing.assert_array_equal(w, k[inv])
+    assert res["point"]["wsum"] == len(groups)
+
+
+def test_percentile_ci_method_and_two_sided_endpoints():
+    v = np.arange(101, dtype=float)
+    assert m.percentile_ci(v, 0.9) == pytest.approx((5.0, 95.0))
+    lo, hi = m.percentile_ci(np.arange(10.0), 0.5, method="lower")
+    assert (lo, hi) == (2.0, 6.0)
+
+
+def test_ratio_bootstrap_fails_closed_on_nonfinite_or_zero_denominators():
+    units = np.array([0, 0, 1, 2, 2, 3])
+    num = {"a": np.arange(6, dtype=float)}
+    den = np.ones(6)
+    with pytest.raises(ValueError, match="non-finite numerator"):
+        m.ratio_bootstrap(units, {"a": np.array([1, np.nan, 1, 1, 1, 1.0])}, den, 5, 1)
+    with pytest.raises(ValueError, match="non-finite denominator"):
+        m.ratio_bootstrap(units, num, np.array([1, np.inf, 1, 1, 1, 1.0]), 5, 1)
+    # unit 3 alone has exposure: a replicate without it has a zero denominator
+    with pytest.raises(ValueError, match="zero or non-finite denominator"):
+        m.ratio_bootstrap(units, num, np.array([0, 0, 0, 0, 0, 1.0]), 50, 1)
+    with pytest.raises(ValueError, match="non-finite replicate"):
+        m.ratio_bootstrap(units, num, den, 5, 1, row_metric_fn=lambda w: {"g": np.nan})

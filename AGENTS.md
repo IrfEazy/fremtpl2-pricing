@@ -1,6 +1,6 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `freeze`, `evaluate`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
   `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
@@ -9,6 +9,24 @@
   `cv_glm.json`, `glm_relativities_*.csv`, `feature_map.json`, `glm_models.json`, `glm_cv.md`,
   `cv_sensitivities.json`, `glm_sensitivities.md`). `fremtpl2 train` runs the grouped CV of the GLMs on train only; `fremtpl2 gbm` (module `gbm`, report `gbm_report`; config `models.gbm`) tunes the LightGBM frequency/severity/Tweedie candidates on the same registered folds, refits on train, selects the GBM pure-premium candidate by protocol section 4 and runs the CV-only monotonicity diagnostic (outputs `cv_gbm.json`, `gbm_models.json`, `gbm_cv.md`, model files in git-ignored `data/processed/models/`);
   `fremtpl2 sensitivities` runs the declared `clean.sensitivities` in CV only.
+- Freeze and test evaluation (config `freeze:`, protocol section 6). `fremtpl2 freeze` (module `freeze`, train only,
+  clean committed tree) recomputes both selections from the recorded per-fold losses, checks the config against the
+  training records and the feature-map level coverage against `results/audit.json`, and writes
+  `results/freeze_manifest.json` (six candidates with fit-free prediction recipes, `selected_glm_id`/`selected_gbm_id`,
+  trace hashes, sha256 of every input/model/config/protocol/`uv.lock`/split/raw file, training commit, library versions,
+  evaluation spec, train-row self-check predictions); it refuses an existing manifest unless `--force`, and `--force`
+  once a test-state file exists. Commit the manifest, then `fremtpl2 evaluate` (module `evaluate`) is the ONLY code path
+  that reads test rows (`evaluate.load_test`): lock, clean tree, hashes, runtime identity (python, packages, `uv.lock`,
+  threads), selection and primary-contrast re-assertion and the self-check (edge cases, determinism) first; then
+  `FROZEN`/`TEST_OPENED` are appended to `results/test_access.json` (the single authoritative journal; the mirror in
+  `data/processed/` is only a check, any disagreement fails closed) before any test row is read; outputs are staged
+  in `data/processed/evaluate_staging/`, validated and hashed, `COMPLETE` records the hashes, and only then are they
+  published to `results/test/attempt-<n>/` and the pointer `results/metrics.json` (`--publish-only` republishes a
+  COMPLETE attempt without recomputing). A second run is refused; only `--technical-rerun --reason` after an attempt
+  with TEST_OPENED and no COMPLETE, with the same manifest and runtime. `evaluate.run_attempt` is the one code path:
+  `fremtpl2 evaluate --rehearsal` runs it on train fold `freeze.rehearsal.fold` with its own journal and outputs under
+  `data/processed/rehearsal/` (no test row, no `results/` write); run it before the real evaluation. Agents never run
+  `freeze` or `evaluate` (rehearsal included) on the real project unless the lead says so; `make all` stops at `freeze`. A crash between the journal append and the mirror write makes `evaluate` fail closed; the operator inspects both files and restores the mirror from the authoritative journal only (never the reverse), recorded as a technical note.
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
   primary; the random split is a labelled sensitivity. Do not change the choice after seeing test
   results. `reports/evaluation_protocol.md` (2026-11-08) governs milestone 3 and the single test
@@ -45,7 +63,7 @@
   is the Dunn & Smyth series, scipy is a declared dependency), then refits on full train. The same CV also runs the pre-registered severity ladder (config `models.glm.severity_ladder`: constant < simplified < L2 full < full, frequency fixed at the full GLM; L2 penalty from strictly positive `models.glm.l2_grid`, chosen on the inner folds per outer fold and by plain CV for the final refit) and the section 4 rule, recorded under `selection` in `cv_glm.json`; every ladder candidate is refitted into `glm_models.json` as `severity_<id>`.
   Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
   `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
-  reported (separate block), never part of a CV target. The bootstrap block is recorded, not applied, until milestone 3.
-- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check).
+  reported (separate block), never part of a CV target. The bootstrap block is not applied in train/CV; `fremtpl2 evaluate` applies it to the test set (paired group bootstrap, `metrics.ratio_bootstrap`).
+- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`).
   Tests are offline; only `fremtpl2 download` touches the network.
 - Commits: small and focused, one line `type(scope): summary`, no footer. Do not push unless explicitly asked.
