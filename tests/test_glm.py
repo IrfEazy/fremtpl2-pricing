@@ -230,3 +230,27 @@ def test_solver_by_family_overrides_only_that_family():
     assert glm._estimator("poisson", None, True, solver).gradient_tol == 1e-7
     assert glm._estimator("gamma", None, True, solver).gradient_tol == 1e-7
     assert glm._estimator("tweedie", 1.5, True, solver).max_iter == 50
+
+
+def test_l2_penalty_shrinks_and_is_weight_scale_invariant():
+    X, _, _, ncl, _, _ = make_data()
+    rng = np.random.default_rng(3)
+    avg = np.exp(0.5 * X["age"].to_numpy() + 1) * rng.gamma(5, 0.2, len(X))
+    plain = glm.fit_severity(X, avg, ncl)
+    small = glm.fit_severity(X, avg, ncl, l2=1e-3)
+    big = glm.fit_severity(X, avg, ncl, l2=1.0)
+    norm = lambda m: float(np.linalg.norm(m.coef))  # noqa: E731
+    assert norm(big) < norm(small) < norm(plain)
+    scaled = glm.fit_severity(X, avg, ncl * 10, l2=1e-3)
+    assert np.allclose(scaled.coef, small.coef, atol=1e-6)
+    assert np.isclose(scaled.intercept, small.intercept, atol=1e-6)
+    d = small.to_dict()
+    assert d["l2"] == 1e-3 and glm.GLMModel.from_dict(json.loads(json.dumps(d))).l2 == 1e-3
+    assert "l2" not in plain.to_dict()
+
+
+@pytest.mark.parametrize("bad", [0.0, -1.0, float("nan")])
+def test_l2_must_be_positive(bad):
+    X, _, _, ncl, _, _ = make_data()
+    with pytest.raises(ValueError, match="l2"):
+        glm.fit_severity(X, np.ones(len(X)), ncl, l2=bad)

@@ -113,6 +113,7 @@ features:
   feature_sets:
     full: [Area, VehPower, VehAge, DrivAge, BonusMalus, VehBrand, VehGas, Density, Region]
     bonus_malus_only: [BonusMalus]  # one-variable baseline
+    severity_simplified: [BonusMalus, DrivAge, VehAge, VehGas]  # simplified severity GLM (protocol section 3); same severity-map pooling rules as the full set
 
 # Milestone 2: GLM cross-validation on the TRAIN set only (fremtpl2_pricing.train). The test set is
 # never loaded into a fit, a preprocessing step or a metric. Decisions fixed before any model run.
@@ -120,6 +121,12 @@ models:
   glm:
     robust_se: true                # robust (sandwich) covariance in the coefficient tables; false = model-based
     ci_level: 0.95                 # level of the relativity confidence intervals
+    severity_ladder:               # severity candidates, ordered simplest -> most complex (protocol sections 3-4); kind: constant | glm | glm_l2
+      - {id: constant, kind: constant}                           # claim-weighted mean S_cap / N of the fitting part
+      - {id: simplified, kind: glm, feature_set: severity_simplified}
+      - {id: l2, kind: glm_l2, feature_set: full}                # ridge-penalised full GLM; at most one glm_l2 entry
+      - {id: full, kind: glm, feature_set: full}
+    l2_grid: [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]  # strictly positive ridge penalties (glum alpha, l1_ratio=0; see glm.PENALTY_CONVENTION); chosen on the inner folds per outer fold and by plain CV for the final refit; zero is excluded; upper end widened (to 10.0) before the first real run because glum normalises the weights (reviewer finding)
     solver:                        # glum IRLS settings of every fit; a fit that warns of non-convergence is recorded in cv_glm.json
       max_iter: 1000
       gradient_tol: 1.0e-7   # tightened from 1e-5: the CV frequency fits stopped one IRLS step early (solver check, rel. prediction 1.6e-4 > 1e-4)

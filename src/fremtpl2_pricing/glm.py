@@ -10,6 +10,12 @@ Exposure handling (applied exactly once):
 - frequency: Poisson, log link, offset = log(exposure), unit sample weight, y = claim count;
 - severity: Gamma, log link, sample weight = number of claims, no offset, y = average cost;
 - Tweedie: log link, sample weight = exposure, no offset, y = pure premium (cost / exposure).
+
+Optional ridge penalty (``l2``, severity ladder only): glum minimises
+``sum(w_i * unit_deviance_i) / (2 * sum(w_i)) + (l2 / 2) * sum(beta_j ** 2)`` over the design
+columns (dummy columns of the categoricals and the numeric columns as passed, not standardised);
+the intercept is never penalised and the weights are normalised by glum, so ``l2`` is a penalty
+per average deviance and does not change when all weights are scaled (see ``PENALTY_CONVENTION``).
 """
 
 from __future__ import annotations
@@ -27,6 +33,12 @@ from sklearn.exceptions import ConvergenceWarning
 INTERCEPT = "(Intercept)"
 # Solver settings used when the caller passes none (the pipeline passes models.glm.solver).
 DEFAULT_SOLVER = {"max_iter": 1000, "gradient_tol": 1e-10}
+PENALTY_CONVENTION = (
+    "glum alpha with l1_ratio=0 (pure L2, ridge): minimise sum(w*unit_deviance)/(2*sum(w)) + "
+    "alpha/2 * sum(beta^2) over the dummy and numeric design columns (unstandardised); intercept "
+    "unpenalised; sample weights are normalised to sum 1 by glum, so alpha does not depend on the "
+    "scale of the weights (verified: scaling all weights leaves the fit unchanged)"
+)
 
 
 def _feature_specs(X: pd.DataFrame) -> list[dict[str, Any]]:
@@ -85,6 +97,9 @@ class GLMModel:
     coef: list[float]
     features: list[dict[str, Any]]
     estimator: Any = field(default=None, repr=False, compare=False)
+    l2: float | None = field(
+        default=None, compare=False
+    )  # ridge penalty (alpha), None = unpenalised
     converged: bool | None = field(default=None, compare=False)  # False if glum warned
     n_iter: int | None = field(default=None, compare=False)
 
@@ -106,7 +121,9 @@ class GLMModel:
         return self.predict_rate(X) * np.asarray(exposure, dtype=float)
 
     def to_dict(self) -> dict[str, Any]:
+        extra = {} if self.l2 is None else {"l2": float(self.l2)}
         return {
+            **extra,
             "kind": self.kind,
             "family": self.family,
             "power": self.power,
@@ -129,10 +146,11 @@ class GLMModel:
             intercept=float(d["intercept"]),
             coef=[float(c) for c in d["coef"]],
             features=[dict(s) for s in d["features"]],
+            l2=None if d.get("l2") is None else float(d["l2"]),
         )
 
 
-def _fit(kind, X, y, weight, offset, family, power, solver=None) -> GLMModel:
+def _fit(kind, X, y, weight, offset, family, power, solver=None, l2=None) -> GLMModel:
     y = np.asarray(y, dtype=float)
     weight = np.asarray(weight, dtype=float)
     if not (len(X) == len(y) == len(weight)):
@@ -148,7 +166,7 @@ def _fit(kind, X, y, weight, offset, family, power, solver=None) -> GLMModel:
     ]
     if empty:
         raise ValueError(f"categories without training rows (empty levels): {empty}")
-    est = _estimator(family, power, fit_intercept=bool(specs), solver=solver)
+    est = _estimator(family, power, fit_intercept=bool(specs), solver=solver, l2=l2)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         est.fit(D, y, sample_weight=weight, offset=offset)
@@ -161,20 +179,23 @@ def _fit(kind, X, y, weight, offset, family, power, solver=None) -> GLMModel:
     else:  # ones column carries the intercept
         intercept, coef = float(est.coef_[0]), []
     return GLMModel(
-        kind, family, power, "log", intercept, coef, specs, est, converged, int(est.n_iter_)
+        kind, family, power, "log", intercept, coef, specs, est, l2, converged, int(est.n_iter_)
     )
 
 
-def _estimator(family, power, fit_intercept, solver=None) -> GeneralizedLinearRegressor:
+def _estimator(family, power, fit_intercept, solver=None, l2=None) -> GeneralizedLinearRegressor:
     opts = {**DEFAULT_SOLVER, **(solver or {})}
     # optional per-family overrides, e.g. {"tweedie": {"gradient_tol": 1e-5}}
     opts.update((opts.get("by_family") or {}).get("tweedie" if power is not None else family, {}))
     if power is not None:
         family = TweedieDistribution(power)
+    if l2 is not None and not (np.isfinite(l2) and l2 > 0):
+        raise ValueError("l2 must be a finite number > 0 (None = unpenalised)")
     return GeneralizedLinearRegressor(
         family=family,
         link="log",
-        alpha=0,
+        alpha=0 if l2 is None else float(l2),
+        l1_ratio=0,
         fit_intercept=fit_intercept,
         max_iter=int(opts["max_iter"]),
         gradient_tol=float(opts["gradient_tol"]),
@@ -191,13 +212,15 @@ def fit_frequency(X: pd.DataFrame, count, exposure, solver=None) -> GLMModel:
     )
 
 
-def fit_severity(X: pd.DataFrame, avg_cost, n_claims, solver=None) -> GLMModel:
-    """Gamma log link, weight = number of claims; rows with n_claims <= 0 or cost <= 0 rejected."""
+def fit_severity(X: pd.DataFrame, avg_cost, n_claims, solver=None, l2=None) -> GLMModel:
+    """Gamma log link, weight = number of claims; rows with n_claims <= 0 or cost <= 0 rejected.
+
+    ``l2``: optional ridge penalty (``PENALTY_CONVENTION``); None = unpenalised."""
     avg_cost = np.asarray(avg_cost, dtype=float)
     n_claims = np.asarray(n_claims, dtype=float)
     if (n_claims <= 0).any() or (avg_cost <= 0).any():
         raise ValueError("severity needs n_claims > 0 and avg_cost > 0 on every row")
-    return _fit("severity", X, avg_cost, n_claims, None, "gamma", None, solver)
+    return _fit("severity", X, avg_cost, n_claims, None, "gamma", None, solver, l2)
 
 
 def fit_tweedie(X: pd.DataFrame, pure_premium, exposure, power: float, solver=None) -> GLMModel:

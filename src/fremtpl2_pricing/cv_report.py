@@ -98,6 +98,117 @@ def _scalar_rows(summary: dict, pooled: dict, group: str, metric_keys: list[str]
     return rows
 
 
+def _selection_lines(sel: dict[str, Any]) -> list[str]:
+    """Severity ladder and selection section (protocol section 4), numbers from ``selection``."""
+    ids = [e["id"] for e in sel["candidates"]]
+    pp, sd = sel["pure_premium_loss_per_fold"], sel["severity_deviance_per_claim_per_fold"]
+    n_folds = sel["ladder"]["n_folds"]
+    lines = [
+        "## Severity ladder and GLM pure premium selection",
+        "",
+        f"Rule version `{sel['rule_version']}` (protocol section 4). Primary loss: "
+        f"{sel['primary_loss']['name']} at power {_f(sel['primary_loss']['power'])}; the frequency "
+        f"model is {sel['primary_loss']['frequency']}. The rule is a paired-fold complexity "
+        "heuristic: the mean fold difference is compared with sd/sqrt(K). It is a heuristic, not a "
+        "significance test and not a valid standard error (training sets overlap across folds and "
+        "K is small); a difference within the threshold is reported as inconclusive, not as a win.",
+        "",
+        "### Candidates (ordered simplest to most complex)",
+        "",
+    ]
+    lines += _table(
+        ["candidate", "kind", "feature set"]
+        + [f"loss fold {k}" for k in range(n_folds)]
+        + ["mean loss", "severity deviance per claim (mean)"],
+        [
+            [e["id"], e["kind"], e.get("feature_set", "")]
+            + [x for x in pp[e["id"]]]
+            + [
+                sel["pure_premium_loss_mean"][e["id"]],
+                sel["severity_deviance_per_claim_mean"][e["id"]],
+            ]
+            for e in sel["candidates"]
+        ],
+    )
+    lines += ["Severity Gamma deviance per claim (weight N) per fold, reported alongside:", ""]
+    lines += _table(
+        ["candidate"] + [f"fold {k}" for k in range(n_folds)],
+        [[i] + list(sd[i]) for i in ids],
+    )
+    lines += ["### Ladder steps (comparison always against the current incumbent)", ""]
+    lines += _table(
+        ["incumbent", "next", "mean d", "sd d", "sd/sqrt(K)", "decision", "inconclusive", "reason"],
+        [
+            [
+                st["incumbent"],
+                st["next"],
+                st["mean_d"],
+                st["sd_d"],
+                st["threshold"],
+                st["decision"],
+                st["inconclusive"],
+                st["reason"],
+            ]
+            for st in sel["ladder"]["steps"]
+        ],
+    )
+    lines += [f"Selected severity candidate: **{sel['selected_severity']}**.", ""]
+    v = sel["freq_x_sev_vs_tweedie"]
+    st = v["steps"][0]
+    lines += [
+        "### Frequency x severity vs GLM Tweedie (step 6)",
+        "",
+        f"d_k = loss(Tweedie) - loss(frequency x {v['freq_x_sev_severity']}); the Tweedie of each "
+        "outer fold uses the power chosen by its inner CV "
+        f"(final power {_f(sel['tweedie_power_final'])}).",
+        "",
+    ]
+    lines += _table(
+        ["fold", "loss freq x sev", "loss Tweedie", "d_k"],
+        [
+            [k, v["freq_x_sev_loss_per_fold"][k], sel["tweedie_loss_per_fold"][k], st["d_k"][k]]
+            for k in range(n_folds)
+        ],
+    )
+    lines += [
+        f"mean d = {_f(st['mean_d'])}, sd = {_f(st['sd_d'])}, sd/sqrt(K) = {_f(st['threshold'])}: "
+        f"{st['reason']}. Winner: **{st['decision']}** (inconclusive: {st['inconclusive']}).",
+        "",
+        f"Selected GLM pure premium candidate: **{sel['selected_glm_pure_premium']['id']}**.",
+        "",
+    ]
+    l2 = sel.get("l2")
+    if l2:
+        lines += [
+            "### L2 penalty",
+            "",
+            f"Grid: {', '.join(_f(g) for g in l2['grid'])} (strictly positive). Convention: "
+            f"{l2['convention']}. Tie rule: {l2['tie_rule']}.",
+            "",
+        ]
+        lines += _table(
+            ["outer fold", "penalty (inner CV)", "on grid edge"],
+            [
+                [k, l2["penalty_by_outer_fold"][k], l2["penalty_at_grid_edge_by_outer_fold"][k]]
+                for k in range(n_folds)
+            ],
+        )
+        lines += _table(
+            ["penalty", "outer CV mean loss"] + [f"fold {k}" for k in range(n_folds)],
+            [
+                [g, l2["outer_cv_loss_mean"][str(g)]] + list(l2["outer_cv_loss_per_fold"][str(g)])
+                for g in l2["grid"]
+            ],
+        )
+        lines += [
+            f"Final full-train penalty (plain CV over the registered folds): "
+            f"**{_f(l2['final_penalty'])}**; on the grid edge: {l2['final_penalty_at_grid_edge']} "
+            f"({l2['grid_edge_note']}).",
+            "",
+        ]
+    return lines
+
+
 def render_report(r: dict[str, Any]) -> str:
     cfg, cv, rows = r["config"], r["cv"], r["rows"]
     t = cfg["models"]["tweedie"]
@@ -445,6 +556,8 @@ def render_report(r: dict[str, Any]) -> str:
             + [(f"fold {x['fold']}", x) for x in gs["per_fold"]]
         ],
     )
+    if "selection" in r:
+        lines += _selection_lines(r["selection"])
     lines += [
         "## Findings",
         "",

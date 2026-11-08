@@ -3,7 +3,7 @@
 - Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
-  `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
+  `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
   `data/raw` and `data/processed` (git-ignored, regenerated), `results/` and `reports/` (tracked
   pipeline outputs: `audit.json`, `split_summary.json`, `targets_summary.json`, `orphan_ledger.csv`, `data_audit.md`,
   `cv_glm.json`, `glm_relativities_*.csv`, `feature_map.json`, `glm_models.json`, `glm_cv.md`,
@@ -42,7 +42,7 @@
   per training part; severity has its own claims-only feature map; Tweedie power chosen by inner CV on the held-out
   Tweedie log-likelihood (dispersion by ML on the fitting part; Poisson deviance per power is a diagnostic, power 1.5 a
   fixed-power sensitivity; grid-edge/flatness and solver-convergence diagnostics are reported; `metrics.tweedie_logpdf`
-  is the Dunn & Smyth series, scipy is a declared dependency), then refits on full train.
+  is the Dunn & Smyth series, scipy is a declared dependency), then refits on full train. The same CV also runs the pre-registered severity ladder (config `models.glm.severity_ladder`: constant < simplified < L2 full < full, frequency fixed at the full GLM; L2 penalty from strictly positive `models.glm.l2_grid`, chosen on the inner folds per outer fold and by plain CV for the final refit) and the section 4 rule, recorded under `selection` in `cv_glm.json`; every ladder candidate is refitted into `glm_models.json` as `severity_<id>`.
   Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
   `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
   reported (separate block), never part of a CV target. The bootstrap block is recorded, not applied, until milestone 3.

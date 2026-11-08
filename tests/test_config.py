@@ -31,3 +31,13 @@ def test_missing_key(tmp_path):
 @pytest.mark.parametrize("cmd", ["evaluate", "report"])
 def test_stubs_exit_2(cmd):
     assert main([cmd, "--config", str(ROOT / "configs" / "default.yaml")]) == 2
+
+
+@pytest.mark.parametrize("bad", [[0.0, 0.1], [-0.1], [], [float("nan")], [0.1, 0.1]])
+def test_l2_grid_must_be_strictly_positive(bad):
+    cfg = load_config(ROOT / "configs" / "default.yaml")
+    cfg["models"]["glm"]["l2_grid"] = bad
+    from fremtpl2_pricing.config import validate_models
+
+    with pytest.raises(ConfigError):
+        validate_models(cfg["models"])

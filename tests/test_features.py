@@ -43,7 +43,7 @@ def test_config_section_complete():
     assert FEAT["definitions"]["DrivAge"]["lower_edges"] == [18, 21, 26, 31, 41, 51, 61, 71, 81]
     assert FEAT["definitions"]["VehAge"]["lower_edges"] == [0, 1, 3, 6, 11, 16]
     assert FEAT["rare_levels"]["min_exposure_years"] == 1500
-    assert set(FEAT["feature_sets"]) == {"full", "bonus_malus_only"}
+    assert set(FEAT["feature_sets"]) == {"full", "bonus_malus_only", "severity_simplified"}
 
 
 def test_band_edges_at_boundaries():

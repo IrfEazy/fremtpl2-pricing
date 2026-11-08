@@ -170,8 +170,12 @@ def test_power_selection_diagnostics_and_convergence(result, cfg):
     conv = result["convergence"]
     n_grid = len(grid)
     n_outer = 3 + n_grid + len(set(t["fixed_power_sensitivities"]) - {float(g) for g in grid})
-    # outer + inner fits, and the four final fits (out_dir given)
-    assert conv["n_fits"] == 5 * n_outer + 5 * 4 * n_grid + 4
+    n_l2 = len(cfg["models"]["glm"]["l2_grid"])
+    # outer + inner fits, ladder fits (simplified, L2 per penalty, full) per outer fold, L2 inner
+    # fits (frequency + one per penalty) per inner split, and the six final fits (out_dir given)
+    assert conv["n_fits"] == (
+        5 * n_outer + 5 * 4 * n_grid + 5 * (n_l2 + 2) + 5 * 4 * (1 + n_l2) + 6
+    )
     assert conv["n_not_converged"] == len(conv["not_converged"])
     assert conv["solver"] == cfg["models"]["glm"]["solver"]
     assert "weak_identification_nats" not in t
@@ -234,10 +238,13 @@ def test_dispersion_summary_and_solver_check_recorded(result, cfg):
     sc = result["solver_check"]
     assert sc["passed"] and sc["failures"] == []
     assert {r["stage"] for r in sc["records"]} == {"cv", "final"}
-    assert len(sc["records"]) == 5 * 3 + 3  # per fold tweedie, frequency, severity; 3 final
+    assert (
+        len(sc["records"]) == 5 * 3 + 3 + 2
+    )  # per fold tweedie, frequency, severity; 3 final + simplified and L2
     assert {(r["stage"], r["model"]) for r in sc["records"]} == {
         ("cv", "tweedie"), ("cv", "frequency"), ("cv", "severity"),
         ("final", "tweedie"), ("final", "frequency"), ("final", "severity"),
+        ("final", "severity_simplified"), ("final", "severity_l2"),
     }  # fmt: skip
     pp = sc["pure_premium"]
     assert len(pp["records"]) == 5
@@ -420,3 +427,49 @@ def test_cli_train_is_wired(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "run_train", lambda c: called.append(c))
     assert cli.main(["train"]) == 0 and called
     assert cli.main(["evaluate"]) == 2
+
+
+def test_selection_block(result, cfg):
+    s = result["selection"]
+    ids = [e["id"] for e in cfg["models"]["glm"]["severity_ladder"]]
+    assert ids == ["constant", "simplified", "l2", "full"]
+    assert set(s["pure_premium_loss_per_fold"]) == set(ids)
+    assert all(len(v) == 5 for v in s["pure_premium_loss_per_fold"].values())
+    assert s["selected_severity"] in ids and s["ladder"]["selected"] == s["selected_severity"]
+    assert [st["next"] for st in s["ladder"]["steps"]] == ids[1:]
+    assert s["ladder"]["rule_version"] == s["rule_version"]
+    # the full rung equals the existing freq x sev out-of-fold primary loss of each fold
+    cv = result["cv"]["folds"]
+    ref = [f["pure_premium"]["freq_x_sev"]["tweedie_ref_deviance_per_exposure"] for f in cv]
+    assert np.allclose(s["pure_premium_loss_per_fold"]["full"], ref, rtol=1e-8)
+    tw = [f["pure_premium"]["tweedie"]["tweedie_ref_deviance_per_exposure"] for f in cv]
+    assert np.allclose(s["tweedie_loss_per_fold"], tw)
+    assert s["freq_x_sev_vs_tweedie"]["selected"] in ("freq_x_sev", "tweedie")
+    assert s["selected_glm_pure_premium"]["id"]
+    l2 = s["l2"]
+    grid = cfg["models"]["glm"]["l2_grid"]
+    assert l2["grid"] == grid and min(grid) > 0 and l2["final_penalty"] in grid
+    assert all(p in grid for p in l2["penalty_by_outer_fold"])
+    assert len(l2["inner"]["0"]["per_inner_fold"]) == 4
+    assert isinstance(l2["final_penalty_at_grid_edge"], bool) and "alpha" in l2["convention"]
+    md = render_report(result)
+    assert "Severity ladder and GLM pure premium selection" in md
+    assert "not a significance test" in md and "Selected GLM pure premium candidate" in md
+
+
+def test_selection_fits_in_convergence_and_solver_records(result, cfg):
+    assert result["convergence"]["n_not_converged"] == 0
+    models = {r["model"] for r in result["solver_check"]["records"] if r["stage"] == "final"}
+    assert {"severity_simplified", "severity_l2"} <= models
+
+
+def test_final_fit_writes_all_severity_candidates(cfg, train_df, tmp_path):
+    train.final_fit(train_df, cfg, 1.5, tmp_path, l2=0.01)
+    models = json.loads((tmp_path / cfg["models"]["outputs"]["models"]).read_text())
+    assert {"severity", "severity_constant", "severity_simplified", "severity_l2"} <= set(models)
+    assert models["severity_l2"]["l2"] == 0.01 and models["severity_constant"]["value"] > 0
+    assert [f["name"] for f in models["severity_simplified"]["features"]] == [
+        "VehAge", "DrivAge", "BonusMalus", "VehGas"
+    ] or len(models["severity_simplified"]["features"]) == 4  # fmt: skip
+    with pytest.raises(ValueError, match="no penalty"):
+        train.final_fit(train_df, cfg, 1.5, tmp_path)

@@ -24,7 +24,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 from threadpoolctl import threadpool_limits
 
-from . import features, glm, metrics
+from . import config as config_mod
+from . import features, glm, metrics, selection
 from .clean import clean
 from .cv_report import render_report
 from .data import load_raw
@@ -270,6 +271,100 @@ def _outer(fit, valid, fcfg, mcfg, rules, grid) -> dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------- severity ladder
+
+
+def _ladder_parts(mcfg: dict[str, Any]):
+    """Severity ladder entries (simplest first), the glm_l2 entry (or None) and the L2 grid."""
+    config_mod.validate_models(mcfg)
+    g = mcfg["glm"]
+    entries = list(g["severity_ladder"])
+    l2_entry = next((e for e in entries if e["kind"] == "glm_l2"), None)
+    return entries, l2_entry, [float(x) for x in g["l2_grid"]]
+
+
+def _pp_loss(df: pd.DataFrame, pp_total: np.ndarray, ref: float) -> float:
+    """Primary loss: exposure-weighted Tweedie deviance (reference power) of S_cap / Exposure
+    against the predicted pure premium per policy (totals), per unit of exposure."""
+    e = df["Exposure"].to_numpy()
+    return metrics.tweedie_deviance(_pp(df), pp_total / e, ref, weight=e) / e.sum()
+
+
+def _l2_inner_task(fit, valid, fcfg, mcfg, entry, grid, ref) -> dict[str, Any]:
+    with threadpool_limits(1):  # single-threaded BLAS/OpenMP: bit-identical reruns
+        return _l2_inner(fit, valid, fcfg, mcfg, entry, grid, ref)
+
+
+def _l2_inner(fit, valid, fcfg, mcfg, entry, grid, ref) -> dict[str, Any]:
+    """Inner split of an outer training part: the full GLM frequency and the L2 severity GLM per
+    penalty are fitted on ``fit`` only (features refitted); primary loss of freq x sev on
+    ``valid``."""
+    assert_train_only(fit)
+    assert_train_only(valid)
+    solver = mcfg["glm"]["solver"]
+    full = features.feature_names(fcfg, "full")
+    fmap = features.fit(fit, fcfg)
+    Xf, Xv = features.transform(fit, fmap), features.transform(valid, fmap)
+    freq = glm.fit_frequency(
+        Xf[full], fit["freq_count"].to_numpy(), fit["Exposure"].to_numpy(), solver
+    )
+    f_val = freq.predict_rate(Xv[full]) * valid["Exposure"].to_numpy()
+    claims, avg, n_cl = _severity_inputs(fit)
+    fmap_s = _severity_map(claims, fcfg, mcfg, fmap)
+    cols = features.feature_names(fcfg, entry["feature_set"])
+    Xs, Xsv = features.transform(claims, fmap_s)[cols], features.transform(valid, fmap_s)[cols]
+    fits = [_fit_record(freq, "frequency_full")]
+    loss = {}
+    for lam in grid:
+        m = glm.fit_severity(Xs, avg, n_cl, solver, l2=lam)
+        loss[lam] = _pp_loss(valid, f_val * m.predict_rate(Xsv), ref)
+        fits.append({**_fit_record(m, f"severity_{entry['id']}"), "l2": lam})
+    return {"loss": loss, "fits": fits}
+
+
+def _ladder_task(fit, valid, fcfg, mcfg, entries, grid, ref, lam, f_val) -> dict[str, Any]:
+    with threadpool_limits(1):  # single-threaded BLAS/OpenMP: bit-identical reruns
+        return _ladder_outer(fit, valid, fcfg, mcfg, entries, grid, ref, lam, f_val)
+
+
+def _ladder_outer(fit, valid, fcfg, mcfg, entries, grid, ref, lam, f_val) -> dict[str, Any]:
+    """Severity candidates fitted on the outer training part only; ``f_val`` = out-of-fold full
+    GLM frequency (expected counts). Returns the primary loss of freq x sev per candidate, the
+    severity Gamma deviance per claim, and (L2 entry) the primary loss for every grid penalty."""
+    assert_train_only(fit)
+    assert_train_only(valid)
+    solver = mcfg["glm"]["solver"]
+    fmap = features.fit(fit, fcfg)
+    claims, avg, n_cl = _severity_inputs(fit)
+    fmap_s = _severity_map(claims, fcfg, mcfg, fmap)
+    Xs_all, Xv_all = features.transform(claims, fmap_s), features.transform(valid, fmap_s)
+    is_claim = (valid["N"] > 0).to_numpy()
+    cl = valid[is_claim]
+    ya, w = (cl["S_cap"] / cl["N"]).to_numpy(), cl["N"].to_numpy()
+    pp_loss, sev_dev, fits, l2_loss = {}, {}, [], None
+    for e in entries:
+        if e["kind"] == "constant":
+            pred = np.full(len(valid), float(claims["S_cap"].sum() / n_cl.sum()))
+        else:
+            cols = features.feature_names(fcfg, e["feature_set"])
+            if e["kind"] == "glm":
+                m = glm.fit_severity(Xs_all[cols], avg, n_cl, solver)
+                fits.append(_fit_record(m, f"severity_{e['id']}"))
+                pred = m.predict_rate(Xv_all[cols])
+            else:
+                l2_loss, pred = {}, None
+                for g_ in grid:
+                    m = glm.fit_severity(Xs_all[cols], avg, n_cl, solver, l2=g_)
+                    fits.append({**_fit_record(m, f"severity_{e['id']}"), "l2": g_})
+                    p_ = m.predict_rate(Xv_all[cols])
+                    l2_loss[g_] = _pp_loss(valid, f_val * p_, ref)
+                    if g_ == lam:
+                        pred = p_
+        pp_loss[e["id"]] = _pp_loss(valid, f_val * pred, ref)
+        sev_dev[e["id"]] = metrics.gamma_deviance(ya, pred[is_claim], w) / w.sum()
+    return {"pp_loss": pp_loss, "sev_deviance": sev_dev, "l2_outer_loss": l2_loss, "fits": fits}
+
+
 # --------------------------------------------------------------------------- metrics
 
 
@@ -436,6 +531,89 @@ def check_level_coverage(train: pd.DataFrame, cfg: dict[str, Any]) -> None:
         )
 
 
+def _select_l2_by_fold(jobs, done, k_folds, grid, entry):
+    """Per outer fold: the penalty with the lowest mean inner primary loss (inner folds with equal
+    weight; the first minimum in grid order on an exact tie) and the inner losses."""
+    if entry is None:
+        return {k: None for k in range(k_folds)}, {}
+    chosen, inner = {}, {}
+    for k in range(k_folds):
+        rows = [r["loss"] for (kind, kk, _, _, _), r in zip(jobs, done, strict=True)
+                if kind == "l2inner" and kk == k]  # fmt: skip
+        mean = {g_: float(np.mean([r[g_] for r in rows])) for g_ in grid}
+        chosen[k] = grid[int(np.argmin([mean[g_] for g_ in grid]))]
+        inner[k] = {"n_inner_folds": len(rows), "mean_loss": mean, "per_inner_fold": rows}
+    return chosen, inner
+
+
+def build_selection(
+    entries, l2_entry, grid, lad, l2_inner, lam_by_fold, tweedie_loss, tweedie_power, ref
+) -> dict[str, Any]:
+    """Severity ladder + frequency x severity vs Tweedie (protocol section 4) from the per-fold
+    results of ``_ladder_outer`` (``lad``) and the per-fold Tweedie reference deviance."""
+    ids = [e["id"] for e in entries]
+    k_folds = len(lad)
+    pp_loss = {i: [lad[k]["pp_loss"][i] for k in range(k_folds)] for i in ids}
+    sev_dev = {i: [lad[k]["sev_deviance"][i] for k in range(k_folds)] for i in ids}
+    ladder_trace = selection.ladder(pp_loss)
+    chosen_sev = ladder_trace["selected"]
+    step6 = selection.freq_x_sev_vs_tweedie(pp_loss[chosen_sev], tweedie_loss)
+    winner = step6["selected"]
+    out: dict[str, Any] = {
+        "rule_version": selection.RULE_VERSION,
+        "primary_loss": {
+            "name": "exposure-weighted Tweedie deviance of S_cap / Exposure per exposure-year",
+            "power": ref,
+            "frequency": "full GLM frequency fixed for every severity candidate",
+        },
+        "heuristic_note": (
+            "paired-fold complexity heuristic (mean difference vs sd/sqrt(K)); not a significance "
+            "test and not a valid standard error (overlapping training sets, small K)"
+        ),
+        "candidates": [{k_: v for k_, v in e.items()} for e in entries],
+        "pure_premium_loss_per_fold": pp_loss,
+        "pure_premium_loss_mean": {i: float(np.mean(v)) for i, v in pp_loss.items()},
+        "severity_deviance_per_claim_per_fold": sev_dev,
+        "severity_deviance_per_claim_mean": {i: float(np.mean(v)) for i, v in sev_dev.items()},
+        "ladder": ladder_trace,
+        "selected_severity": chosen_sev,
+        "tweedie_loss_per_fold": list(tweedie_loss),
+        "tweedie_power_final": tweedie_power,
+        "tweedie_note": "Tweedie of each outer fold uses the power chosen by its inner CV",
+        "freq_x_sev_vs_tweedie": {
+            "freq_x_sev_severity": chosen_sev,
+            "freq_x_sev_loss_per_fold": pp_loss[chosen_sev],
+            **step6,
+        },
+        "selected_glm_pure_premium": (
+            {"id": f"freq_x_sev[{chosen_sev}]", "family": "freq_x_sev", "severity": chosen_sev}
+            if winner == "freq_x_sev"
+            else {"id": "tweedie", "family": "tweedie", "tweedie_power": tweedie_power}
+        ),
+        "l2": None,
+    }
+    if l2_entry is not None:
+        outer_loss = {g_: [lad[k]["l2_outer_loss"][g_] for k in range(k_folds)] for g_ in grid}
+        mean = {g_: float(np.mean(v)) for g_, v in outer_loss.items()}
+        final = grid[int(np.argmin([mean[g_] for g_ in grid]))]
+        edge = lambda g_: bool(g_ in (min(grid), max(grid)))  # noqa: E731
+        out["l2"] = {
+            "candidate_id": l2_entry["id"],
+            "grid": grid,
+            "convention": glm.PENALTY_CONVENTION,
+            "tie_rule": "first minimum in grid order",
+            "penalty_by_outer_fold": [lam_by_fold[k] for k in range(k_folds)],
+            "penalty_at_grid_edge_by_outer_fold": [edge(lam_by_fold[k]) for k in range(k_folds)],
+            "inner": {k: l2_inner[k] for k in range(k_folds)},
+            "outer_cv_loss_per_fold": outer_loss,
+            "outer_cv_loss_mean": mean,
+            "final_penalty": final,
+            "final_penalty_at_grid_edge": edge(final),
+            "grid_edge_note": "diagnostic only: a grid-edge penalty is flagged, not a failure",
+        }
+    return out
+
+
 def _power_diagnostics(grid, loglik: dict[float, float]) -> dict[str, Any]:
     """Selected power plus boundary / flatness diagnostic of a held-out log-likelihood curve."""
     ll = np.array([loglik[p] for p in grid])
@@ -515,6 +693,7 @@ def cross_validate(train: pd.DataFrame, cfg: dict[str, Any], capped_ids=None) ->
         raise ValueError("models.tweedie.selection_loss: only 'tweedie_loglik' is supported")
     grouped = cfg["split"]["primary"] == "grouped"
     k_folds = cfg["split"]["cv_folds"]
+    ladder_entries, l2_entry, l2_grid = _ladder_parts(mcfg)
     timing: dict[str, float] = {}
     t0 = time.perf_counter()
     check_level_coverage(train, cfg)
@@ -525,17 +704,18 @@ def cross_validate(train: pd.DataFrame, cfg: dict[str, Any], capped_ids=None) ->
         jobs.append(("outer", k, None, fit, valid))
         for j, ifit, ivalid in inner_splits(fit, grouped):
             jobs.append(("inner", k, j, ifit, ivalid))
+            if l2_entry is not None:
+                jobs.append(("l2inner", k, j, ifit, ivalid))
     n_jobs = mcfg["parallel"]["n_jobs"]
-    done = Parallel(n_jobs=n_jobs)(
-        delayed(_outer_task if kind == "outer" else _inner_task)(
-            *(
-                (fit, valid, fcfg, mcfg, cfg["clean"], grid)
-                if kind == "outer"
-                else (fit, valid, fcfg, mcfg, grid)
-            )
-        )
-        for kind, _, _, fit, valid in jobs
-    )
+
+    def _job(kind, fit, valid):
+        if kind == "outer":
+            return delayed(_outer_task)(fit, valid, fcfg, mcfg, cfg["clean"], grid)
+        if kind == "inner":
+            return delayed(_inner_task)(fit, valid, fcfg, mcfg, grid)
+        return delayed(_l2_inner_task)(fit, valid, fcfg, mcfg, l2_entry, l2_grid, ref)
+
+    done = Parallel(n_jobs=n_jobs)(_job(kind, fit, valid) for kind, _, _, fit, valid in jobs)
     timing["cv_fits"] = time.perf_counter() - t0
     t1 = time.perf_counter()
     fit_records = [
@@ -585,6 +765,38 @@ def cross_validate(train: pd.DataFrame, cfg: dict[str, Any], capped_ids=None) ->
         capped = train["IDpol"].isin(capped_ids)
     capped_mask = {k: capped.loc[outer[k]["pred"].index].to_numpy() for k in range(k_folds)}
     final_diag = final_power_diagnostics(grid, outer, k_folds, selected, capped_mask)
+    t_sel = time.perf_counter()
+    lam_by_fold, l2_inner = _select_l2_by_fold(jobs, done, k_folds, l2_grid, l2_entry)
+    lad = Parallel(n_jobs=n_jobs)(
+        delayed(_ladder_task)(
+            fit,
+            valid,
+            fcfg,
+            mcfg,
+            ladder_entries,
+            l2_grid,
+            ref,
+            lam_by_fold[k],
+            outer[k]["pred"]["freq_full"].to_numpy(),
+        )
+        for k, fit, valid in outer_splits(train, k_folds, grouped)
+    )
+    for k, r in enumerate(lad):
+        fit_records += [
+            {"stage": "ladder", "fold": k, "inner_fold": None, **rec} for rec in r["fits"]
+        ]
+    sel_result = build_selection(
+        ladder_entries,
+        l2_entry,
+        l2_grid,
+        lad,
+        l2_inner,
+        lam_by_fold,
+        [m["pure_premium"]["tweedie"]["tweedie_ref_deviance_per_exposure"] for m in per_fold],
+        final_diag["power"],
+        ref,
+    )
+    timing["selection_ladder"] = time.perf_counter() - t_sel
     result = {
         "selected_powers": selected,
         "folds": [{"fold": k, **per_fold[k]} for k in range(k_folds)],
@@ -623,6 +835,7 @@ def cross_validate(train: pd.DataFrame, cfg: dict[str, Any], capped_ids=None) ->
             },
         },
         "loaded_premium": loaded,
+        "selection": sel_result,
         "fit_records": fit_records,
         "solver_check_cv": {
             "records": [r_ for c in check_cv for r_ in c["records"]],
@@ -959,15 +1172,25 @@ def dispersion_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def final_fit(train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: Path):
+def final_fit(
+    train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: Path, l2: float | None = None
+):
     with threadpool_limits(1):
-        return _final_fit(train, cfg, power, out_dir)
+        return _final_fit(train, cfg, power, out_dir, l2)
 
 
-def _final_fit(train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: Path):
-    """Refit on the full train set; write coefficient tables, feature maps and model dicts."""
+def _final_fit(
+    train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: Path, l2: float | None = None
+):
+    """Refit on the full train set; write coefficient tables, feature maps and model dicts.
+
+    Every severity ladder candidate is refitted and written to the models file as
+    ``severity_<id>``; ``l2`` is the penalty of the glm_l2 candidate (chosen by plain CV)."""
     assert_train_only(train)
     mcfg, fcfg = cfg["models"], cfg["features"]
+    ladder_entries, l2_entry, _ = _ladder_parts(mcfg)
+    if l2_entry is not None and l2 is None:
+        raise ValueError("final fit: the severity ladder has an L2 candidate but no penalty")
     outs, g = mcfg["outputs"], mcfg["glm"]
     cols, bm_cols = (
         features.feature_names(fcfg, "full"),
@@ -1011,6 +1234,29 @@ def _final_fit(train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: 
         ("severity", None, sev, glm.fit_severity(Xs, avg, n_cl, tight), Xs),
         ("tweedie", power, tw, glm.fit_tweedie(X[cols], pp, e, power, tight), X[cols]),
     ]
+    sev_models: dict[str, Any] = {}
+    extra_fits = []
+    for ent in ladder_entries:
+        key = f"severity_{ent['id']}"
+        if ent["kind"] == "constant":
+            sev_models[key] = {
+                "kind": "constant",
+                "value": float(train["S_cap"].sum() / n_cl.sum()),
+                "definition": "claim-weighted mean S_cap / N of the full training set",
+            }
+            continue
+        cols_e = features.feature_names(fcfg, ent["feature_set"])
+        pen = l2 if ent["kind"] == "glm_l2" else None
+        if ent["kind"] == "glm" and cols_e == cols:
+            sev_models[key] = sev.to_dict()  # the full GLM above
+            continue
+        m_e = glm.fit_severity(Xs[cols_e], avg, n_cl, solver, l2=pen)
+        extra_fits.append(_fit_record(m_e, key))
+        checks.append(
+            (key, None, m_e, glm.fit_severity(Xs[cols_e], avg, n_cl, tight, l2=pen), Xs[cols_e])
+        )
+        mu_dev[key] = mu_dev["severity"]
+        sev_models[key] = m_e.to_dict()
     solver_check = [
         {
             "stage": "final",
@@ -1033,6 +1279,7 @@ def _final_fit(train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: 
         "frequency_bonus_malus_only": freq_bm.to_dict(),
         "severity": sev.to_dict(),
         "tweedie": tw.to_dict(),
+        **sev_models,
     }
     (out_dir / outs["models"]).write_text(json.dumps(models, indent=2) + "\n", encoding="utf-8")
     return {
@@ -1044,6 +1291,7 @@ def _final_fit(train: pd.DataFrame, cfg: dict[str, Any], power: float, out_dir: 
             _fit_record(freq_bm, "frequency_bm"),
             _fit_record(sev, "severity_full"),
             _fit_record(tw, "tweedie", power),
+            *extra_fits,
         ],
         "files": [
             outs[k]
@@ -1117,7 +1365,9 @@ def train_models(
     final = None
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
-        final = final_fit(train, cfg, final_power, out_dir)
+        final = final_fit(
+            train, cfg, final_power, out_dir, (res["selection"]["l2"] or {}).get("final_penalty")
+        )
     fit_records += [{"stage": "final", "fold": None, "inner_fold": None, **r}
                     for r in (final or {}).get("fits", [])]  # fmt: skip
     timing["final_fit"] = time.perf_counter() - t1
