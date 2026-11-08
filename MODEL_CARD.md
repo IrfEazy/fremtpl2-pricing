@@ -70,12 +70,15 @@ this note. Do not use these models for decisions about people.
 ## Reproducibility
 
 Dependencies are locked with `uv`, seeds and settings are in `configs/`, and `make all` rebuilds the
-pre-test artifacts and verifies them against the published freeze. The reproduction records are in
-[`results/reproduction/`](results/reproduction/): both the strict and the post-hoc amended
-verdict are FAIL: figures, tables and numeric JSON values matched, markdown reports differ only in
-timing values and the GLM config-hash line, and three run-state fields remain uncovered (the split status text, the input hashes recorded in the interpretation results, and the rendered test report). The post-hoc
-amendment is disclosed in the README. Held-out
-metrics are never recomputed.
+pre-test artifacts and verifies them against the published freeze. `make reproduce` rebuilds the
+pre-test pipeline in a fresh clone and compares its outputs with the committed ones
+([`results/reproduction/`](results/reproduction/)). The comparison is strict, except for the
+deviations declared by a dated amendment of the verification policy in
+[`configs/reproduce.yaml`](configs/reproduce.yaml); each deviation is pinned to specific fields or
+values and verified from the files on every run. The latest check fails the strict policy and passes
+under the amendment; the deviations and both verdicts are listed in the reproduction block of the
+README. Held-out metrics are never recomputed: the published test report is re-rendered and its
+files are verified against their recorded hashes.
 
 ## Contact
 

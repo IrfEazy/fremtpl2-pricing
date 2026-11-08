@@ -192,7 +192,10 @@ def _policy_items(i: dict[str, Any]) -> list[str]:
     covers, text from the docs config by deviation kind); no history, no dates."""
     out = []
     for amendment in i["policy"].get("amendments", []):
-        for dev in amendment.get("declared_deviations", []):
+        for dev in [
+            *amendment.get("declared_deviations", []),
+            *amendment.get("derived_hashes", []),
+        ]:
             text = i["dc"]["deviation_items"].get(dev.get("kind"))
             if text is None:
                 raise DocsError(

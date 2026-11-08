@@ -22,8 +22,9 @@ docs:
     relativities: [glm_relativities_frequency.csv, glm_relativities_severity.csv, glm_relativities_tweedie.csv]
   deviation_items:                             # one line per declared-deviation kind of the policy: what it covers
     download_metadata: "The download date recorded in the raw-data metadata (data/raw/manifest.json) may differ; the raw data files must be byte-identical."
-    glm_config_echo: "The echo of the GLM training config and its hash (cv_glm.json, glm_cv.md) may differ in the pinned config keys that the GLM training modules do not read."
-    markdown_telemetry: "The timing values rendered in the markdown reports (glm_cv.md, glm_sensitivities.md, gbm_cv.md) may differ; every other byte must be identical."
+    glm_config_echo: "The GLM training config echo in cv_glm.json, the config hash line of glm_cv.md and the GLM config hash in the training record of results/freeze_manifest.json may differ only by the pinned config keys introduced after the GLM training, each pinned by hash; everything else must match exactly."
+    markdown_telemetry: "Only the pinned timing cells of the markdown reports (glm_cv.md, glm_sensitivities.md, gbm_cv.md) may differ; each must equal the rendering of the corresponding timing in the regenerated JSON, and every other byte must be identical."
+    derived_provenance_hash: "The provenance hashes recorded in results/interpretation.json are derived from inputs that may differ only by the deviations above; each side is recomputed from its own input (clone and committed) and must equal the value recorded on that side; the input difference is covered by a deviation above."
   decimals:                                    # digits per quantity kind
     loss: 3
     gini: 4

@@ -255,11 +255,24 @@ def test_reproduction_block_shows_only_the_latest_run_and_the_policy_items(proj,
     assert "aaaaaaaa" not in text and "run-" not in text and "Disclosure" not in text
     assert "| train |" not in text
     items = [ln for ln in text.splitlines() if ln.startswith("- ")]
-    assert len(items) == 3 and all(
+    assert len(items) == 4 and all(
         ln[2:] in dcfg["docs"]["deviation_items"].values() for ln in items
     )
+    assert "- " + dcfg["docs"]["deviation_items"]["derived_provenance_hash"] in items
     for word in ("post-hoc", "first run", "revealed", "added"):
         assert word not in text
+
+
+def test_policy_items_render_a_derived_hashes_only_amendment(proj, dcfg):
+    _record(proj, 1)
+    (proj / "configs").mkdir(exist_ok=True)
+    (proj / "configs/reproduce.yaml").write_text(
+        "check: {}\nreproduce: {}\namendments:\n  - id: X\n    derived_hashes:\n"
+        "      - {id: D, kind: derived_provenance_hash}\n"
+    )
+    docs_render.run_docs(dcfg, root=proj)
+    items = [ln for ln in (proj / "README.md").read_text().splitlines() if ln.startswith("- ")]
+    assert items == ["- " + dcfg["docs"]["deviation_items"]["derived_provenance_hash"]]
 
 
 def test_reproduction_runs_are_ordered_numerically(proj, dcfg):
