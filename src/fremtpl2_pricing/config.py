@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import math
 from pathlib import Path
 from typing import Any
@@ -84,11 +85,17 @@ def load_reproduce_config(path: str | Path = DEFAULT_REPRODUCE_CONFIG) -> dict[s
     for key in REPRODUCE_KEYS:
         if not isinstance(rcfg.get(key), dict):
             raise ConfigError(f"missing config mapping '{key}' in {path}")
+    amendments = rcfg.get("amendments", [])
+    if not isinstance(amendments, list) or not all(isinstance(a, dict) for a in amendments):
+        raise ConfigError(f"'amendments' must be a list of mappings in {path}")
+    # the hash of the policy file itself, recorded by `reproduce` next to the pinned original hash
+    rcfg["policy_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
     return rcfg
 
 
 def with_reproduce(cfg: dict[str, Any], rcfg: dict[str, Any]) -> dict[str, Any]:
-    """A copy of ``cfg`` with ``freeze.check`` and ``reproduce`` taken from the reproduce config.
+    """A copy of ``cfg`` with ``freeze.check`` and ``reproduce`` taken from the reproduce config
+    (plus the dated ``amendments`` and the sha256 of the policy file; never in the main config).
 
     Raises ``ConfigError`` if ``cfg`` already has either key (never silently overrides).
     """
@@ -100,9 +107,16 @@ def with_reproduce(cfg: dict[str, Any], rcfg: dict[str, Any]) -> dict[str, Any]:
         raise ConfigError(
             "main config already defines reproduce; it belongs in the reproduce config"
         )
+    for key in ("amendments", "reproduce_policy_sha256"):
+        if key in cfg:
+            raise ConfigError(
+                f"main config already defines {key}; it belongs in the reproduce config"
+            )
     out = copy.deepcopy(cfg)
     out.setdefault("freeze", {})["check"] = copy.deepcopy(rcfg["check"])
     out["reproduce"] = copy.deepcopy(rcfg["reproduce"])
+    out["amendments"] = copy.deepcopy(rcfg.get("amendments", []))
+    out["reproduce_policy_sha256"] = rcfg.get("policy_sha256")
     return out
 
 

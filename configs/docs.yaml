@@ -17,7 +17,7 @@ docs:
     interpretation: interpretation.json
     split_summary: split_summary.json
     targets_summary: targets_summary.json
-    reproduction: reproduction.json            # optional: absent renders "not yet recorded"
+    reproduction: reproduction                 # directory of the run records run-<n>.json (reproduce history); empty or absent renders "not yet recorded"
     relativities: [glm_relativities_frequency.csv, glm_relativities_severity.csv, glm_relativities_tweedie.csv]
   decimals:                                    # digits per quantity kind
     loss: 3

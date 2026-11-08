@@ -28,13 +28,15 @@ check:                             # `fremtpl2 freeze --check`: strict, read-onl
 # clone of HEAD and compares the regenerated tracked outputs with the committed baseline. It never
 # recomputes held-out metrics: the published test evidence (journal, results/test/, metrics pointer)
 # must stay byte-identical, the report is only re-rendered from it. Tolerances are declared here
-# before any real run; they apply only to floats of the portable comparison, never to ints, strings,
+# before any real run (the declared deviations below are the one dated, post-hoc exception); they apply only to floats of the portable comparison, never to ints, strings,
 # keys, list lengths or `exact_keys` subtrees (selected ids, hyperparameters, configuration echoes).
 reproduce:
   workdir: reproduce               # under paths.processed (git-ignored); refused if non-empty unless --force-clean (which deletes only inside it)
   clone_dir: clone                 # inside workdir: the measured clone of HEAD
   log_dir: logs                    # inside workdir: stdout/stderr of every step
-  record: reproduction.json        # under paths.results of the SOURCE tree; excluded from its own comparison
+  history_dir: reproduction        # under paths.results of the SOURCE tree: one immutable record per run, `run-<n>.json`; excluded from the comparison
+  operational_retry: none          # a failed or incomplete run is recorded as its own run-<n> and never replaced or retried in place; the history must be contiguous
+  history_pattern: "run-{n}.json"  # n = highest existing + 1; an existing record is never overwritten (the run refuses)
   rtol: 1.0e-6
   atol: 1.0e-9
   max_mismatches: 10               # mismatches listed per category
@@ -66,3 +68,93 @@ reproduce:
     # freeze --check: an all-numeric mismatch (exit 1 with numeric_only) records the failed strict check and continues; an integrity, structural or execution failure stops the run
     - {name: freeze_check, cmd: [uv, run, --frozen, fremtpl2, freeze, --check, --config, "{config}"], json_result: true}
     - {name: report, cmd: [uv, run, --frozen, fremtpl2, report, --config, "{config}"], outputs: [reports/test_evaluation.md, reports/figures/test_lorenz.png, reports/figures/test_lift.png, reports/figures/test_double_lift.png, reports/figures/test_calibration_decile.png, reports/figures/test_calibration_factor.png, reports/figures/test_bootstrap_delta.png, reports/figures/test_bootstrap_delta_policy.png]}
+
+# ---------------------------------------------------------------------------------------------
+# Amendments: dated, explicitly POST-HOC exceptions to the policy above, added after the first
+# real run (run-1, committed in results/reproduction/run-1.json, strict verdict FAIL) revealed two
+# differences that were not declared beforehand. The original strict verdict is always kept
+# (`strict_verdict`); a run whose only differences are matched by these pinned deviations, with
+# every step and every comparison completed, additionally gets `amended_verdict:
+# PASS_WITH_DECLARED_DEVIATIONS`, which is NOT an exact pass under the original policy. Each
+# deviation names one artifact, its field paths and its pinned values and is verified from the
+# actual files on every run; nothing is ignored by key name and the list is never expanded after a
+# run (a further difference needs a new dated amendment). `freeze --check` stays strict and only
+# reports which failures a satisfied deviation covers.
+amendments:
+  - id: A1
+    date: "2026-11-08"
+    post_hoc: true
+    revealed_by: run-1
+    reason: >-
+      The first clean-clone run failed the original strict policy on two metadata/provenance
+      differences and stopped at the structural failure, so its reports and figures were not
+      compared. (1) The download metadata data/raw/manifest.json differs from the frozen file only
+      in the day of the download (`retrieved`); the raw data files are byte-identical. (2) The GLM
+      training output echoes the config section used at training time and its hash; that training
+      ran before the gradient-boosting block, two bootstrap options and the Lorenz point count were
+      added to the config, so regenerating under the current config gives identical computed
+      numbers but a different echo and hash. The added keys are read only by gbm, freeze and
+      evaluate/report (static evidence below), never by the GLM training modules. (3) The original
+      policy declared the JSON telemetry keys volatile but not their markdown renderings: the
+      timing values (seconds) rendered in the markdown reports, found from the renderer code.
+    original_policy_ref: "b0008e1:configs/reproduce.yaml"
+    original_policy_sha256: d35439ce4deb892114161823d9f87bdb8cf5bc04707fc1f6d0df38fd85641bb6
+    declared_deviations:
+      - id: D1
+        kind: download_metadata
+        artifact: data/raw/manifest.json            # hashed in results/freeze_manifest.json
+        fields:                                      # JSON pointers of the `retrieved` entries
+          - {path: /datasets/0/retrieved, committed: "2026-11-07"}
+          - {path: /datasets/1/retrieved, committed: "2026-11-07"}
+        new_value_format: iso_date                   # YYYY-MM-DD; both values are recorded
+        # With the committed values put back, the file re-serialised like manifest.write_manifest must
+        # hash to the frozen entry (every other field exact); these stay byte-identical (mandatory).
+        raw_files: [data/raw/freMTPL2freq.parquet, data/raw/freMTPL2sev.parquet]
+      - id: D2
+        kind: glm_config_echo
+        # Every place where the GLM training stage writes a copy or hash of the training config
+        # (train.config_summary, freeze.check_training_record, cv_report); glm_models.json has none.
+        echoes:
+          cv_json: results/cv_glm.json               # /config (config_sha256, models subtree), train.config_summary
+          report: reports/glm_cv.md                  # the "Config hash" line, cv_report
+          # results/freeze_manifest.json /training_record/glm_config_sha256_at_training (check_training_record)
+        # sha256(json.dumps(main config, sort_keys=True, default=str)), recomputed from the current config
+        old_config_sha256: 75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe
+        new_config_sha256: cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793
+        added_keys: [models.gbm, models.bootstrap.interval, models.bootstrap.quantile_method, models.evaluation.lorenz_points]
+        added_value_sha256:                          # canonical JSON (sort_keys, compact) of each value in configs/default.yaml
+          models.gbm: cdf3274f491a43df507dea0f1bb09a7e2374b52041c1680fe01c6cc12768e228
+          models.bootstrap.interval: 9bf373c47ef90d7cf9e998317cd5785a6a9187e0e6df64e7f1c33409f2f60c3f
+          models.bootstrap.quantile_method: 4dd109ad15a2481c6cd88948a95b3116061fd1b966bef5c92481ec848e167829
+          models.evaluation.lorenz_points: 16dc368a89b428b2485484313ba67a3912ca03f2b2b42429174a4f8b3dc84e44
+        static_evidence:                             # a recorded, labelled grep listing re-scanned on every run: informational only (a regex can miss another read idiom), never a pass/fail input
+          source_dir: src/fremtpl2_pricing
+          keys:                                      # modules whose text matches the config-read idiom of the key
+            models.gbm: {pattern: '\["models"\]\["gbm"\]', modules: [freeze, gbm]}
+            models.bootstrap.interval: {pattern: '\["interval"\]', modules: [freeze]}
+            models.bootstrap.quantile_method: {pattern: '\[["'']quantile_method["'']\]', modules: [evaluate, freeze, report]}
+            models.evaluation.lorenz_points: {pattern: '\[["'']lorenz_points["'']\]', modules: [evaluate]}
+          glm_training_modules: [train, glm, features, selection, cv_report, metrics, sensitivities, clean, targets, split, groups, data]  # read none of the keys
+      - id: D3
+        kind: markdown_telemetry
+        # Found from the renderer code (cv_report, gbm_report, sensitivities, interpret, audit, report,
+        # docs_render), not from run outputs. Only these tracked .md files render timings:
+        #   cv_report._glm_report            -> reports/glm_cv.md, table "## Timing (seconds)" (stage | seconds)
+        #   cv_report (sensitivities report) -> reports/glm_sensitivities.md, same table
+        #   gbm_report                       -> reports/gbm_cv.md, "## Checks and timings": the "- <stage>: <n> s" bullets after "- passed:"
+        # No other renderer writes a timing, date, duration or host: audit (data_audit.md) and interpret
+        # (interpretation.md) render none (interpret keeps timing_seconds only in its JSON); report
+        # (test_evaluation.md, `opened (UTC)`) renders the committed journal and stays byte-exact; docs_render
+        # blocks live in README / model card, outside the compared outputs.
+        # Within a pinned section only the pinned cell may differ; it must be a finite non-negative
+        # decimal on both sides and equal the producer's rendering of the regenerated JSON value; every
+        # other byte of the file (hash line of D2 excepted) is identical.
+        volatile_keys: [timing_seconds]              # must be in check.volatile_keys
+        files:
+          # json: the regenerated file whose timing_seconds the report renders; renderer: the producer's
+          # formatter (cv_report._f for the tables, gbm_report._f with one decimal for the bullets). Each
+          # changed cell must equal that rendering of the JSON value; the heading, marker and table
+          # header must exist exactly once.
+          - {path: reports/glm_cv.md, json: results/cv_glm.json, renderer: cv_report, heading: "## Timing (seconds)", cells: {style: table, column: 1, header: "| stage | seconds |"}}
+          - {path: reports/glm_sensitivities.md, json: results/cv_sensitivities.json, renderer: cv_report, heading: "## Timing (seconds)", cells: {style: table, column: 1, header: "| stage | seconds |"}}
+          - {path: reports/gbm_cv.md, json: results/cv_gbm.json, renderer: gbm_report, heading: "## Checks and timings", cells: {style: bullet_seconds, after: "- passed: "}}

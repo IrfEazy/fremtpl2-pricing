@@ -71,10 +71,31 @@
   `FAIL` (including a raw data checksum mismatch at download and any step failure not listed next), `UNSUPPORTED_ENVIRONMENT`
   (only exit 127 of a `reproduce.tool_commands` tool such as `uv`/`git`, or a `reproduce.transport_exit_codes` code, 75 for no
   network at download). The clone must be at the tested commit (`git rev-parse` in the clone), else FAIL. The record goes to
-  `results/reproduction.json` of the source tree with the tested and clone commits, tool versions (uv, git, python), the preserved
+  `results/reproduction/run-<n>.json` of the source tree (n = highest existing + 1; the run history is immutable: files are
+  created exclusively, an existing one is never overwritten, a modified committed record refuses the run, and the directory is
+  excluded from the comparison and the purge) with the tested and clone commits, tool versions (uv, git, python), the preserved
   evidence identities (journal, pointer and manifest sha256, attempt id) and the recomputable inventory.
   Scope: `EXACT_PASS` means exact reproduction of the declared recomputable artifacts plus verification of preserved published
-  evidence; held-out metrics are not recomputed. Reproduction rebuilds the pre-test artifacts and verifies them against the
+  evidence; held-out metrics are not recomputed. Amendment A1 (dated 2026-11-08, explicitly post-hoc, revealed by run-1 which
+  failed the original strict policy; `amendments` in `configs/reproduce.yaml`, pinned to `original_policy_sha256` of that file at
+  `b0008e1`): three declared deviations, each pinned to one artifact, field paths and values and verified from the actual files on
+  every run (`freeze.verify_amendment`), nothing ignored by key name and never expanded after a run (a further difference needs a
+  new dated amendment). D1 download metadata: `data/raw/manifest.json` `/datasets/0/retrieved` and `/datasets/1/retrieved`
+  (committed 2026-11-07, new value an ISO `YYYY-MM-DD` date, both recorded); with the committed values put back and the producer's
+  serialisation the file must hash to the frozen entry (every other field exact) and the raw parquet files stay byte-equal. D2
+  GLM training config echo, three places found from the code (`train.config_summary` -> `results/cv_glm.json` `/config`,
+  `freeze.check_training_record` -> manifest `/training_record/glm_config_sha256_at_training`, `cv_report` -> the "Config hash"
+  line of `reports/glm_cv.md`; `glm_models.json` has none): the committed echo equals the current config restricted to the
+  committed keys, the added keys are exactly `models.gbm`, `models.bootstrap.interval`, `models.bootstrap.quantile_method`,
+  `models.evaluation.lorenz_points` with pinned canonical-JSON sha256 values, the old/new hashes are pinned (the new one is
+  recomputed from the current main config with the producer's serialisation; the old one covers the whole config of the time and
+  can only be compared with the pin) and everything else in the file is exact; the static evidence (a regex grep listing of the modules reading each added key and the GLM training modules matching none) is re-scanned from the tested source and recorded with a label as informational documentation only: a regex can miss another read idiom, so it is never a pass/fail input and not proof of irrelevance; D2 covers the hash line of `reports/glm_cv.md` only as a substitution that D3 applies before its comparison. D3 markdown telemetry (the original policy declared the JSON `timing_seconds` keys volatile but not their markdown renderings; found from the renderers): only `reports/glm_cv.md` and `reports/glm_sensitivities.md` (table `## Timing (seconds)`, second column, `cv_report`) and `reports/gbm_cv.md` (`## Checks and timings`, the `- <stage>: <n> s` bullets after `- passed:`, `gbm_report`) render timings; `audit`, `interpret` (timings only in its JSON), `report` (`opened (UTC)` of the committed journal, byte-exact) and `docs_render` (README / model card, not compared) render none. Within a pinned section only the pinned cells may differ, as finite non-negative decimals with the same padding and key, and each changed cell must equal the producer's rendering (`cv_report._f`, `gbm_report._f` with one decimal) of the corresponding `timing_seconds` value in the regenerated JSON named by the spec (`json`); the pinned heading, `after` marker and table header must exist exactly once; every other byte of the file is identical (`freeze.md_telemetry_differences`), and any other file or section is not covered. Each run record
+  keeps `strict_verdict` (original policy, unchanged; `verdict` is its alias) and adds `amended_verdict`:
+  `PASS_WITH_DECLARED_DEVIATIONS` only if every difference is matched by a satisfied deviation and every step and comparison
+  completed (a skipped step, a missing file, a crash, a parser error or an unclassified difference gives the strict verdict). It is fail closed: neither passing verdict is possible unless every configured step ran and every expected comparison executed. The amended pass forbids any difference no deviation declares: within-tolerance numeric, parsed-equal reformatted and pixel-equal PNG re-encoded files are PORTABLE-class and make the amended verdict equal the strict one (a strict-check failure is suppressed inside `reproduce` only when every failed check is positively classified as covered or numeric-only, never on a generic non-zero exit). It is never an exact pass under
+  the original policy. `reproduce.operational_retry: none`: a failed or incomplete run (an exception included) is recorded as its own `run-<n>` and never replaced or retried in place; the history must be contiguous (a gap refuses the run). Each record carries `decision_procedure`: the original and amended policy sha256, the sha256 of the verifier sources (`reproduce.py`, `freeze.py`), the tested commit and the exact rerun command. Known stale note: the Makefile comment on the `reproduce` target still says it writes `results/reproduction.json`; the record is `results/reproduction/run-<n>.json` (Makefile was outside the allowed paths of the amendment work). The record lists the applied deviations (base and new values), the original and amended policy hashes and
+  the complete check inventory. A `freeze_check` step whose failures are all covered (or numeric) does not stop the run;
+  `freeze --check` stays strict (exit code and `passed` unchanged) and only adds a `declared_deviations` report. `fremtpl2 reproduce` prints both verdicts and exits 0 only for `EXACT_PASS` or `PASS_WITH_DECLARED_DEVIATIONS` (non-zero for `PORTABLE_NUMERIC_PASS`, `FAIL` and `UNSUPPORTED_ENVIRONMENT`; the amended verdict is the strict one when no amendment applies). Reproduction rebuilds the pre-test artifacts and verifies them against the
   published freeze, validates (exact inventory: no missing or unexpected attempt entry, one COMPLETE, unique attempt identity, a
   pointer resolving inside `results/test/`, no symlink) and re-renders the published evaluation outputs (`report`), and never
   recomputes held-out metrics; `freeze` and `evaluate` are not steps. Accepted limits: volatile keys are matched by name at any
@@ -88,8 +109,9 @@
   (fully generated) and the blocks between `<!-- docs:NAME:begin -->` / `<!-- docs:NAME:end -->` markers in `README.md`
   (`results`, `reproduction`, `drivers`) and `MODEL_CARD.md` (`metrics`) only from tracked pipeline files: `results/metrics.json`
   and the completed attempt it points to (verified by `report.load_completed`), `cv_glm/cv_gbm/cv_sensitivities/interpretation/
-  audit/split_summary/targets_summary.json`, the GLM relativity tables, `gbm_models.json` and `reproduction.json` when present
-  (absent -> "not yet recorded"). Rule: every number in README, model card and model report goes through a docs block or the
+  audit/split_summary/targets_summary.json`, the GLM relativity tables, `gbm_models.json` and the run records `reproduction/run-<n>.json` when present
+  (none -> "not yet recorded"; the block shows the run history and, for the latest run, the per-step minutes and machine, plus the
+  fixed post-hoc disclosure once a record carries an amendment). Rule: every number in README, model card and model report goes through a docs block or the
   model report, never typed by hand; text outside the markers is preserved byte for byte, a missing or duplicated marker is an
   error, output is deterministic and `fremtpl2 docs --check` writes nothing and exits non-zero on drift. Runs after `report`
   (`make docs`, explicit, never in `make all`); adding a block means one render function in `BLOCKS`.

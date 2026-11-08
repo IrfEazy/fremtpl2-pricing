@@ -5,8 +5,10 @@ injected runner (no uv, no network, no real data, no pipeline run).
 """
 
 import copy
+import hashlib
 import io
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -23,9 +25,15 @@ _DEFAULTS = with_reproduce(
     _MAIN, load_reproduce_config(Path(__file__).resolve().parents[1] / "configs/reproduce.yaml")
 )
 
-PASS = {"passed": True, "numeric_only": True}
-NUMERIC = {"passed": False, "numeric_only": True}
-STRUCTURAL = {"passed": False, "numeric_only": False}
+
+def _chk(status, numeric_only):
+    return {"name": "files", "status": status, "numeric_only": numeric_only, "n_numeric": 0,
+            "n_structural": 0, "mismatches": []}  # fmt: skip
+
+
+PASS = {"passed": True, "numeric_only": True, "checks": [_chk("pass", True)]}
+NUMERIC = {"passed": False, "numeric_only": True, "checks": [_chk("fail", True)]}
+STRUCTURAL = {"passed": False, "numeric_only": False, "checks": [_chk("fail", False)]}
 
 
 def _png(value: int = 10, level: int = 9) -> bytes:
@@ -124,7 +132,9 @@ def test_exact_pass_and_record(repo, cfg):
     assert not any(has_data for _, has_data in seen[:1])  # the clone starts without data/
     assert [s["name"] for s in rec["steps"]] == ["setup", "regen", "freeze_check", "report"]
     assert all("seconds" in s and "exit_code" in s for s in rec["steps"])
-    written = json.loads((repo / "results/reproduction.json").read_text())
+    written = json.loads((repo / "results/reproduction/run-1.json").read_text())
+    assert written["run"] == 1 and rec["run"] == 1
+    assert written["strict_verdict"] == written["verdict"] == written["amended_verdict"]
     assert written["tested_commit"] == freeze.head_commit(repo)
     assert written["download_included"] is False
     assert {"platform", "machine", "cpu_count", "python", "start_utc", "end_utc"} <= set(written)
@@ -132,11 +142,15 @@ def test_exact_pass_and_record(repo, cfg):
     status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True
     )
-    assert status.stdout.split() == ["??", "results/reproduction.json"]
+    assert status.stdout.split() == ["??", "results/reproduction/"]  # untracked directory
     # a second run: the record does not make the tree dirty, the workdir needs --force-clean
     with pytest.raises(freeze.FreezeError, match="not empty"):
         _run(repo, cfg, runner=_runner())
     assert _run(repo, cfg, runner=_runner(), force_clean=True)["verdict"] == "EXACT_PASS"
+    assert sorted(p.name for p in (repo / "results/reproduction").iterdir()) == [
+        "run-1.json",
+        "run-2.json",
+    ]
 
 
 def test_portable_pass_only_within_declared_tolerance(repo, cfg):
@@ -486,3 +500,479 @@ def test_undeclared_untracked_output_fails_but_declared_one_passes(repo, cfg):
     rec = _run(repo, cfg, runner=_runner(edit=lambda c: _write(c, "results/new.json", "{}")))
     assert rec["verdict"] == "FAIL"
     assert rec["comparison"]["untracked_undeclared"] == ["results/new.json"]
+
+
+# --------------------------------------------------------------------------- run history
+
+
+def test_history_is_never_overwritten(repo, cfg, monkeypatch):
+    _run(repo, cfg, runner=_runner())
+    first = (repo / "results/reproduction/run-1.json").read_bytes()
+    monkeypatch.setattr(reproduce, "_history_files", lambda *a: {})  # a stale view of the directory
+    with pytest.raises(freeze.FreezeError, match="never overwritten"):
+        _run(repo, cfg, runner=_runner(), force_clean=True)
+    assert (repo / "results/reproduction/run-1.json").read_bytes() == first
+
+
+def test_numbers_increment_past_the_highest_existing_record(tmp_path):
+    d = tmp_path / "h"
+    pat = "run-{n}.json"
+    names = [reproduce.write_run_record(d, pat, {"x": i}).name for i in range(2)]
+    (d / "run-7.json").write_text("{}")
+    names.append(reproduce.write_run_record(d, pat, {}).name)
+    assert names == ["run-1.json", "run-2.json", "run-8.json"]
+    assert json.loads((d / "run-2.json").read_text()) == {"x": 1, "run": 2}
+
+
+def test_a_modified_committed_record_refuses_the_run(repo, cfg):
+    _write(repo, "results/reproduction/run-1.json", '{"verdict": "FAIL"}')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "run-1")
+    _run(repo, cfg, runner=_runner())  # run-2 is written next to the committed run-1
+    assert (repo / "results/reproduction/run-2.json").is_file()
+    _write(repo, "results/reproduction/run-1.json", '{"verdict": "EXACT_PASS"}')
+    with pytest.raises(freeze.FreezeError, match="immutable"):
+        _run(repo, cfg, runner=_runner(), force_clean=True)
+
+
+def test_the_history_directory_is_not_compared_or_purged(repo, cfg):
+    _write(repo, "results/reproduction/run-1.json", '{"verdict": "FAIL"}')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "run-1")
+    rules = reproduce.snapshot_rules(cfg, repo, freeze.head_commit(repo))
+    assert not any(
+        p.startswith("results/reproduction/") for p in rules["compared"] + rules["purge"]
+    )
+    rec = _run(repo, cfg, runner=_runner())
+    assert rec["strict_verdict"] == "EXACT_PASS"
+    assert "results/reproduction/run-1.json" not in rec["recomputable_inventory"]["compared"]
+
+
+# --------------------------------------------------------------------------- amended verdict
+
+D1 = {"id": "D1", "kind": "download_metadata", "satisfied": True, "problems": [],
+      "applied": [{"place": "data/raw/manifest.json", "path": "/datasets/0/retrieved",
+                   "base": "2026-11-07", "new": "2026-11-08"}],
+      "covers_checks": {"files": ["sha256 mismatch: data/raw/manifest.json"]},
+      "covers_files": []}  # fmt: skip
+D2 = {"id": "D2", "kind": "glm_config_echo", "satisfied": True, "problems": [],
+      "applied": [{"place": "results/a.json /config/config_sha256", "base": "o", "new": "n"}],
+      "covers_checks": {}, "covers_files": ["results/a.json"]}  # fmt: skip
+
+
+def _failed_check(name="files", path="sha256 mismatch: data/raw/manifest.json", extra=()):
+    fail = {"name": name, "status": "fail", "numeric_only": False, "n_numeric": 0,
+            "n_structural": 1 + len(extra),
+            "mismatches": [{"path": p, "kind": "structural"} for p in (path, *extra)]}  # fmt: skip
+    ok = {"name": "selection", "status": "pass", "numeric_only": True, "n_numeric": 0,
+          "n_structural": 0, "mismatches": []}  # fmt: skip
+    return {"passed": False, "numeric_only": False, "checks": [ok, fail]}
+
+
+def _amended_cfg(cfg):
+    cfg = copy.deepcopy(cfg)
+    cfg["amendments"] = [
+        {"id": "A1", "date": "2026-11-08", "post_hoc": True, "revealed_by": "run-1",
+         "reason": "r", "original_policy_sha256": "0" * 64, "declared_deviations": []}
+    ]  # fmt: skip
+    cfg["reproduce_policy_sha256"] = "f" * 64
+    return cfg
+
+
+def _edit_a(clone):
+    _write(clone, "results/a.json", json.dumps({"v": 9.0, "n": 3, "timing_seconds": 1.0}))
+
+
+@pytest.fixture
+def acfg(cfg):
+    return _amended_cfg(cfg)
+
+
+def _with_deviations(monkeypatch, results):
+    monkeypatch.setattr(reproduce, "verify_amendment", lambda *a, **k: copy.deepcopy(results))
+
+
+def test_covered_failures_continue_and_give_the_amended_pass_but_keep_the_strict_failure(
+    repo, acfg, monkeypatch
+):
+    _with_deviations(monkeypatch, [D1, D2])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=_edit_a))
+    assert [s["name"] for s in rec["steps"]] == ["setup", "regen", "freeze_check", "report"]
+    assert rec["failure"] is None
+    assert rec["strict_verdict"] == rec["verdict"] == "FAIL"
+    assert rec["freeze_check"]["passed"] is False  # the strict status is recorded as failed
+    assert rec["amended_verdict"] == "PASS_WITH_DECLARED_DEVIATIONS"
+    am = rec["amendment"]
+    assert am["original_policy_sha256"] == "0" * 64 and am["amended_policy_sha256"] == "f" * 64
+    assert [d["id"] for d in am["applied_deviations"]] == ["D1", "D2"]
+    assert am["applied_deviations"][0]["applied"][0]["base"] == "2026-11-07"
+    assert am["applied_deviations"][0]["applied"][0]["new"] == "2026-11-08"
+    assert am["unmatched_differences"] == []
+    inv = am["inventory"]
+    assert inv["steps"]["ran"] == inv["steps"]["configured"]
+    assert {c["name"]: c["covered_by_deviation"] for c in inv["freeze_checks"]} == {
+        "selection": False, "files": True,
+    }  # fmt: skip
+    assert {f["path"]: f["covered_by_deviation"] for f in inv["comparison_files"]}[
+        "results/a.json"
+    ]  # fmt: skip
+    assert len(inv["comparison_files"]) == inv["n_expected_files"]
+    written = json.loads((acfg and (repo / "results/reproduction/run-1.json")).read_text())
+    assert written["amended_verdict"] == "PASS_WITH_DECLARED_DEVIATIONS"
+
+
+def test_an_uncovered_failure_stops_the_run_and_gives_no_amended_pass(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+    check = _failed_check(extra=("sha256 mismatch: data/processed/split.parquet",))
+    rec = _run(repo, acfg, runner=_runner(check=check, edit=_edit_a))
+    assert rec["failure"]["step"] == "freeze_check"
+    assert [s["name"] for s in rec["steps"]] == ["setup", "regen", "freeze_check"]
+    assert rec["strict_verdict"] == rec["amended_verdict"] == "FAIL"
+    assert rec["comparison"] is None
+
+
+def test_an_unsatisfied_deviation_covers_nothing(repo, acfg, monkeypatch):
+    bad = {**D1, "satisfied": False, "problems": ["not an ISO date"]}
+    _with_deviations(monkeypatch, [bad, D2])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=_edit_a))
+    assert rec["failure"]["step"] == "freeze_check" and rec["amended_verdict"] == "FAIL"
+
+
+def test_an_unmatched_output_difference_blocks_the_amended_pass(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, {**D2, "covers_files": []}])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=_edit_a))
+    assert rec["strict_verdict"] == "FAIL" and rec["amended_verdict"] == "FAIL"
+    assert "results/a.json: fail" in rec["amendment"]["unmatched_differences"]
+
+
+def test_a_difference_in_another_file_is_not_covered_by_the_pinned_one(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+
+    def edit(clone):
+        _edit_a(clone)
+        _write(clone, "results/rel.csv", "name,coef\nx,0.5\ny,9.0\n")
+
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit))
+    assert rec["amended_verdict"] == "FAIL"
+    assert "results/rel.csv: fail" in rec["amendment"]["unmatched_differences"]
+
+
+def test_a_skipped_step_or_a_missing_comparison_gives_no_amended_pass(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=_edit_a, regenerate=False))
+    assert rec["amended_verdict"] == "FAIL"  # the purged outputs were not regenerated: missing
+    assert any(u.endswith(": missing") for u in rec["amendment"]["unmatched_differences"])
+    # a comparison that lacks files is incomplete
+    rules = reproduce.snapshot_rules(acfg, repo, freeze.head_commit(repo))
+    comp = {"files": [{"path": "results/a.json", "status": "fail"}], "source_changed": [],
+            "untracked_source": [], "untracked_undeclared": []}  # fmt: skip
+    steps = [{"name": s["name"]} for s in rules["rp"]["steps"]]
+    am, verdict = reproduce.assess_amendment(
+        acfg["amendments"][0], acfg, rules, repo, steps, None, _failed_check(), comp, "FAIL"
+    )
+    assert (
+        verdict == "FAIL" and "differ from the expected inventory" in am["unmatched_differences"][0]
+    )
+    # a skipped step (the report did not run) is incomplete as well
+    am, verdict = reproduce.assess_amendment(
+        acfg["amendments"][0], acfg, rules, repo, steps[:-1], None, _failed_check(), None, "FAIL"
+    )
+    assert verdict == "FAIL" and any("steps run" in u for u in am["unmatched_differences"])
+
+
+def test_amended_verdict_equals_the_strict_one_when_nothing_needs_excusing(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+    rec = _run(repo, acfg, runner=_runner(edit=_volatile_edit))
+    assert rec["strict_verdict"] == rec["amended_verdict"] == "EXACT_PASS"
+    assert rec["amendment"]["applied_deviations"] == []
+    rec = _run(repo, acfg, runner=_runner(check=NUMERIC), force_clean=True)
+    assert rec["strict_verdict"] == rec["amended_verdict"] == "PORTABLE_NUMERIC_PASS"
+
+
+def test_without_amendments_the_amended_verdict_is_the_strict_one(repo, cfg):
+    cfg = copy.deepcopy(cfg)
+    cfg["amendments"] = []
+    rec = _run(repo, cfg, runner=_runner(edit=_volatile_edit))
+    assert rec["amended_verdict"] == rec["strict_verdict"] == "EXACT_PASS" and not rec["amendment"]
+    assert _run(repo, cfg, runner=_runner(check=STRUCTURAL), force_clean=True)["failure"]
+
+
+def test_a_within_tolerance_numeric_difference_forbids_the_amended_pass(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+
+    def edit(clone):
+        _edit_a(clone)  # covered by D2
+        _write(clone, "results/rel.csv", "name,coef\nx,0.5\ny,1.2500000001\n")  # within rtol
+
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit))
+    inv = {f["path"]: f["status"] for f in rec["amendment"]["inventory"]["comparison_files"]}
+    assert inv["results/rel.csv"] == "tolerance"
+    assert rec["strict_verdict"] == rec["amended_verdict"] == "FAIL"
+    assert "results/rel.csv: tolerance" in rec["amendment"]["unmatched_differences"]
+
+
+def test_a_pixel_equal_png_reencoding_or_reformatting_forbids_the_amended_pass(
+    repo, acfg, monkeypatch
+):
+    _with_deviations(monkeypatch, [D1, D2])
+    for rel, data, status in (
+        ("reports/figures/f.png", _png(level=0), "pixel_equal"),
+        ("results/rel.csv", "name,coef\nx,0.50\ny,1.25\n", "equivalent"),
+    ):
+
+        def edit(clone, rel=rel, data=data):
+            _edit_a(clone)
+            _write(clone, rel, data)
+
+        rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit), force_clean=True)
+        files = {f["path"]: f["status"] for f in rec["amendment"]["inventory"]["comparison_files"]}
+        assert files[rel] == status
+        assert rec["amended_verdict"] == "FAIL", rel
+
+
+def test_an_out_of_scope_byte_change_forbids_the_amended_pass(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+
+    def edit(clone):
+        _edit_a(clone)
+        _write(clone, "src/mod.py", "X = 2\n")
+
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit))
+    assert rec["amended_verdict"] == "FAIL"
+    assert any(u.startswith("source_changed") for u in rec["amendment"]["unmatched_differences"])
+
+
+def test_a_passing_verdict_needs_a_complete_check_result_and_comparison(repo, cfg):
+    # a check result without its check entries is unusable: fail closed even if "passed"
+    rec = _run(repo, cfg, runner=_runner(check={"passed": True, "numeric_only": True}))
+    assert rec["verdict"] == "FAIL"
+    rules = reproduce.snapshot_rules(cfg, repo, freeze.head_commit(repo))
+    steps = [{"name": s["name"]} for s in rules["rp"]["steps"]]
+    assert reproduce.incomplete(rules, steps, PASS, {"files": []})  # comparisons not executed
+    full = {"files": [{"path": p, "status": "exact"} for p in rules["compared"]]}
+    assert reproduce.incomplete(rules, steps, PASS, full) == []
+    full["files"][0]["status"] = "missing"
+    assert any("missing" in r for r in reproduce.incomplete(rules, steps, PASS, full))
+    assert reproduce.decide(PASS, {"exact_ok": True, "portable_ok": True}, ["x"]) == "FAIL"
+    assert reproduce.incomplete(rules, steps[:-1], PASS, full)
+
+
+def test_a_generic_nonzero_check_is_never_tolerated():
+    cov = {"id": "D", "satisfied": True, "covers_checks": {}, "covers_files": []}
+    assert not reproduce.tolerable_check({"checks": []}, [cov])  # no classified failure
+    assert not reproduce.tolerable_check({"checks": [{"status": "fail"}]}, [cov])  # malformed
+    assert not reproduce.tolerable_check(_failed_check(), [cov])  # failed but not covered
+    assert not reproduce.tolerable_check(None, [cov])
+    ok = {**cov, "covers_checks": {"files": ["sha256 mismatch: data/raw/manifest.json"]}}
+    assert reproduce.tolerable_check(_failed_check(), [ok])
+
+
+def test_the_record_pins_the_decision_procedure(repo, acfg, monkeypatch):
+    _with_deviations(monkeypatch, [D1, D2])
+    cmd = ["fremtpl2", "reproduce", "--config", "configs/default.yaml"]
+    rec = _run(repo, acfg, runner=_runner(edit=_volatile_edit), command=cmd)
+    dp = rec["decision_procedure"]
+    assert dp["original_policy_sha256"] == "0" * 64 and dp["amended_policy_sha256"] == "f" * 64
+    assert dp["rerun_command"] == cmd and dp["operational_retry"] == "none"
+    assert dp["tested_commit"] == rec["tested_commit"] == freeze.head_commit(repo)
+    src = Path(reproduce.__file__).parent
+    assert dp["verifier_sources_sha256"] == {
+        f"src/fremtpl2_pricing/{n}": hashlib.sha256((src / n).read_bytes()).hexdigest()
+        for n in ("reproduce.py", "freeze.py")
+    }
+
+
+def test_operational_retry_none_numbers_every_run_and_refuses_gaps(repo, cfg):
+    first = _run(repo, cfg, runner=_runner(check=STRUCTURAL))  # a failed run is its own record
+    second = _run(repo, cfg, runner=_runner(), force_clean=True)
+    assert (first["run"], second["run"]) == (1, 2)
+    assert first["strict_verdict"] == "FAIL" and second["strict_verdict"] == "EXACT_PASS"
+    first_text = (repo / "results/reproduction/run-1.json").read_text()
+    (repo / "results/reproduction/run-1.json").unlink()  # a gap: run-1 deleted
+    with pytest.raises(freeze.FreezeError, match="not contiguous"):
+        _run(repo, cfg, runner=_runner(), force_clean=True)
+    (repo / "results/reproduction/run-1.json").write_text(first_text)
+    bad = copy.deepcopy(cfg)
+    bad["reproduce"]["operational_retry"] = "retry"
+    with pytest.raises(freeze.FreezeError, match="operational_retry"):
+        _run(repo, bad, runner=_runner(), force_clean=True)
+
+
+def test_a_crash_is_recorded_as_its_own_failed_run_and_reraised(repo, cfg):
+    def boom(cmd, cwd):
+        raise RuntimeError("kaboom")
+
+    with pytest.raises(RuntimeError):
+        _run(repo, cfg, runner=boom)
+    rec = json.loads((repo / "results/reproduction/run-1.json").read_text())
+    assert rec["amended_verdict"] == rec["strict_verdict"] == "FAIL"
+    assert rec["failure"]["step"] == "exception" and "kaboom" in rec["failure"]["reason"]
+
+
+# --------------------------------------------------------------------------- the real amendment
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _real_amendment():
+    amendments = load_reproduce_config(REPO_ROOT / "configs/reproduce.yaml")["amendments"]
+    assert len(amendments) == 1
+    return amendments[0]
+
+
+def test_the_real_amendment_is_dated_post_hoc_and_pins_exactly_three_deviations():
+    a = _real_amendment()
+    assert (a["date"], a["post_hoc"], a["revealed_by"]) == ("2026-11-08", True, "run-1")
+    assert a["original_policy_sha256"] == (
+        "d35439ce4deb892114161823d9f87bdb8cf5bc04707fc1f6d0df38fd85641bb6"
+    )
+    d1, d2, d3 = a["declared_deviations"]
+    assert (d1["id"], d1["artifact"], d1["new_value_format"]) == (
+        "D1", "data/raw/manifest.json", "iso_date",
+    )  # fmt: skip
+    assert [(f["path"], f["committed"]) for f in d1["fields"]] == [
+        ("/datasets/0/retrieved", "2026-11-07"),
+        ("/datasets/1/retrieved", "2026-11-07"),
+    ]
+    assert d2["added_keys"] == [
+        "models.gbm", "models.bootstrap.interval", "models.bootstrap.quantile_method",
+        "models.evaluation.lorenz_points",
+    ]  # fmt: skip
+    assert (d2["old_config_sha256"], d2["new_config_sha256"]) == (
+        "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+        "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793",
+    )
+
+
+def test_the_pinned_hashes_match_the_frozen_default_config():
+    from fremtpl2_pricing.config import load_config
+    from fremtpl2_pricing.train import config_summary
+
+    d2 = _real_amendment()["declared_deviations"][1]
+    cfg = load_config(REPO_ROOT / "configs/default.yaml")
+    assert config_summary(cfg)["config_sha256"] == d2["new_config_sha256"]
+    for dotted, pinned in d2["added_value_sha256"].items():
+        node = cfg
+        for part in dotted.split("."):
+            node = node[part]
+        assert freeze.canonical_sha256(node) == pinned
+
+
+def test_the_original_policy_hash_matches_the_commit_it_names():
+    ref = _real_amendment()["original_policy_ref"]
+    try:
+        blob = subprocess.run(
+            ["git", "show", ref], cwd=REPO_ROOT, capture_output=True, check=True
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("the original policy commit is not available")
+    import hashlib
+
+    assert hashlib.sha256(blob).hexdigest() == _real_amendment()["original_policy_sha256"]
+
+
+def test_static_evidence_of_the_added_keys_matches_the_source():
+    ev = _real_amendment()["declared_deviations"][1]["static_evidence"]
+    scanned = freeze.scan_readers(ev, REPO_ROOT)
+    assert scanned == {k: sorted(v["modules"]) for k, v in ev["keys"].items()}
+    assert scanned["models.evaluation.lorenz_points"] == ["evaluate"]
+    glm_stage = set(ev["glm_training_modules"])
+    assert {"train", "glm", "cv_report"} <= glm_stage
+    assert not glm_stage & {m for mods in scanned.values() for m in mods}
+
+
+def test_the_reproduce_config_carries_the_amendment_and_its_hash():
+    from fremtpl2_pricing.config import ConfigError, with_reproduce
+
+    rcfg = load_reproduce_config(REPO_ROOT / "configs/reproduce.yaml")
+    merged = with_reproduce(_MAIN, rcfg)
+    assert merged["amendments"] == rcfg["amendments"]
+    assert merged["reproduce_policy_sha256"] == rcfg["policy_sha256"]
+    assert len(rcfg["policy_sha256"]) == 64
+    with pytest.raises(ConfigError, match="amendments"):
+        with_reproduce({**_MAIN, "amendments": []}, rcfg)
+    # the verification-policy keys are not part of the main config seen by the trainer
+    assert freeze.main_config(merged) == _MAIN
+
+
+def test_the_real_policy_declares_no_operational_retry():
+    rp = load_reproduce_config(REPO_ROOT / "configs/reproduce.yaml")["reproduce"]
+    assert rp["operational_retry"] == "none"
+
+
+def test_the_real_d3_pins_the_timing_sections_of_the_committed_reports():
+    d3 = _real_amendment()["declared_deviations"][2]
+    assert d3["kind"] == "markdown_telemetry" and d3["volatile_keys"] == ["timing_seconds"]
+    pinned = {f["path"] for f in d3["files"]}
+    for spec in d3["files"]:
+        text = (REPO_ROOT / spec["path"]).read_text(encoding="utf-8")
+        # an unchanged file differs nowhere; a doubled value inside the section is a covered cell
+        timings = json.loads((REPO_ROOT / spec["json"]).read_text())["timing_seconds"]
+        assert freeze.md_telemetry_differences(text, text, spec, timings) == ([], [])
+        lines = text.split("\n")
+        head = lines.index(spec["heading"])
+        pat = r"\| (\d+\.?\d*) \|$" if spec["cells"]["style"] == "table" else r"(\d+\.?\d*) s$"
+        idx = next(i for i in range(head + 1, len(lines)) if re.search(pat, lines[i]))
+        mutated = list(lines)
+        mutated[idx] = re.sub(pat, lambda m: m[0].replace(m[1], "123.5"), lines[idx])
+        key = re.match(r"\| ([^|]+?) \|" if pat.startswith(r"\|") else r"- (\w+):", lines[idx])[1]
+        new_timings = {**timings, key: 123.5}  # the regenerated JSON value the cell renders
+        args = (text, "\n".join(mutated), spec)
+        problems, changed = freeze.md_telemetry_differences(*args, new_timings)
+        assert problems == [] and len(changed) == 1, (spec["path"], problems)
+        problems, _ = freeze.md_telemetry_differences(*args, timings)  # JSON does not say 123.5
+        assert any("producer's rendering" in p for p in problems), spec["path"]
+    # every other tracked markdown report renders no timing section
+    for md in sorted((REPO_ROOT / "reports").glob("*.md")):
+        rel = f"reports/{md.name}"
+        if rel not in pinned:
+            text = md.read_text(encoding="utf-8")
+            assert "## Timing" not in text and "timings" not in text.lower(), rel
+
+
+def _cli_record(strict, amended):
+    return {"strict_verdict": strict, "amended_verdict": amended, "verdict": strict,
+            "total_seconds": 1.0}  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("strict", "amended", "code"),
+    [
+        ("EXACT_PASS", "EXACT_PASS", 0),
+        ("FAIL", "PASS_WITH_DECLARED_DEVIATIONS", 0),
+        ("PORTABLE_NUMERIC_PASS", "PORTABLE_NUMERIC_PASS", 1),
+        ("FAIL", "FAIL", 1),
+        ("UNSUPPORTED_ENVIRONMENT", "UNSUPPORTED_ENVIRONMENT", 1),
+    ],
+)
+def test_reproduce_cli_prints_both_verdicts_and_exits_zero_only_for_exact_or_amended_pass(
+    monkeypatch, capsys, strict, amended, code
+):
+    from fremtpl2_pricing import cli
+
+    monkeypatch.setattr(cli, "run_reproduce", lambda *a, **k: _cli_record(strict, amended))
+    args = ["reproduce", "--config", str(REPO_ROOT / "configs/default.yaml"),
+            "--reproduce-config", str(REPO_ROOT / "configs/reproduce.yaml")]  # fmt: skip
+    assert cli.main(args) == code
+    out = capsys.readouterr().out
+    assert f"strict {strict}" in out and f"amended {amended}" in out
+
+
+def test_a_markdown_timing_deviation_covers_only_the_files_it_names(repo, acfg, monkeypatch):
+    d3 = {"id": "D3", "kind": "markdown_telemetry", "satisfied": True, "problems": [],
+          "applied": [{"place": "reports/r.md:3", "base": "1.2", "new": "9.0"}],
+          "covers_checks": {}, "covers_files": ["reports/r.md"]}  # fmt: skip
+    edit = lambda c: _write(c, "reports/r.md", "# Report\n\nvalue 9.0 end\n")  # noqa: E731
+    _with_deviations(monkeypatch, [D1, d3])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit))
+    assert rec["strict_verdict"] == "FAIL"
+    assert rec["amended_verdict"] == "PASS_WITH_DECLARED_DEVIATIONS"
+    _with_deviations(monkeypatch, [D1, {**d3, "covers_files": ["reports/other.md"]}])
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit), force_clean=True)
+    assert rec["amended_verdict"] == "FAIL"
+    assert "reports/r.md: fail" in rec["amendment"]["unmatched_differences"]
+    _with_deviations(
+        monkeypatch, [D1, {**d3, "satisfied": False}]
+    )  # an unsatisfied D3 covers nothing
+    rec = _run(repo, acfg, runner=_runner(check=_failed_check(), edit=edit), force_clean=True)
+    assert rec["amended_verdict"] == "FAIL"

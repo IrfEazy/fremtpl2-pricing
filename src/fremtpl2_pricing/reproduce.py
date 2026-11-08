@@ -11,8 +11,9 @@ tracked output except the declared published paths, so a step that does not rege
 fails. Renderer outputs of committed evidence (``byte_exact_paths``) must be byte-identical; only
 figures may differ as renders. Any other tracked file that changed, or any untracked file outside
 the output roots, or any new untracked file under them that is not a declared step output, fails
-the run. The record is written to ``results/reproduction.json``
-of the SOURCE tree.
+the run. The record is written to ``results/reproduction/run-<n>.json`` of the SOURCE tree (one
+immutable record per run; an existing record is never overwritten and the directory is excluded
+from the comparison).
 
 Reproduction never recomputes held-out metrics: ``freeze`` and ``evaluate`` are not steps and
 ``report`` only re-renders the published evaluation.
@@ -26,10 +27,17 @@ and never re-read from the clone. A ``freeze --check`` failure whose mismatches 
 not stop the run (the strict check stays failed, the remaining steps and the classification run);
 integrity, structural and execution failures stop it.
 
-Verdicts: ``EXACT_PASS``, ``PORTABLE_NUMERIC_PASS`` (the strict check failed only on numeric
-differences and the outputs agree within the declared tolerance, or only the encoding of a figure
-differs), ``FAIL`` and ``UNSUPPORTED_ENVIRONMENT`` (only an identified missing tool, exit 127 of
-``uv``/``git``, or the transport exit code 75).
+Verdicts (``strict_verdict``, the original policy): ``EXACT_PASS``, ``PORTABLE_NUMERIC_PASS``
+(the strict check failed only on numeric differences and the outputs agree within the declared
+tolerance, or only the encoding of a figure differs), ``FAIL`` and ``UNSUPPORTED_ENVIRONMENT``
+(only an identified missing tool, exit 127 of ``uv``/``git``, or the transport exit code 75).
+
+Amendment (post-hoc, configs/reproduce.yaml ``amendments``): the record also carries
+``amended_verdict``, which is ``PASS_WITH_DECLARED_DEVIATIONS`` only if every difference found is
+matched by a declared deviation with all its pins satisfied (:mod:`freeze`) and every step and every
+comparison completed; otherwise it equals the strict verdict. It is never an exact pass under the
+original policy, and the strict verdict is never changed. A ``freeze_check`` step whose failures
+are all covered by declared deviations does not stop the run.
 """
 
 from __future__ import annotations
@@ -38,6 +46,7 @@ import copy
 import csv
 import datetime as dt
 import fnmatch
+import hashlib
 import io
 import json
 import os
@@ -46,7 +55,7 @@ import re
 import shutil
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +63,7 @@ from .freeze import (
     FreezeError,
     assert_clean_tree,
     compare_values,
+    declared_coverage,
     evidence_identity,
     git,
     git_blob,
@@ -61,8 +71,10 @@ from .freeze import (
     head_commit,
     project_paths,
     strict_json_loads,
+    verify_amendment,
 )
 
+AMENDED_PASS = "PASS_WITH_DECLARED_DEVIATIONS"
 EXACT, PORTABLE, FAIL, UNSUPPORTED = (
     "EXACT_PASS",
     "PORTABLE_NUMERIC_PASS",
@@ -196,20 +208,24 @@ def _category(rel: str, rp: dict[str, Any]) -> str:
 
 
 def snapshot_rules(cfg: dict[str, Any], root: Path, commit: str) -> dict[str, Any]:
-    """The comparison rules, taken from the SOURCE tree and the tested commit before any step:
+    """The comparison rules, taken from the SOURCE tree and the tested commit before any step
+    (the run history directory is not an output; the amendments are part of the snapshot):
     the reproduce block (tolerances, exact keys, byte-exact and preserved paths, steps), the
     volatile keys and the expected inventory (tracked outputs to regenerate and compare). The
     clone's config is never read, so a step cannot redefine them."""
     rp = copy.deepcopy(cfg["reproduce"])
     paths = project_paths(cfg, root)
     roots = (paths["results"] + "/", Path(cfg["paths"]["reports"]).as_posix() + "/")
-    record = f"{paths['results']}/{rp['record']}"
+    history = f"{paths['results']}/{rp['history_dir']}/"
     is_in = lambda p, pats: any(fnmatch.fnmatch(p, pat) for pat in pats)  # noqa: E731
-    outputs = sorted(p for p in git_tracked(root, commit) if p.startswith(roots) and p != record)
+    tracked = git_tracked(root, commit)
+    outputs = sorted(p for p in tracked if p.startswith(roots) and not p.startswith(history))
     return {
         "rp": rp,
         "roots": roots,
-        "record": record,
+        "history": history,
+        "amendments": copy.deepcopy(cfg.get("amendments") or []),
+        "policy_sha256": cfg.get("reproduce_policy_sha256"),
         "drop": frozenset(cfg["freeze"]["check"]["volatile_keys"]),
         "purge": [p for p in outputs if not is_in(p, rp["preserve_paths"])],
         "compared": [p for p in outputs if not is_in(p, rp["protected_paths"])],
@@ -221,11 +237,15 @@ def compare_clone(root: Path, clone: Path, commit: str, rules: dict[str, Any]) -
     """Every tracked file under ``results/`` and ``reports/`` of the clone against its HEAD blob,
     per category, plus the tracked files that changed outside the declared output paths. ``rules``
     is the snapshot of :func:`snapshot_rules`."""
-    rp, roots, record, drop = rules["rp"], rules["roots"], rules["record"], rules["drop"]
+    rp, roots, history, drop = rules["rp"], rules["roots"], rules["history"], rules["drop"]
     outside = lambda p: not p.startswith(roots)  # noqa: E731
-    changed = set(git(clone, "diff", "--name-only", "-z", "HEAD").split("\0")) - {"", record}
+    changed = {
+        p
+        for p in git(clone, "diff", "--name-only", "-z", "HEAD").split("\0")
+        if p and not p.startswith(history)
+    }
     others = set(git(clone, "ls-files", "--others", "--exclude-standard", "-z").split("\0")) - {""}
-    untracked = sorted(p for p in others if not outside(p) and p != record)
+    untracked = sorted(p for p in others if not outside(p) and not p.startswith(history))
     untracked_source = sorted(p for p in others if outside(p))
     declared = {o for step in rp["steps"] for o in step.get("outputs", [])}
     untracked_undeclared = [p for p in untracked if p not in declared]
@@ -270,6 +290,7 @@ def compare_clone(root: Path, clone: Path, commit: str, rules: dict[str, Any]) -
     return {
         "categories": categories,
         "n_files": len(results),
+        "files": [{"path": r["path"], "status": r["status"]} for r in results],
         "source_changed": source_changed,
         "untracked_new": untracked,
         "untracked_source": untracked_source,
@@ -279,16 +300,196 @@ def compare_clone(root: Path, clone: Path, commit: str, rules: dict[str, Any]) -
     }
 
 
-def decide(check: dict[str, Any] | None, comparison: dict[str, Any]) -> str:
+def incomplete(
+    rules: dict[str, Any],
+    steps: list[dict[str, Any]],
+    check: Any,
+    comparison: dict[str, Any] | None,
+) -> list[str]:
+    """Why a run is not complete (fail closed): every configured step ran, the strict-check result
+    is usable and every expected comparison was executed (no missing artifact, no extra or absent
+    comparison). An empty list means complete; only then may a passing verdict be given."""
+    out = []
+    configured = [st["name"] for st in rules["rp"]["steps"]]
+    ran = [st["name"] for st in steps]
+    if ran != configured:
+        out.append(f"steps run {ran} differ from the configured {configured}")
+    if not (_usable_check(check) and isinstance(check.get("passed"), bool)):
+        out.append("no complete strict freeze-check result")
+    if comparison is None:
+        out.append("comparison not executed")
+        return out
+    files = comparison.get("files") or []
+    paths = [f.get("path") for f in files]
+    if sorted(paths) != sorted(rules["compared"]):
+        out.append("the executed comparisons differ from the expected inventory")
+    if any(f.get("status") == "missing" for f in files):
+        out.append("an expected artifact is missing")
+    return out
+
+
+def decide(
+    check: dict[str, Any] | None, comparison: dict[str, Any], reasons: Sequence[str] = ()
+) -> str:
     """Verdict of a run whose steps all ran: from the strict ``freeze --check`` result and the
-    comparison of the outputs."""
-    if check is None:
+    comparison of the outputs. ``reasons`` (:func:`incomplete`) forbid any passing verdict."""
+    if check is None or reasons:
         return FAIL
     if check["passed"] and comparison["exact_ok"]:
         return EXACT
     if (check["passed"] or check["numeric_only"]) and comparison["portable_ok"]:
         return PORTABLE
     return FAIL
+
+
+# --------------------------------------------------------------------------- history, amendment
+
+
+def _history_files(directory: Path, pattern: str) -> dict[int, Path]:
+    """Existing run records ``run-<n>.json`` of the history directory, by run number."""
+    rx = re.compile("^" + re.escape(pattern).replace(re.escape("{n}"), r"(\d+)") + "$")
+    found = {}
+    if directory.is_dir():
+        for f in directory.iterdir():
+            if (m := rx.match(f.name)) and f.is_file():
+                found[int(m.group(1))] = f
+    return found
+
+
+def assert_history_contiguous(directory: Path, pattern: str, retry_policy: Any) -> int:
+    """Enforce ``operational_retry: none``: the history is exactly run-1..run-k (no gap, so no run
+    was deleted or replaced); returns k. A failed or incomplete run is its own record."""
+    if retry_policy != "none":
+        raise FreezeError(f"reproduce.operational_retry must be 'none', not {retry_policy!r}")
+    found = sorted(_history_files(directory, pattern))
+    if found != list(range(1, len(found) + 1)):
+        raise FreezeError(f"the run history {found} is not contiguous from run-1; refused")
+    return len(found)
+
+
+def write_run_record(directory: Path, pattern: str, record: dict[str, Any]) -> Path:
+    """Write the record as the next ``run-<n>.json`` (highest existing + 1). The history is
+    immutable: the file is created exclusively and an existing one is never overwritten."""
+    directory.mkdir(parents=True, exist_ok=True)
+    n = max(_history_files(directory, pattern), default=0) + 1
+    target = directory / pattern.format(n=n)
+    record["run"] = n
+    try:
+        with target.open("x", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    except FileExistsError as exc:
+        raise FreezeError(f"{target} exists; the run history is never overwritten") from exc
+    return target
+
+
+def _usable_check(check: Any) -> bool:
+    return isinstance(check, dict) and isinstance(check.get("checks"), list)
+
+
+def tolerable_check(check: dict[str, Any], results: list[dict[str, Any]]) -> bool:
+    """A failed strict check does not stop the run if every failed check is numeric-only (the
+    declared tolerance case) or covered by a satisfied declared deviation."""
+    if not _usable_check(check):
+        return False
+    failed = [c for c in check["checks"] if isinstance(c, dict) and c.get("status") == "fail"]
+    if not failed:
+        return False  # a non-zero exit with no classified failure is never tolerated
+    try:
+        covered = set(declared_coverage(check["checks"], results)["covered_failures"])
+    except (KeyError, TypeError):
+        return False  # a malformed check entry is unclassified, never covered
+    return all(c.get("name") in covered or c.get("numeric_only") is True for c in failed)
+
+
+def assess_amendment(
+    amendment: dict[str, Any],
+    cfg: dict[str, Any],
+    rules: dict[str, Any],
+    clone: Path,
+    steps: list[dict[str, Any]],
+    failure: dict[str, Any] | None,
+    check: dict[str, Any] | None,
+    comparison: dict[str, Any] | None,
+    strict: str,
+) -> tuple[dict[str, Any], str]:
+    """The amended assessment of a run and its ``amended_verdict``.
+    ``PASS_WITH_DECLARED_DEVIATIONS`` requires: no failure, every configured step run, a complete
+    strict-check result and a complete comparison (no file missing), every failed check covered
+    by a satisfied deviation, every compared file either exact (or volatile-only) or covered by a
+    satisfied deviation (within-tolerance numeric, reformatted and pixel-equal files are NOT
+    declared, so they leave the amended verdict equal to the strict one), and at least one applied
+    deviation. Otherwise the amended verdict equals the strict one; unmatched differences are
+    listed."""
+    results = verify_amendment(amendment, cfg, clone)
+    configured = [st["name"] for st in rules["rp"]["steps"]]
+    ran = [st["name"] for st in steps]
+    unmatched: list[str] = []
+    if failure is not None:
+        unmatched.append(f"run stopped at {failure.get('step')}")
+    unmatched += incomplete(rules, steps, check, comparison) if failure is None else []
+    checks = check["checks"] if _usable_check(check) else []
+    try:
+        cov = declared_coverage(checks, results)
+    except (KeyError, TypeError):
+        cov = {"covered_failures": [], "uncovered_failures": ["malformed"], "deviations_used": []}
+    unmatched += [f"freeze check {n} (not covered)" for n in cov["uncovered_failures"]]
+    covered_files = {f for r in results if r["satisfied"] for f in r["covers_files"]}
+    files = comparison["files"] if comparison else []
+    inv_files = []
+    for f in files:
+        # only an exact or volatile-only file is within the policy: an in-tolerance numeric
+        # difference, a parsed-equal reformatting or a pixel-equal re-encoding is a difference that
+        # no deviation declares, unless a satisfied deviation covers that very file
+        ok = f["status"] in OK_EXACT
+        cov_file = f["status"] not in (*OK_EXACT, "missing") and f["path"] in covered_files
+        inv_files.append({**f, "covered_by_deviation": cov_file})
+        if not (ok or cov_file):
+            unmatched.append(f"{f['path']}: {f['status']}")
+    for key in ("source_changed", "untracked_source", "untracked_undeclared"):
+        if comparison and comparison[key]:
+            unmatched.append(f"{key}: {comparison[key]}")
+    failed_files = {f["path"] for f in files if f["status"] == "fail"}
+    used = set(cov["deviations_used"]) | {
+        r["id"] for r in results if r["satisfied"] and failed_files & set(r["covers_files"])
+    }
+    applied = [r for r in results if r["satisfied"] and r["applied"] and r["id"] in used]
+    failed_check_names = [c["name"] for c in checks if c["status"] == "fail"]
+    if strict in (EXACT, PORTABLE, UNSUPPORTED):
+        verdict = strict  # nothing for a deviation to excuse (or no assessment possible)
+    elif not unmatched and applied:
+        verdict = AMENDED_PASS
+    else:
+        verdict = strict
+    record = {
+        "id": amendment["id"],
+        "date": amendment["date"],
+        "post_hoc": amendment["post_hoc"],
+        "revealed_by": amendment["revealed_by"],
+        "reason": amendment["reason"],
+        "original_policy_sha256": amendment["original_policy_sha256"],
+        "amended_policy_sha256": rules["policy_sha256"],
+        "applied_deviations": [
+            {k: r[k] for k in ("id", "kind", "applied", "static_evidence") if k in r}
+            for r in applied
+        ],
+        "deviations": [{k: r[k] for k in ("id", "satisfied", "problems")} for r in results],
+        "unmatched_differences": unmatched,
+        "inventory": {
+            "steps": {"configured": configured, "ran": ran},
+            "freeze_checks": [
+                {
+                    "name": c["name"],
+                    "status": c["status"],
+                    "covered_by_deviation": c["name"] in cov["covered_failures"],
+                }
+                for c in checks
+            ],  # fmt: skip
+            "freeze_checks_failed": failed_check_names,
+            "comparison_files": inv_files,
+            "n_expected_files": len(rules["compared"]),
+        },
+    }
+    return record, verdict
 
 
 # --------------------------------------------------------------------------- runner
@@ -390,18 +591,76 @@ def _is_environment(rules: dict[str, Any], cmd: list[str], code: int) -> bool:
     return (code == 127 and cmd[0] in rp["tool_commands"]) or code in rp["transport_exit_codes"]
 
 
+def _source_sha256(name: str) -> str:
+    return hashlib.sha256((Path(__file__).with_name(name)).read_bytes()).hexdigest()
+
+
+def decision_procedure(
+    rules: dict[str, Any], amendment: dict[str, Any] | None, commit: str,
+    command: Sequence[str] | None,
+) -> dict[str, Any]:  # fmt: skip
+    """The frozen decision procedure of a run: the policy hashes (original and amended), the sha256
+    of the verifier sources, the tested commit, the exact rerun command and the retry policy."""
+    amended = rules.get("policy_sha256")
+    return {
+        "original_policy_sha256": amendment["original_policy_sha256"] if amendment else amended,
+        "amended_policy_sha256": amended,
+        "policy_file": "configs/reproduce.yaml",
+        "verifier_sources_sha256": {
+            f"src/fremtpl2_pricing/{n}": _source_sha256(n) for n in ("reproduce.py", "freeze.py")
+        },
+        "tested_commit": commit,
+        "rerun_command": list(command) if command is not None else None,
+        "operational_retry": rules["rp"].get("operational_retry"),
+    }
+
+
+def _crash_record(rules, commit, start, t0, exc, command) -> dict[str, Any]:
+    """The record of a run that raised: its own run-<n>, FAIL on both verdicts."""
+    failure = {"step": "exception", "exit_code": None, "environment": False,
+               "reason": f"{type(exc).__name__}: {exc}"}  # fmt: skip
+    first = rules["amendments"][0] if rules["amendments"] else None
+    return {
+        "tested_commit": commit,
+        "start_utc": start.isoformat(timespec="seconds"),
+        "end_utc": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
+        "total_seconds": round(time.perf_counter() - t0, 3),
+        "scope": SCOPE,
+        "steps": [],
+        "failure": failure,
+        "strict_verdict": FAIL,
+        "amended_verdict": FAIL,
+        "verdict": FAIL,
+        "decision_procedure": decision_procedure(rules, first, commit, command),
+        "amendment": None,
+        "freeze_check": None,
+        "comparison": None,
+    }
+
+
 def run_reproduce(
     cfg: dict[str, Any],
     config_path: str | Path,
     force_clean: bool = False,
     root: Path | None = None,
     runner: Runner = subprocess_runner,
+    command: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """``fremtpl2 reproduce``: clean source tree required; returns (and writes) the record."""
+    """``fremtpl2 reproduce``: clean source tree required; returns (and writes) the record.
+    ``operational_retry: none``: the history must be contiguous and every run, failed or incomplete
+    included, is its own ``run-<n>`` record (an unexpected exception after the start is recorded as
+    a failed run and re-raised)."""
     root = Path.cwd() if root is None else Path(root)
     paths = project_paths(cfg, root)
-    record_rel = f"{paths['results']}/{cfg['reproduce']['record']}"
-    assert_clean_tree(root, frozenset({record_rel}))
+    history_rel = f"{paths['results']}/{cfg['reproduce']['history_dir']}/"
+    assert_clean_tree(root, frozenset({history_rel}))  # new (untracked) run records are fine
+    if git(root, "diff", "--name-only", "HEAD", "--", history_rel).strip():
+        raise FreezeError(f"a committed run record under {history_rel} was modified (immutable)")
+    assert_history_contiguous(
+        root / history_rel,
+        cfg["reproduce"]["history_pattern"],
+        cfg["reproduce"].get("operational_retry"),
+    )
     commit = head_commit(root)
     rules = snapshot_rules(cfg, root, commit)  # before any step; never re-read from the clone
     rp = rules["rp"]
@@ -410,9 +669,23 @@ def run_reproduce(
     if config_rel.is_absolute():
         config_rel = config_rel.relative_to(root)
     work = _workdir(root, cfg, force_clean)
+    start, t0 = dt.datetime.now(dt.UTC), time.perf_counter()
+    try:
+        record = _execute(
+            cfg, config_rel, root, runner, work, rules, commit, identity, start, t0, command
+        )
+    except Exception as exc:
+        record = _crash_record(rules, commit, start, t0, exc, command)
+        write_run_record(root / history_rel, rp["history_pattern"], record)
+        raise
+    write_run_record(root / history_rel, rp["history_pattern"], record)
+    return record
+
+
+def _execute(cfg, config_rel, root, runner, work, rules, commit, identity, start, t0, command):
+    rp = rules["rp"]
     clone, logs = work / rp["clone_dir"], work / rp["log_dir"]
     logs.mkdir()
-    start, t0 = dt.datetime.now(dt.UTC), time.perf_counter()
     git(root, "clone", "--quiet", "--no-hardlinks", str(root), str(clone))
     clone_commit = head_commit(clone)
     purged = purge_outputs(clone, rules) if clone_commit == commit else []
@@ -438,9 +711,12 @@ def run_reproduce(
             elif not valid or (code == 0) != check["passed"]:
                 failure = {**base, "environment": False, "reason": "no valid strict-check result"}
             elif not check["passed"] and not check["numeric_only"]:
-                reason = "integrity or structural mismatch in the strict check"
-                failure = {**base, "environment": False, "reason": reason}
-            # an all-numeric mismatch records the failed strict check and continues
+                devs = [r for a in rules["amendments"] for r in verify_amendment(a, cfg, clone)]
+                if not tolerable_check(check, devs):
+                    reason = "integrity or structural mismatch in the strict check"
+                    failure = {**base, "environment": False, "reason": reason}
+            # an all-numeric mismatch, or one fully covered by declared deviations, records the
+            # failed strict check and continues
         elif code != 0:
             failure = {**base, "environment": _is_environment(rules, cmd, code)}
         if failure is None and (missing := missing_outputs(clone, step)):
@@ -456,7 +732,13 @@ def run_reproduce(
         verdict = UNSUPPORTED if failure["environment"] else FAIL
     else:
         comparison = compare_clone(root, clone, commit, rules)
-        verdict = decide(check, comparison)
+        verdict = decide(check, comparison, incomplete(rules, steps, check, comparison))
+    amended, amendment_rec = verdict, None
+    first = rules["amendments"][0] if rules["amendments"] else None
+    if rules["amendments"]:
+        amendment_rec, amended = assess_amendment(
+            rules["amendments"][0], cfg, rules, clone, steps, failure, check, comparison, verdict
+        )
     end = dt.datetime.now(dt.UTC)
     record = {
         "tested_commit": commit,
@@ -475,7 +757,11 @@ def run_reproduce(
         "recomputable_inventory": {"compared": rules["compared"], "purged": purged},
         "steps": steps,
         "failure": failure,
-        "verdict": verdict,
+        "strict_verdict": verdict,  # the original policy, unchanged semantics
+        "amended_verdict": amended,  # PASS_WITH_DECLARED_DEVIATIONS only via the pinned amendment
+        "verdict": verdict,  # alias of strict_verdict (kept for callers of the v1 record)
+        "decision_procedure": decision_procedure(rules, first, commit, command),
+        "amendment": amendment_rec,
         "freeze_check": check,
         "comparison": comparison,
         "tolerances": {
@@ -484,18 +770,19 @@ def run_reproduce(
             "formula": "|a - b| <= atol + rtol * |a|, a = committed value",
         },
     }
-    target = root / record_rel
-    tmp = target.with_name(target.name + ".tmp")
-    tmp.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    tmp.replace(target)
+    return record
     return record
 
 
 __all__ = [
     "compare_clone",
     "compare_file",
+    "assess_amendment",
+    "assert_history_contiguous",
+    "incomplete",
     "decide",
     "purge_outputs",
     "run_reproduce",
     "snapshot_rules",
+    "write_run_record",
 ]

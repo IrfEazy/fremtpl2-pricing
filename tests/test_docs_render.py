@@ -208,25 +208,71 @@ def test_numbers_equal_the_input_values(proj, dcfg):
 # --------------------------------------------------------------------------- reproduction
 
 
+def _record(proj, n, **extra):
+    rec = {
+        "tested_commit": "0123456789abcdef",
+        "strict_verdict": "EXACT_PASS", "verdict": "EXACT_PASS",
+        "start_utc": "2026-11-09T10:00:00+00:00", "total_seconds": 90.0,
+        "platform": "Linux-x", "machine": "x86_64", "cpu_count": 8, "python": "3.13.1",
+        "steps": [{"name": "train", "seconds": 30.0}, {"name": "gbm", "seconds": 60.0}],
+    }  # fmt: skip
+    rec.update(extra)
+    path = proj / f"results/reproduction/run-{n}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rec))
+
+
 def test_missing_reproduction_renders_the_placeholder(proj, dcfg):
-    assert not (proj / "results/reproduction.json").exists()
+    assert not (proj / "results/reproduction").exists()
     docs_render.run_docs(dcfg, root=proj)
     assert "not yet recorded" in (proj / "README.md").read_text()
 
 
 def test_reproduction_block_reads_the_record(proj, dcfg):
-    rec = {
-        "tested_commit": "0123456789abcdef", "verdict": "EXACT_PASS", "total_seconds": 90.0,
-        "platform": "Linux-x", "machine": "x86_64", "cpu_count": 8, "python": "3.13.1",
-        "steps": [{"name": "train", "seconds": 30.0}, {"name": "gbm", "seconds": 60.0}],
-    }  # fmt: skip
-    (proj / "results/reproduction.json").write_text(json.dumps(rec))
+    _record(proj, 1)
     docs_render.run_docs(dcfg, root=proj)
     text = (proj / "README.md").read_text()
-    assert "**EXACT_PASS**" in text and "`01234567`" in text and "0123456789" not in text
-    assert "total 1.5 minutes" in text and "| train | 0.5 |" in text and "| gbm | 1.0 |" in text
-    assert "Linux-x (x86_64, 8 CPUs), Python 3.13.1" in text
-    assert "not yet recorded" not in text
+    assert "| run-1 | 2026-11-09 | `01234567` | **EXACT_PASS** | - | 1.5 |" in text
+    assert "0123456789" not in text and "not yet recorded" not in text
+    assert "Latest run (run-1): machine Linux-x (x86_64, 8 CPUs), Python 3.13.1" in text
+    assert "| train | 0.5 |" in text and "| gbm | 1.0 |" in text
+    assert "Disclosure" not in text  # no amendment, no disclosure
+
+
+def test_reproduction_block_shows_the_history_amended_verdict_and_the_disclosure(proj, dcfg):
+    # run-1 is a v1 record: only `verdict`, neither `strict_verdict` nor an amendment
+    _record(proj, 1, tested_commit="aaaaaaaaaaaaaaaa", verdict="FAIL", total_seconds=60.0)
+    path = proj / "results/reproduction/run-1.json"
+    rec1 = json.loads(path.read_text())
+    del rec1["strict_verdict"]
+    path.write_text(json.dumps(rec1))
+    _record(
+        proj, 2, tested_commit="bbbbbbbbbbbbbbbb", strict_verdict="FAIL", verdict="FAIL",
+        amended_verdict="PASS_WITH_DECLARED_DEVIATIONS", amendment={"id": "A1"},
+        total_seconds=120.0, steps=[{"name": "setup", "seconds": 240.0}],
+    )  # fmt: skip
+    docs_render.run_docs(dcfg, root=proj)
+    text = (proj / "README.md").read_text()
+    assert "| run-1 | 2026-11-09 | `aaaaaaaa` | **FAIL** | - | 1.0 |" in text
+    assert (
+        "| run-2 | 2026-11-09 | `bbbbbbbb` | **FAIL** | **PASS_WITH_DECLARED_DEVIATIONS** | 2.0 |"
+        in text
+    )
+    assert "Latest run (run-2)" in text and "| setup | 4.0 |" in text and "| train |" not in text
+    assert "first run failed the original strict policy" in text
+    assert "post-hoc and artifact-specific" in text
+    assert "is not an exact pass under the original policy" in text
+    assert "frozen artifacts and the original failure record are unchanged" in text
+    assert "Held-out metrics were not recomputed" in text
+
+
+def test_reproduction_runs_are_ordered_numerically(proj, dcfg):
+    for n in (10, 2, 1):
+        _record(proj, n, tested_commit=f"{n:016d}")
+    docs_render.run_docs(dcfg, root=proj)
+    text = (proj / "README.md").read_text()
+    assert text.index("run-1 |") < text.index("run-2 |") < text.index("run-10 |")
+    assert "Latest run (run-10)" in text
 
 
 # --------------------------------------------------------------------------- verification, config

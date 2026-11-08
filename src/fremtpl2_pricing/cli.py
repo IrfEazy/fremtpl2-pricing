@@ -156,9 +156,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_freeze(cfg, args.config, force=args.force)
         elif args.command == "reproduce":
             rcfg = with_reproduce(cfg, load_reproduce_config(args.reproduce_config))
-            rec = run_reproduce(rcfg, args.config, force_clean=args.force_clean)
-            print(f"reproduce: {rec['verdict']} ({rec['total_seconds']:.0f}s), see the record")
-            return 0 if rec["verdict"] in ("EXACT_PASS", "PORTABLE_NUMERIC_PASS") else 1
+            command = ["fremtpl2", "reproduce", "--config", str(args.config),
+                       "--reproduce-config", str(args.reproduce_config)]  # fmt: skip
+            if args.force_clean:
+                command.append("--force-clean")
+            rec = run_reproduce(rcfg, args.config, force_clean=args.force_clean, command=command)
+            print(
+                f"reproduce: strict {rec['strict_verdict']}, amended {rec['amended_verdict']} "
+                f"({rec['total_seconds']:.0f}s), see the record"
+            )
+            # exit 0 only for EXACT_PASS or the amended pass (not PORTABLE_NUMERIC_PASS)
+            ok = ("EXACT_PASS", "PASS_WITH_DECLARED_DEVIATIONS")
+            return 0 if rec["amended_verdict"] in ok else 1
         elif args.command == "evaluate":
             if args.reason and not args.technical_rerun:
                 raise FreezeError("--reason is only used with --technical-rerun")

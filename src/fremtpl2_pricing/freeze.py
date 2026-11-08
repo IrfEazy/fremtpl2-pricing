@@ -29,6 +29,7 @@ files) and never fits anything.
 
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import fnmatch
 import hashlib
@@ -36,6 +37,7 @@ import importlib.metadata
 import json
 import math
 import platform
+import re
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -49,7 +51,7 @@ from threadpoolctl import threadpool_limits
 
 from . import features, gbm, glm, selection
 from .manifest import sha256_file
-from .train import assert_train_only, load_train
+from .train import assert_train_only, config_summary, load_train
 
 MANIFEST_VERSION = "freeze-manifest-v1"
 PP_NULL, PP_BM = "pp_null", "bonus_malus_only"
@@ -104,9 +106,14 @@ def git_tracked(root: Path, rev: str = "HEAD") -> set[str]:
 
 def assert_clean_tree(root: Path, ignore: frozenset[str] = frozenset()) -> None:
     """The work tree must be clean, including untracked non-ignored files (paths in ``ignore``
-    excepted)."""
+    excepted; an entry ending in ``/`` ignores everything below that directory)."""
     status = git(root, "status", "--porcelain", "--untracked-files=normal")
-    lines = [ln for ln in status.splitlines() if ln.strip() and ln[3:].strip('"') not in ignore]
+    dirs = tuple(i for i in ignore if i.endswith("/"))
+
+    def ignored(path: str) -> bool:
+        return path in ignore or path.startswith(dirs)
+
+    lines = [ln for ln in status.splitlines() if ln.strip() and not ignored(ln[3:].strip('"'))]
     if lines:
         raise FreezeError(
             "the work tree is not clean (commit or remove these first):\n" + "\n".join(lines)
@@ -1137,6 +1144,509 @@ def evidence_identity(cfg: dict[str, Any], root: Path) -> dict[str, Any] | None:
     return out
 
 
+# --------------------------------------------------------------------------- declared deviations
+#
+# Post-hoc amendment of the verification policy (configs/reproduce.yaml ``amendments``): a deviation
+# is a pinned, artifact- and field-path-specific exception that is verified from the actual files on
+# every run. Nothing is ignored by key name and nothing is expanded at runtime: an unmatched
+# difference stays a failure. ``freeze --check`` keeps its strict result; it only reports which
+# failures a satisfied deviation covers.
+
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def is_iso_date(value: Any) -> bool:
+    """A ``YYYY-MM-DD`` string that is a real calendar date (no other ISO 8601 form)."""
+    if not isinstance(value, str) or not _ISO_DATE.fullmatch(value):
+        return False
+    try:
+        dt.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def main_config(cfg: dict[str, Any]) -> dict[str, Any]:
+    """The main config as ``fremtpl2 train --config`` loaded it: without the verification-policy
+    keys that ``with_reproduce`` merges in (their presence would change the config hash)."""
+    out = copy.deepcopy(cfg)
+    for key in ("reproduce", "amendments", "reproduce_policy_sha256"):
+        out.pop(key, None)
+    if isinstance(out.get("freeze"), dict):
+        out["freeze"].pop("check", None)
+    return out
+
+
+def _ptr_get(obj: Any, ptr: str) -> Any:
+    for part in [p for p in ptr.split("/") if p]:
+        obj = obj[int(part)] if isinstance(obj, list) else obj[part]
+    return obj
+
+
+def _ptr_set(obj: Any, ptr: str, value: Any) -> None:
+    parts = [p for p in ptr.split("/") if p]
+    parent = _ptr_get(obj, "/".join(parts[:-1]))
+    parent[int(parts[-1]) if isinstance(parent, list) else parts[-1]] = value
+
+
+def _key_diff(committed: Any, new: Any, prefix: str = "") -> tuple[list[str], list[str]]:
+    """Dotted key paths present only in ``new`` (added) and only in ``committed`` (removed),
+    recursing into mappings present on both sides; an added mapping is reported at its root."""
+    added: list[str] = []
+    removed: list[str] = []
+    if isinstance(committed, dict) and isinstance(new, dict):
+        for key in sorted(set(new) - set(committed)):
+            added.append(f"{prefix}{key}")
+        for key in sorted(set(committed) - set(new)):
+            removed.append(f"{prefix}{key}")
+        for key in sorted(set(committed) & set(new)):
+            a, r = _key_diff(committed[key], new[key], f"{prefix}{key}.")
+            added += a
+            removed += r
+    return added, removed
+
+
+def _restrict(current: Any, committed: Any) -> Any:
+    """``current`` restricted to the keys of ``committed`` (recursively over mappings; lists and
+    scalars unchanged, so their values and structure must then be equal)."""
+    if isinstance(current, dict) and isinstance(committed, dict):
+        return {k: _restrict(current[k], committed[k]) for k in committed if k in current}
+    return current
+
+
+def scan_readers(spec: dict[str, Any], root: Path) -> dict[str, list[str]]:
+    """Static evidence: for each key, the modules of ``spec['source_dir']`` whose text matches the
+    key's declared pattern (the config-read idiom), as a sorted list of module names."""
+    src = root / spec["source_dir"]
+    texts = {f.stem: f.read_text(encoding="utf-8") for f in sorted(src.glob("*.py"))}
+    return {
+        key: sorted(m for m, t in texts.items() if re.search(item["pattern"], t))
+        for key, item in spec["keys"].items()
+    }
+
+
+def _new_result(dev: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": dev["id"], "kind": dev["kind"], "satisfied": True, "problems": [], "applied": [],
+        "covers_checks": {}, "covers_files": [],
+    }  # fmt: skip
+
+
+def _verify_download_metadata(dev: dict[str, Any], root: Path, manifest: dict[str, Any]):
+    """D1: the download metadata differs from the frozen bytes only in the pinned ``retrieved``
+    fields, whose new values are ISO dates; re-serialised with the committed values it hashes to
+    the frozen entry, so every other field is exact. The raw data files stay byte-identical."""
+    res = _new_result(dev)
+    art = dev["artifact"]
+    entries = {e["path"]: e for e in manifest["files"]}
+    file = root / art
+    if art not in entries or not file.is_file():
+        return res  # a missing or unlisted file is a failure no deviation covers
+    entry = entries[art]
+    if file.stat().st_size == entry["bytes"] and sha256_file(file) == entry["sha256"]:
+        return res  # no difference to excuse
+    problems = res["problems"]
+    try:
+        doc = strict_json_loads(file.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        problems.append(f"{art}: not valid JSON ({exc})")
+        return res
+    rebuilt = copy.deepcopy(doc)
+    for field_ in dev["fields"]:
+        try:
+            value = _ptr_get(doc, field_["path"])
+        except (KeyError, IndexError, ValueError, TypeError):
+            problems.append(f"{art}{field_['path']}: field not found")
+            continue
+        if not is_iso_date(value):
+            problems.append(f"{art}{field_['path']}: {value!r} is not an ISO date (YYYY-MM-DD)")
+            continue
+        _ptr_set(rebuilt, field_["path"], field_["committed"])
+        res["applied"].append(
+            {"place": art, "path": field_["path"], "base": field_["committed"], "new": value}
+        )
+    if not problems:
+        # same serialisation as manifest.write_manifest
+        blob = (json.dumps(rebuilt, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        if len(blob) != entry["bytes"] or hashlib.sha256(blob).hexdigest() != entry["sha256"]:
+            problems.append(f"{art}: differs from the frozen file outside the pinned fields")
+    for rel in dev["raw_files"]:
+        if rel not in entries:
+            problems.append(f"{rel}: not in the frozen manifest")
+        else:
+            problems += verify_files(root, [entries[rel]], set())
+    if problems:
+        res["satisfied"] = False
+    else:
+        res["covers_checks"] = {"files": [f"sha256 mismatch: {art}"]}
+    return res
+
+
+def _verify_glm_config_echo(dev, cfg: dict[str, Any], root: Path, manifest: dict[str, Any]):
+    """D2: the GLM training stage echoes the training config (hash and the ``models`` subtree) in
+    three places (``train.config_summary`` -> cv_glm.json /config, ``freeze.check_training_record``
+    -> manifest /training_record, ``cv_report`` -> the hash line of glm_cv.md). The committed echo
+    must equal the current config restricted to the committed keys; the added keys are exactly the
+    pinned ones with the pinned value hashes; the old/new hashes are pinned; every other field of
+    cv_glm.json is exact (volatile telemetry keys excepted, as in the strict check)."""
+    res = _new_result(dev)
+    problems = res["problems"]
+    cv_rel, md_rel = dev["echoes"]["cv_json"], dev["echoes"]["report"]
+    old, new = dev["old_config_sha256"], dev["new_config_sha256"]
+    chk = cfg["freeze"]["check"]
+    cv_file, md_file = root / cv_rel, root / md_rel
+    if not cv_file.is_file():
+        return res
+    cv_new_bytes = cv_file.read_bytes()
+    try:
+        committed_bytes = git_blob(root, "HEAD", cv_rel)
+    except FreezeError:
+        return res
+    md_base = md_new = None
+    try:
+        md_base = git_blob(root, "HEAD", md_rel).decode("utf-8")
+        md_new = md_file.read_text(encoding="utf-8") if md_file.is_file() else None
+    except (FreezeError, OSError, ValueError):
+        pass
+    cv_changed = cv_new_bytes != committed_bytes
+    md_changed = md_new is not None and md_base is not None and md_new != md_base
+    if not cv_changed and not md_changed:
+        return res
+    try:
+        base_doc = strict_json_loads(committed_bytes.decode("utf-8"))
+        new_doc = strict_json_loads(cv_new_bytes.decode("utf-8"))
+        bcfg, ncfg = base_doc["config"], new_doc["config"]
+    except (ValueError, KeyError, TypeError) as exc:
+        problems.append(f"{cv_rel}: unreadable echo ({exc})")
+        res["satisfied"] = False
+        return res
+    expected = json.loads(json.dumps(config_summary(main_config(cfg)), default=str))
+    if expected["config_sha256"] != new:
+        problems.append("the hash of the current config differs from the pinned new hash")
+    if ncfg != expected:
+        problems.append(f"{cv_rel}: the new echo is not the echo of the current config")
+    if bcfg.get("config_sha256") != old:
+        problems.append(f"{cv_rel}: the committed hash is not the pinned old hash")
+    if ncfg.get("config_sha256") != new:
+        problems.append(f"{cv_rel}: the new hash is not the pinned new hash")
+    added, removed = _key_diff(bcfg, ncfg)
+    if removed or sorted(added) != sorted(dev["added_keys"]):
+        problems.append(
+            f"{cv_rel}: added keys {added} / removed keys {removed} differ from the pin"
+        )
+    for dotted, pinned in dev["added_value_sha256"].items():
+        try:
+            value = _ptr_get(ncfg, dotted.replace(".", "/"))
+        except (KeyError, IndexError, ValueError, TypeError):
+            problems.append(f"{cv_rel}: pinned added key {dotted} not found")
+            continue
+        if canonical_sha256(value) != pinned:
+            problems.append(f"{cv_rel}: value of the added key {dotted} differs from its pin")
+    restricted = copy.deepcopy(_restrict(expected, bcfg))
+    restricted["config_sha256"] = old
+    if not compare_values(bcfg, restricted).ok:
+        problems.append(f"{cv_rel}: the committed echo is not the current config restricted to it")
+    rest = lambda d: {k: v for k, v in d.items() if k != "config"}  # noqa: E731
+    if not compare_values(
+        rest(base_doc), rest(new_doc), drop=frozenset(chk["volatile_keys"]),
+        exact_keys=frozenset(chk["exact_keys"]),
+    ).ok:  # fmt: skip
+        problems.append(f"{cv_rel}: differs from the committed file outside /config")
+    tr = manifest.get("training_record", {})
+    if tr.get("glm_config_sha256_at_training") != old:
+        problems.append(
+            "manifest /training_record/glm_config_sha256_at_training is not the old pin"
+        )
+    if md_changed and (md_base.count(old) != 1 or md_new.count(new) != 1 or old in md_new):
+        problems.append(
+            f"{md_rel}: the hash line is not the pinned old hash replaced by the new one"
+        )
+    # Static evidence is a recorded, labelled grep listing (a regex over module text): it can miss a
+    # read through another idiom, so it is documentation only and never a pass/fail input.
+    evidence = dev["static_evidence"]
+    scanned = scan_readers(evidence, root)
+    declared = {k: sorted(v["modules"]) for k, v in evidence["keys"].items()}
+    glm_modules = set(evidence["glm_training_modules"])
+    res["static_evidence"] = {
+        "label": "informational grep listing (regex); not proof, not a pass/fail input",
+        "scanned": scanned,
+        "listing_at_amendment": declared,
+        "listing_unchanged": scanned == declared,
+        "glm_training_modules": evidence["glm_training_modules"],
+        "glm_training_modules_matching": {
+            k: sorted(set(m) & glm_modules) for k, m in scanned.items()
+        },
+    }
+    if cv_changed:
+        res["applied"].append({"place": f"{cv_rel} /config/config_sha256", "base": old, "new": new})
+        res["applied"] += [
+            {"place": f"{cv_rel} /config/{k.replace('.', '/')}", "base": "<absent>",
+             "new": f"sha256 {dev['added_value_sha256'][k]}"}
+            for k in dev["added_keys"]
+        ]  # fmt: skip
+        res["applied"].append(
+            {"place": "manifest /training_record/glm_config_sha256_at_training",
+             "base": old, "new": new}
+        )  # fmt: skip
+    if md_changed:
+        res["applied"].append({"place": f"{md_rel} hash line", "base": old, "new": new})
+    if problems:
+        res["satisfied"] = False
+        return res
+    paths = {"/config/" + k.replace(".", "/") for k in dev["added_keys"]} | {
+        "/config/config_sha256"
+    }
+    if cv_changed:
+        res["covers_checks"] = {
+            "manifest_fields": ["/training_record/glm_config_sha256_at_training"],
+            f"telemetry:{cv_rel}": sorted(paths),
+        }
+        res["covers_files"].append(cv_rel)
+    if md_changed:
+        # the whole file (this substitution plus the pinned timing cells) is judged by D3 only
+        res["md_substitutions"] = {md_rel: [old, new]}
+    return res
+
+
+_DECIMAL = r"\d+(?:\.\d+)?(?:[eE][+-]?\d+)?"  # a finite non-negative decimal literal
+_TABLE_CELL = re.compile(rf"( *)({_DECIMAL})( *)")
+_BULLET_SECONDS = re.compile(rf"- (\w+): ({_DECIMAL}) s")
+
+
+def _is_number(text: str) -> bool:
+    return re.fullmatch(_DECIMAL, text) is not None and math.isfinite(float(text))
+
+
+def _producer_format(renderer: str) -> Any:
+    """The producer's own formatter of a timing value: the ``cv_report`` table cell formatter or the
+    ``gbm_report`` bullet formatter (one decimal, as ``- <stage>: <n> s``)."""
+    from . import cv_report, gbm_report
+
+    if renderer == "cv_report":
+        return lambda v: cv_report._f(v)
+    if renderer == "gbm_report":
+        return lambda v: f"{gbm_report._f(v, 1)}"
+    raise KeyError(renderer)
+
+
+def _telemetry_cell(a: str, b: str, style: str, column: int, timings: dict[str, Any],
+                    fmt: Any) -> str | None:  # fmt: skip
+    """Why the two differing lines of a pinned section are not a pure telemetry-cell difference,
+    or None. ``table``: only the pinned column differs, both sides numbers with equal padding;
+    ``bullet_seconds``: ``- key: <number> s`` on both sides with the same key. In both cases the new
+    text must equal the producer's rendering of the stage's value in the regenerated JSON."""
+    if style == "table":
+        pa, pb = a.split("|"), b.split("|")
+        i = column + 1  # the line starts with "|"
+        if not (a.startswith("|") and len(pa) == len(pb) and i < len(pa) - 1):
+            return "not a table row of the same shape"
+        if [x for j, x in enumerate(pa) if j != i] != [x for j, x in enumerate(pb) if j != i]:
+            return "a cell outside the pinned column differs"
+        ma, mb = _TABLE_CELL.fullmatch(pa[i]), _TABLE_CELL.fullmatch(pb[i])
+        if not (ma and mb and ma[1] == mb[1] and ma[3] == mb[3]):
+            return "the pinned cell is not a plain number on both sides"
+        if not (_is_number(ma[2]) and _is_number(mb[2])):
+            return "the pinned cell is not finite"
+        key, value, text = pa[1].strip(), None, mb[2]
+    else:
+        ma, mb = _BULLET_SECONDS.fullmatch(a), _BULLET_SECONDS.fullmatch(b)
+        if not (ma and mb and ma[1] == mb[1]):
+            return "not a '- key: <number> s' line with the same key"
+        if not (_is_number(ma[2]) and _is_number(mb[2])):
+            return "the value is not finite"
+        key, text = ma[1], mb[2] + " s"
+    if key not in timings:
+        return f"stage {key!r} is not in the regenerated JSON timing_seconds"
+    value = timings[key]
+    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+        return f"the JSON timing of {key!r} is not a finite number"
+    expected = fmt(value) + (" s" if style != "table" else "")
+    if text != expected:
+        return f"{text!r} is not the producer's rendering {expected!r} of the JSON value"
+    return None
+
+
+def md_telemetry_differences(base: str, new: str, spec: dict[str, Any],
+                             timings: dict[str, Any] | None = None):  # fmt: skip
+    """Compare a markdown file with its committed text: every byte must be identical except the
+    pinned telemetry cells inside the pinned section, each equal to the producer's rendering of the
+    regenerated JSON value (``timings``). The pinned heading, marker and table header must exist
+    exactly once in both texts. Returns (problems, changed cells)."""
+    lb, ln = base.split("\n"), new.split("\n")
+    if len(lb) != len(ln):
+        return ["the number of lines differs"], []
+    head = spec["heading"]
+    starts = [i for i, x in enumerate(lb) if x == head]
+    if len(starts) != 1 or ln[starts[0]] != head or ln.count(head) != 1:
+        return [f"pinned heading {head!r} is not unique at the same line in both files"], []
+    start = starts[0]
+    end = next((i for i in range(start + 1, len(lb)) if re.match(r"#{1,2} ", lb[i])), len(lb))
+    cells, problems = spec["cells"], []
+    try:
+        fmt = _producer_format(spec["renderer"])
+    except KeyError:
+        return [f"unknown renderer {spec.get('renderer')!r}"], []
+    if not isinstance(timings, dict):
+        return ["the regenerated JSON has no timing_seconds mapping"], []
+    marker = cells.get("after")
+    first = start + 1
+    if marker is not None:
+        marks = [i for i in range(start + 1, end) if lb[i].startswith(marker)]
+        if len(marks) != 1 or sum(x.startswith(marker) for x in ln[start + 1 : end]) != 1:
+            return [f"marker {marker!r} is not unique in the pinned section"], []
+        first = marks[0] + 1
+    header = cells.get("header")
+    if header is not None and (
+        lb[start + 1 : end].count(header) != 1 or ln[start + 1 : end].count(header) != 1
+    ):
+        return [f"table header {header!r} is not unique in the pinned section"], []
+    changed = []
+    for i, (a, b) in enumerate(zip(lb, ln, strict=True)):
+        if a == b:
+            continue
+        if not first <= i < end:
+            problems.append(f"line {i + 1} differs outside the pinned cells")
+            continue
+        why = _telemetry_cell(a, b, cells["style"], int(cells.get("column", 0)), timings, fmt)
+        if why:
+            problems.append(f"line {i + 1}: {why}")
+        else:
+            changed.append({"line": i + 1, "base": a.strip(), "new": b.strip()})
+    return problems, changed
+
+
+def _verify_markdown_telemetry(dev, cfg: dict[str, Any], root: Path, manifest: dict[str, Any],
+                               prior: list[dict[str, Any]]):  # fmt: skip
+    """D3: the markdown renderings of the volatile telemetry (``timing_seconds``). Within the pinned
+    section of each pinned file only the pinned cells may differ; each equals the producer's
+    rendering of the corresponding value of the regenerated JSON; every other byte is identical to
+    the committed text (after the hash-line substitution of a satisfied D2). Any other file or
+    section is not covered."""
+    res = _new_result(dev)
+    problems = res["problems"]
+    volatile = set(cfg["freeze"]["check"]["volatile_keys"])
+    if not set(dev["volatile_keys"]) <= volatile:
+        problems.append("the rendered keys are not declared volatile in the check policy")
+    subs: dict[str, list[str]] = {}
+    for r in prior:
+        if r["satisfied"]:
+            subs.update(r.get("md_substitutions", {}))
+    for spec in dev["files"]:
+        rel, file = spec["path"], root / spec["path"]
+        try:
+            base = git_blob(root, "HEAD", rel).decode("utf-8")
+            new = file.read_text(encoding="utf-8") if file.is_file() else None
+        except (FreezeError, OSError, ValueError):
+            continue
+        if new is None or new == base:
+            continue
+        if rel in subs:
+            base = base.replace(*subs[rel])
+        try:
+            doc = strict_json_loads((root / spec["json"]).read_text(encoding="utf-8"))
+            timings = doc["timing_seconds"]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            problems.append(f"{rel}: the regenerated JSON {spec.get('json')} is unreadable ({exc})")
+            continue
+        bad, changed = md_telemetry_differences(base, new, spec, timings)
+        problems += [f"{rel}: {p}" for p in bad]
+        if not bad:
+            res["covers_files"].append(rel)
+            res["applied"] += [
+                {"place": f"{rel}:{c['line']}", "base": c["base"], "new": c["new"]} for c in changed
+            ]
+    if problems:
+        res["satisfied"] = False
+        res["covers_files"] = []
+    return res
+
+
+_VERIFIERS = {
+    "download_metadata": _verify_download_metadata,
+    "glm_config_echo": _verify_glm_config_echo,
+    "markdown_telemetry": _verify_markdown_telemetry,
+}
+
+
+def verify_amendment(
+    amendment: dict[str, Any], cfg: dict[str, Any], root: Path
+) -> list[dict[str, Any]]:
+    """Evaluate every declared deviation of ``amendment`` against the files under ``root``. A
+    deviation is ``satisfied`` unless a difference it would excuse breaks one of its pins; it
+    ``covers`` failed checks and compared files only if satisfied and the difference exists."""
+    paths = project_paths(cfg, root)
+    out = []
+    try:
+        manifest = strict_json_loads((root / paths["manifest"]).read_text(encoding="utf-8"))
+        manifest["files"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return [
+            {**_new_result(d), "satisfied": False, "problems": ["frozen manifest unreadable"]}
+            for d in amendment["declared_deviations"]
+        ]
+    for dev in amendment["declared_deviations"]:
+        verifier = _VERIFIERS.get(dev["kind"])
+        if verifier is None:
+            out.append({**_new_result(dev), "satisfied": False, "problems": ["unknown kind"]})
+        elif dev["kind"] == "download_metadata":
+            out.append(verifier(dev, root, manifest))
+        elif dev["kind"] == "markdown_telemetry":
+            out.append(verifier(dev, cfg, root, manifest, out))  # after D2: its hash substitution
+        else:
+            out.append(verifier(dev, cfg, root, manifest))
+    return out
+
+
+def declared_coverage(
+    checks: list[dict[str, Any]], results: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Which failed checks of a strict result are covered by satisfied deviations: all mismatches
+    of the check are structural, complete (not truncated) and at paths a deviation declares."""
+    allowed: dict[str, dict[str, set[str]]] = {}
+    for r in results:
+        if r["satisfied"]:
+            for name, paths in r["covers_checks"].items():
+                allowed.setdefault(name, {}).setdefault(r["id"], set()).update(paths)
+    covered, uncovered, used = [], [], set()
+    for c in checks:
+        if c["status"] != "fail":
+            continue
+        ids = allowed.get(c["name"], {})
+        paths = set().union(*ids.values()) if ids else set()
+        mm = c["mismatches"]
+        ok = (
+            bool(paths)
+            and c["n_numeric"] == 0
+            and c["n_structural"] == len(mm)
+            and all(m["kind"] == "structural" and m["path"] in paths for m in mm)
+        )
+        (covered if ok else uncovered).append(c["name"])
+        if ok:
+            used.update(ids)
+    return {
+        "covered_failures": covered,
+        "uncovered_failures": uncovered,
+        "all_failures_covered": bool(covered) and not uncovered,
+        "deviations_used": sorted(used),
+    }
+
+
+def deviation_report(
+    amendments: list[dict[str, Any]], cfg: dict[str, Any], root: Path, checks: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """The ``declared_deviations`` block of a ``freeze --check`` result (report only: ``passed``
+    and the exit code stay strict)."""
+    results = [r for a in amendments for r in verify_amendment(a, cfg, root)]
+    cov = declared_coverage(checks, results)
+    return {
+        "amendments": [a["id"] for a in amendments],
+        "deviations": [
+            {k: r[k] for k in ("id", "satisfied", "problems", "applied")} for r in results
+        ],
+        **cov,
+    }
+
+
 def run_freeze_check(
     cfg: dict[str, Any], config_path: str | Path, root: Path | None = None
 ) -> dict[str, Any]:
@@ -1232,7 +1742,7 @@ def run_freeze_check(
     checks.append(_check("published_evidence", problems=_evidence_problems(cfg, root, paths)))
 
     failed = [c for c in checks if c["status"] == "fail"]
-    return {
+    result = {
         "mode": "freeze-check",
         "passed": not failed,
         "numeric_only": all(c["numeric_only"] for c in failed),
@@ -1241,3 +1751,6 @@ def run_freeze_check(
         "head": head_commit(root),
         "checks": checks,
     }
+    if cfg.get("amendments"):  # report only: the strict result above is not changed
+        result["declared_deviations"] = deviation_report(cfg["amendments"], cfg, root, checks)
+    return result
