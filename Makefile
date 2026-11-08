@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split train sensitivities gbm interpret freeze rehearsal evaluate report all
+.PHONY: setup lint test download audit split train sensitivities gbm interpret freeze freeze-check reproduce rehearsal evaluate report all
 
 setup:
 	uv sync
@@ -52,4 +52,18 @@ evaluate:
 report:
 	uv run fremtpl2 report
 
-all: download audit split train gbm sensitivities interpret freeze
+# Strict, read-only verification of the committed freeze manifest against the regenerated artifacts
+# (writes nothing, needs no clean tree; usable after test access).
+freeze-check:
+	uv run fremtpl2 freeze --check
+
+# Rebuilds the pre-test pipeline in an isolated clean clone of HEAD and compares it with the committed
+# baseline; writes results/reproduction.json. Never recomputes held-out metrics.
+reproduce:
+	uv run fremtpl2 reproduce
+
+# After the test access (results/test_access.json exists) `freeze` is refused, so the strict check
+# replaces it; `report` runs only when a completed attempt exists (results/metrics.json).
+all: download audit split train gbm sensitivities interpret
+	@if [ -f results/test_access.json ]; then $(MAKE) freeze-check; else $(MAKE) freeze; fi
+	@if [ -f results/metrics.json ]; then $(MAKE) report; fi

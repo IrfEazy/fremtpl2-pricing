@@ -3,21 +3,29 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
+
+import requests
 
 from .audit import run_audit
 from .config import DEFAULT_CONFIG, ConfigError, load_config
 from .data import DataError
 from .download import DownloadError, run_download
 from .evaluate import run_evaluate, run_publish, run_rehearsal
-from .freeze import FreezeError, run_freeze
+from .freeze import FreezeError, run_freeze, run_freeze_check
 from .gbm import run_gbm
 from .interpret import run_interpret
 from .report import run_report
+from .reproduce import run_reproduce
 from .sensitivities import run_sensitivities
 from .split import run_split
 from .train import run_train
+
+NETWORK_EXIT_CODE = (
+    75  # EX_TEMPFAIL: a download step could not reach the network (not a data mismatch)
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     names = (
         "download", "audit", "split", "train", "sensitivities", "gbm", "interpret", "freeze",
-        "evaluate", "report",
+        "evaluate", "report", "reproduce",
     )  # fmt: skip
     for name in names:
         p = sub.add_parser(name, help=f"{name} step")
@@ -39,6 +47,18 @@ def build_parser() -> argparse.ArgumentParser:
                 "--force",
                 action="store_true",
                 help="replace an existing manifest (refused once the test set was accessed)",
+            )
+            p.add_argument(
+                "--check",
+                action="store_true",
+                help="strict read-only verification of the committed manifest against the "
+                "regenerated artifacts (writes nothing; allowed after test access)",
+            )
+        if name == "reproduce":
+            p.add_argument(
+                "--force-clean",
+                action="store_true",
+                help="delete a non-empty reproduce.workdir (only inside paths.processed) first",
             )
         if name == "evaluate":
             p.add_argument(
@@ -87,7 +107,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "report":
             run_report(cfg)
         elif args.command == "freeze":
+            if args.check:
+                if args.force:
+                    raise FreezeError("--check is read-only and cannot be combined with --force")
+                res = run_freeze_check(cfg, args.config)
+                print(json.dumps(res, indent=2))
+                return 0 if res["passed"] else 1
             run_freeze(cfg, args.config, force=args.force)
+        elif args.command == "reproduce":
+            rec = run_reproduce(cfg, args.config, force_clean=args.force_clean)
+            print(f"reproduce: {rec['verdict']} ({rec['total_seconds']:.0f}s), see the record")
+            return 0 if rec["verdict"] in ("EXACT_PASS", "PORTABLE_NUMERIC_PASS") else 1
         elif args.command == "evaluate":
             if args.reason and not args.technical_rerun:
                 raise FreezeError("--reason is only used with --technical-rerun")
@@ -103,6 +133,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 run_evaluate(cfg, args.config, args.technical_rerun, args.reason)
         else:
             run_download(cfg, force=args.force)
+    except requests.RequestException as exc:  # network unavailable: a distinct exit code
+        print(f"error: network unavailable: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return NETWORK_EXIT_CODE
     except (DownloadError, DataError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

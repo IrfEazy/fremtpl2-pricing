@@ -1,6 +1,6 @@
 # Project conventions
 
-- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `interpret`, `freeze`, `evaluate`, `report`; modules
+- Layout: `src/fremtpl2_pricing/` (package, CLI `fremtpl2`: `download`, `audit`, `split`, `train`, `sensitivities`, `gbm`, `interpret`, `freeze`, `evaluate`, `report`, `reproduce`; modules
   `data` (verified load), `audit`, `clean` (single config-driven cleaning function), `targets`, `groups`,
   `split`, `features` (fold-fitted preprocessing), `glm` (glum GLMs), `metrics`, `train` (CV + final refits),
   `selection` (pure functions of protocol section 4: severity ladder, freq x sev vs Tweedie, with traces), `cv_report` (renders `reports/glm_cv.md` from `results/cv_glm.json`), `interpret` (train-only interpretation), `report` (test report), `figures` (deterministic matplotlib helpers)), `configs/` (YAML), `tests/` (offline, synthetic frames in `tests/synth.py`),
@@ -39,6 +39,50 @@
   `fremtpl2 evaluate --rehearsal` runs it on train fold `freeze.rehearsal.fold` with its own journal and outputs under
   `data/processed/rehearsal/` (no test row, no `results/` write); run it before the real evaluation. Agents never run
   `freeze` or `evaluate` (rehearsal included) on the real project unless the lead says so; `make all` stops at `freeze`. A crash between the journal append and the mirror write makes `evaluate` fail closed; the operator inspects both files and restores the mirror from the authoritative journal only (never the reverse), recorded as a technical note.
+- Reproduction (config `freeze.check:` and `reproduce:`). `fremtpl2 freeze --check` (module `freeze`, `run_freeze_check`) is
+  strict and read-only (writes nothing, needs no clean tree, allowed after test access, exit 1 on any mismatch, structured JSON on
+  stdout): the manifest is tracked and the HEAD blobs of its tracked files equal the manifest hashes; the manifest rebuilt in
+  memory by `build_manifest` equals the committed one except the declared `run_specific_keys` (zero tolerance); untracked
+  regenerated artifacts (models, split, raw) match the manifest sha256; tracked telemetry files (`telemetry_files`) are compared as
+  parsed JSON with the declared `volatile_keys` removed; once a test-state file exists the published evidence is verified
+  read-only with `report.load_completed` (journal COMPLETE, `results/metrics.json` pointer, every attempt file against the COMPLETE
+  hashes). `compare_values` is the one pure comparison: a float difference is "numeric" only at the config-declared
+  `freeze.check.numeric_paths` (per-fold losses, constants, stored predictions) and only outside `exact_keys`; every other
+  difference (ids, strings, ints, bools, key sets, list lengths, hyperparameters, chosen powers/penalties, manifest fields) is
+  structural and fails `reproduce`. `fremtpl2 reproduce [--force-clean]` (module `reproduce`) needs a clean source tree, clones
+  HEAD into `paths.processed/reproduce.workdir` (real path strictly inside `paths.processed`, not a symlink, never the root or an
+  ancestor; no `data/`, so no stale artifact), deletes every tracked file under `results/` and `reports/` of the clone except
+  `reproduce.preserve_paths` (published evidence and inputs no step regenerates), runs `reproduce.steps` with per-step seconds
+  and exit codes (stops at the first failure), then compares every tracked output with the HEAD blob: an output a step did not
+  regenerate fails; "exact" is equal bytes or a JSON that differs only in declared volatile keys; parsed-equal files with other
+  byte differences are "equivalent" and values within rtol/atol "tolerance" (portable at most); `byte_exact_paths` (renderer
+  outputs of committed evidence, e.g. `reports/test_evaluation.md`) must be byte-identical; a `.png` whose bytes differ passes
+  only as `pixel_equal` (portable, never exact) if the decoded pixels (`matplotlib.image.imread`) are identical, a pixel
+  difference or an undecodable figure fails. Any other tracked change, any untracked file outside `results/` and `reports/`, and any
+  symlinked or escaping artifact path fails. Each step may declare `outputs` (also under ignored paths such as `data/processed/`)
+  that must exist as regular files after it exits 0, else FAIL. The comparison rules (tolerances, exact keys, volatile keys,
+  byte-exact and preserved paths, the inventory of tracked outputs) are snapshotted from the SOURCE tree and commit before any
+  step and never re-read from the clone. JSON is parsed strictly (duplicate keys are rejected); shape (keys, types, list lengths
+  and order) is compared first and never tolerated, non-finite numbers pass only if identical to the committed ones, `exact_keys`
+  cover their descendants, and a float passes iff `|a - b| <= atol + rtol * |a|` with `a` the committed value. A `freeze --check`
+  failure whose mismatches are all numeric does not stop the run (strict check recorded as failed, `report` and the
+  classification still run); integrity, structural or execution failures stop it. Verdicts:
+  `EXACT_PASS`, `PORTABLE_NUMERIC_PASS` (strict check failed only numerically, outputs within tolerance or figures pixel-equal),
+  `FAIL` (including a raw data checksum mismatch at download and any step failure not listed next), `UNSUPPORTED_ENVIRONMENT`
+  (only exit 127 of a `reproduce.tool_commands` tool such as `uv`/`git`, or a `reproduce.transport_exit_codes` code, 75 for no
+  network at download). The clone must be at the tested commit (`git rev-parse` in the clone), else FAIL. The record goes to
+  `results/reproduction.json` of the source tree with the tested and clone commits, tool versions (uv, git, python), the preserved
+  evidence identities (journal, pointer and manifest sha256, attempt id) and the recomputable inventory.
+  Scope: `EXACT_PASS` means exact reproduction of the declared recomputable artifacts plus verification of preserved published
+  evidence; held-out metrics are not recomputed. Reproduction rebuilds the pre-test artifacts and verifies them against the
+  published freeze, validates (exact inventory: no missing or unexpected attempt entry, one COMPLETE, unique attempt identity, a
+  pointer resolving inside `results/test/`, no symlink) and re-renders the published evaluation outputs (`report`), and never
+  recomputes held-out metrics; `freeze` and `evaluate` are not steps. Accepted limits: volatile keys are matched by name at any
+  depth (the declared list is verified to be telemetry only), and byte-different model files are structural (the `model_files`
+  check is not numeric) and block portability until a semantic model comparison exists. Never run `reproduce`,
+  `freeze --check` or `make all` on the real project unless the lead says so. `make all` ends with `freeze --check` instead of
+  `freeze` once `results/test_access.json` exists, then `report` when `results/metrics.json` exists; `make freeze-check`,
+  `make reproduce`.
 - Evaluation protocol: the grouped split (group = tuple of all rating factors) is the pre-registered
   primary; the random split is a labelled sensitivity. Do not change the choice after seeing test
   results. `reports/evaluation_protocol.md` (2026-11-08) governs milestone 3 and the single test
@@ -76,6 +120,6 @@
   Before the CV loop `train.check_level_coverage` fails fast if a feature map would not cover its validation part. Outputs: `results/cv_glm.json`, `results/glm_relativities_*.csv`,
   `results/feature_map.json`, `results/glm_models.json`, `reports/glm_cv.md`. The excess loading is only
   reported (separate block), never part of a CV target. The bootstrap block is not applied in train/CV; `fremtpl2 evaluate` applies it to the test set (paired group bootstrap, `metrics.ratio_bootstrap`).
-- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make interpret` (train-only interpretation; before `freeze`), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`), `make report` (test report after `evaluate`; explicit).
+- Commands: `make setup`, `make test` (`uv run pytest -q`), `make train` (CV of the GLMs on train only), `make gbm` (GBM tuning, train only; about 10-15 minutes, see `results/cv_gbm.json` timings), `make lint` (ruff check + format --check), `make interpret` (train-only interpretation; before `freeze`), `make freeze` (train only), `make rehearsal` (the evaluate code path on a train fold, no test row), `make evaluate` (the one-shot test evaluation; never in `make all`), `make report` (test report after `evaluate`; explicit), `make freeze-check`, `make reproduce` (see Reproduction).
   Tests are offline; only `fremtpl2 download` touches the network.
 - Commits: small and focused, one line `type(scope): summary`, no footer. Do not push unless explicitly asked.

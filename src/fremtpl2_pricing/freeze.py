@@ -30,12 +30,16 @@ files) and never fits anything.
 from __future__ import annotations
 
 import datetime as dt
+import fnmatch
 import hashlib
 import importlib.metadata
 import json
+import math
 import platform
 import subprocess
 import sys
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -80,6 +84,22 @@ def git(root: Path, *args: str) -> str:
         detail = getattr(exc, "stderr", "") or str(exc)
         raise FreezeError(f"git {' '.join(args)} failed: {detail.strip()}") from exc
     return out.stdout
+
+
+def git_blob(root: Path, rev: str, rel: str) -> bytes:
+    """Bytes of ``rel`` at revision ``rev`` (the committed original)."""
+    try:
+        out = subprocess.run(
+            ["git", "show", f"{rev}:{rel}"], cwd=root, capture_output=True, check=True
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise FreezeError(f"git show {rev}:{rel} failed") from exc
+    return out.stdout
+
+
+def git_tracked(root: Path, rev: str = "HEAD") -> set[str]:
+    """Paths tracked at revision ``rev``."""
+    return set(git(root, "ls-tree", "-r", "--name-only", "-z", rev).split("\0")) - {""}
 
 
 def assert_clean_tree(root: Path, ignore: frozenset[str] = frozenset()) -> None:
@@ -856,3 +876,368 @@ def run_freeze(
     tmp.write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     tmp.replace(target)
     return manifest
+
+
+# --------------------------------------------------------------------------- strict check
+
+
+@dataclass
+class Comparison:
+    """Result of :func:`compare_values`. ``numeric`` mismatches are float differences beyond the
+    tolerance; every other difference (keys, types, ints, strings, list lengths, ``exact_keys``
+    subtrees) is ``structural`` and is never tolerated."""
+
+    mismatches: list[dict[str, Any]] = field(default_factory=list)
+    n_numeric: int = 0
+    n_structural: int = 0
+    n_within_tolerance: int = 0
+    max_abs: float = 0.0
+    max_rel: float = 0.0
+    limit: int = 10
+
+    @property
+    def ok(self) -> bool:
+        return self.n_numeric + self.n_structural == 0
+
+    @property
+    def numeric_only(self) -> bool:
+        return self.n_structural == 0
+
+    def add(self, path: str, kind: str, base: Any, new: Any) -> None:
+        if kind == "numeric":
+            self.n_numeric += 1
+        else:
+            self.n_structural += 1
+        if len(self.mismatches) < self.limit:
+            self.mismatches.append(
+                {"path": path, "kind": kind, "base": _short(base), "new": _short(new)}
+            )
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "numeric_only": self.numeric_only,
+            "n_numeric": self.n_numeric,
+            "n_structural": self.n_structural,
+            "n_within_tolerance": self.n_within_tolerance,
+            "max_abs": self.max_abs,
+            "max_rel": self.max_rel,
+            "mismatches": self.mismatches,
+        }
+
+
+def _short(v: Any) -> str:
+    text = repr(v)
+    return text if len(text) <= 80 else text[:77] + "..."
+
+
+def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        out[key] = value
+    return out
+
+
+def strict_json_loads(text: str) -> Any:
+    """``json.loads`` that rejects duplicate object keys (``ValueError``). Non-finite numbers are
+    parsed, not accepted silently: :func:`compare_values` treats a non-finite value as a
+    difference unless the committed value is identical."""
+    return json.loads(text, object_pairs_hook=_no_duplicates)
+
+
+def compare_values(
+    base: Any,
+    new: Any,
+    *,
+    rtol: float = 0.0,
+    atol: float = 0.0,
+    drop: frozenset[str] | set[str] = frozenset(),
+    exact_keys: frozenset[str] | set[str] = frozenset(),
+    numeric_paths: Sequence[str] | None = None,
+    limit: int = 10,
+) -> Comparison:
+    """Compare two parsed JSON values; ``base`` is the committed reference. Dict keys in ``drop``
+    are ignored at any depth (matched by name). The shape (keys, types, list lengths) is compared
+    first; only if it is identical are values compared: floats may differ within
+    ``|a - b| <= atol + rtol * |a|`` with ``a`` the committed value (strict mode: zero
+    tolerance), non-finite floats only if identical; ints, bools, strings and everything below a
+    key in ``exact_keys`` (descendants included) must be equal. If
+    ``numeric_paths`` (fnmatch patterns on the ``/``-joined path) is given, a float difference
+    is only classed numeric (and only tolerated) at a matching path; anywhere else it is
+    structural."""
+    out = Comparison(limit=limit)
+
+    def shape(a: Any, b: Any, path: str) -> None:
+        if isinstance(a, dict) and isinstance(b, dict):
+            ka, kb = set(a) - drop, set(b) - drop
+            for k in sorted(ka - kb):
+                out.add(f"{path}/{k}", "structural", a[k], "<missing>")
+            for k in sorted(kb - ka):
+                out.add(f"{path}/{k}", "structural", "<missing>", b[k])
+            for k in sorted(ka & kb):
+                shape(a[k], b[k], f"{path}/{k}")
+        elif isinstance(a, list) and isinstance(b, list):
+            if len(a) != len(b):
+                out.add(path, "structural", f"list[{len(a)}]", f"list[{len(b)}]")
+                return
+            for i, (x, y) in enumerate(zip(a, b, strict=True)):
+                shape(x, y, f"{path}[{i}]")
+        elif type(a) is not type(b):
+            out.add(path, "structural", a, b)
+
+    def walk(a: Any, b: Any, path: str, tolerant: bool) -> None:
+        if isinstance(a, dict) and isinstance(b, dict):
+            ka, kb = set(a) - drop, set(b) - drop
+            for k in sorted(ka - kb):
+                out.add(f"{path}/{k}", "structural", a[k], "<missing>")
+            for k in sorted(kb - ka):
+                out.add(f"{path}/{k}", "structural", "<missing>", b[k])
+            for k in sorted(ka & kb):
+                walk(a[k], b[k], f"{path}/{k}", tolerant and k not in exact_keys)
+        elif isinstance(a, list) and isinstance(b, list):
+            if len(a) != len(b):
+                out.add(path, "structural", f"list[{len(a)}]", f"list[{len(b)}]")
+                return
+            for i, (x, y) in enumerate(zip(a, b, strict=True)):
+                walk(x, y, f"{path}[{i}]", tolerant)
+        elif type(a) is float and type(b) is float:
+            if a == b or (math.isnan(a) and math.isnan(b)):
+                return
+            if not (math.isfinite(a) and math.isfinite(b)):
+                out.add(path, "structural", a, b)
+                return
+            diff = abs(a - b)
+            rel = diff / max(abs(a), abs(b))
+            out.max_abs, out.max_rel = max(out.max_abs, diff), max(out.max_rel, rel)
+            numeric = tolerant and (
+                numeric_paths is None or any(fnmatch.fnmatchcase(path, p) for p in numeric_paths)
+            )
+            if numeric and diff <= atol + rtol * abs(a):
+                out.n_within_tolerance += 1
+            else:
+                out.add(path, "numeric" if numeric else "structural", a, b)
+        elif type(a) is not type(b) or a != b:
+            out.add(path, "structural", a, b)
+
+    shape(base, new, "")
+    if out.n_structural:  # a different shape is never compared numerically
+        return out
+    walk(base, new, "", True)
+    return out
+
+
+def _check(name: str, cmp: Comparison | None = None, problems: list[str] | None = None,
+           numeric: bool = False) -> dict[str, Any]:  # fmt: skip
+    """One entry of the structured result. ``cmp`` and/or free-text ``problems`` (each counted as
+    one mismatch; structural unless ``numeric``)."""
+    problems = problems or []
+    res: dict[str, Any] = cmp.summary() if cmp else {
+        "ok": True, "numeric_only": True, "n_numeric": 0, "n_structural": 0,
+        "n_within_tolerance": 0, "max_abs": 0.0, "max_rel": 0.0, "mismatches": [],
+    }  # fmt: skip
+    for text in problems:
+        res["ok"] = False
+        res["numeric_only"] = res["numeric_only"] and numeric
+        res["n_numeric" if numeric else "n_structural"] += 1
+        res["mismatches"].append({"path": text, "kind": "numeric" if numeric else "structural"})
+    return {"name": name, "status": "pass" if res["ok"] else "fail", **res}
+
+
+def _manifest_groups(manifest: dict[str, Any], run_specific: set[str]) -> dict[str, Any]:
+    groups = {
+        "selection": ("candidates", "selected_glm_id", "selected_gbm_id", "selection"),
+        "recipes": ("recipes",),
+        "self_check": ("self_check",),
+    }
+    used = {k for keys in groups.values() for k in keys} | {"files"} | run_specific
+    out = {name: {k: manifest.get(k) for k in keys} for name, keys in groups.items()}
+    out["manifest_fields"] = {k: v for k, v in manifest.items() if k not in used}
+    out["file_list"] = [(f["path"], f["role"]) for f in manifest.get("files", [])]
+    return out
+
+
+def _evidence_inventory(root: Path, paths: dict[str, Any], events: list[dict[str, Any]],
+                        complete: dict[str, Any]) -> list[str]:  # fmt: skip
+    """Exact inventory of the published evidence against the COMPLETE event: one COMPLETE and
+    unique attempt identities, no symlinked or escaping artifact, a pointer that resolves inside
+    the attempts directory, and exactly the staged outputs in the attempt directory (neither
+    missing nor unexpected entries)."""
+    problems = []
+    real_root = root.resolve()
+    done = [e for e in events if e["event"] == "COMPLETE"]
+    if len(done) != 1:
+        problems.append(f"{len(done)} COMPLETE events (exactly one is allowed)")
+    for key in ("attempt_id", "attempt"):
+        values = [e[key] for e in events if e["event"] == "TEST_OPENED" and key in e]
+        if len(values) != len(set(values)):
+            problems.append(f"duplicate attempt identity ({key}) in the journal")
+    attempts = (root / paths["attempts"]).resolve()
+    adir = root / complete["publish_dir"]
+    if (
+        adir.is_symlink()
+        or not adir.resolve().is_relative_to(attempts)
+        or adir.resolve() == attempts
+    ):
+        problems.append(f"{complete['publish_dir']}: resolves outside {paths['attempts']}")
+        return problems
+    for rel in (paths["state"], paths["pointer"]):
+        f = root / rel
+        if f.is_symlink() or not f.resolve().is_relative_to(real_root):
+            problems.append(f"{rel}: symlinked or escaping artifact path")
+    found = set()
+    for f in sorted(adir.rglob("*")):
+        rel = f.relative_to(adir).as_posix()
+        if f.is_symlink():
+            problems.append(f"{complete['publish_dir']}/{rel}: symlinked artifact")
+        elif f.is_file():
+            found.add(rel)
+    staged = set(complete["staged"])
+    for name in sorted(staged - found):
+        problems.append(f"{complete['publish_dir']}/{name}: missing")
+    for name in sorted(found - staged):
+        problems.append(f"{complete['publish_dir']}/{name}: unexpected entry (not in COMPLETE)")
+    return problems
+
+
+def _evidence_problems(cfg: dict[str, Any], root: Path, paths: dict[str, Any]) -> list[str]:
+    """Verify the published evaluation with the report loader (journal COMPLETE, pointer
+    resolution, every attempt output against the COMPLETE hashes) and its exact inventory.
+    Nothing to verify, and no problem, before any test access."""
+    if not has_test_state(root, paths):
+        return []
+    from .evaluate import real_sink  # local imports: both import this module
+    from .report import _journal_events, load_completed
+
+    try:
+        data = load_completed(cfg, root)
+        events, _ = _journal_events(real_sink(root, paths))
+        return _evidence_inventory(root, paths, events, data["complete"])
+    except (FreezeError, ValueError, OSError, KeyError, TypeError) as exc:
+        return [f"published evidence: {exc}"]
+
+
+def evidence_identity(cfg: dict[str, Any], root: Path) -> dict[str, Any] | None:
+    """Identities of the preserved published evidence (journal, pointer, attempt, manifest);
+    ``None`` before any test access. Preserved, not recomputed."""
+    paths = project_paths(cfg, root)
+    if not has_test_state(root, paths):
+        return None
+    out: dict[str, Any] = {}
+    try:
+        for key, rel in (("journal", "state"), ("pointer", "pointer"), ("manifest", "manifest")):
+            out[f"{key}_sha256"] = sha256_file(root / paths[rel])
+        from .report import load_completed
+
+        complete = load_completed(cfg, root)["complete"]
+        out.update(attempt_id=complete["attempt_id"], attempt=complete["attempt"])
+    except (FreezeError, ValueError, OSError, KeyError, TypeError) as exc:
+        out["error"] = str(exc)
+    return out
+
+
+def run_freeze_check(
+    cfg: dict[str, Any], config_path: str | Path, root: Path | None = None
+) -> dict[str, Any]:
+    """``fremtpl2 freeze --check``: strict, read-only verification of the committed manifest.
+
+    Writes nothing and does not need a clean tree. Never reads a test row. Returns a structured
+    result with one entry per check; ``passed`` is true only if every check passes; ``numeric_only``
+    tells whether every failure is a numeric one (float differences, bytes of regenerated model
+    files), which ``reproduce`` may accept under its declared tolerance."""
+    root = Path.cwd() if root is None else Path(root)
+    paths = project_paths(cfg, root)
+    chk = cfg["freeze"]["check"]
+    limit = int(chk["max_mismatches"])
+    run_specific = set(chk["run_specific_keys"])
+    volatile = frozenset(chk["volatile_keys"])
+    exact_keys = frozenset(chk["exact_keys"])
+    numeric_paths = list(chk["numeric_paths"])
+    telemetry = {f"{paths['results']}/{f}" for f in chk["telemetry_files"]}
+    checks: list[dict[str, Any]] = []
+    mpath = root / paths["manifest"]
+    if not mpath.is_file():
+        raise FreezeError(f"missing manifest: {paths['manifest']}")
+    manifest = strict_json_loads(mpath.read_text(encoding="utf-8"))
+    tracked = git_tracked(root)
+    entries = manifest["files"]
+
+    # (1) original-byte integrity: the committed bytes are the frozen bytes
+    problems = []
+    if paths["manifest"] not in tracked:
+        problems.append(f"{paths['manifest']}: the manifest is not tracked at HEAD")
+    elif git_blob(root, "HEAD", paths["manifest"]) != mpath.read_bytes():
+        problems.append(f"{paths['manifest']}: differs from the committed manifest")
+    for e in entries:
+        if e["path"] in tracked:
+            blob = git_blob(root, "HEAD", e["path"])
+            if hashlib.sha256(blob).hexdigest() != e["sha256"] or len(blob) != e["bytes"]:
+                problems.append(f"{e['path']}: HEAD blob differs from the manifest hash")
+    checks.append(_check("original_bytes", problems=problems))
+
+    # (2) the manifest rebuilt in memory equals the committed one (run-specific keys excluded)
+    try:
+        rebuilt = build_manifest(cfg, config_path, root)
+    except (FreezeError, OSError, KeyError, ValueError) as exc:
+        checks.append(_check("rebuild", problems=[f"manifest rebuild failed: {exc}"]))
+        rebuilt = None
+    if rebuilt is not None:
+        base = _manifest_groups(manifest, run_specific)
+        new = _manifest_groups(rebuilt, run_specific)
+        for name in base:
+            # float differences are numeric only where config declares it (losses, constants,
+            # stored predictions); ids, hyperparameters and every non-float are structural
+            cmp = compare_values(
+                base[name],
+                new[name],
+                exact_keys=exact_keys,
+                numeric_paths=numeric_paths if name != "manifest_fields" else [],
+                limit=limit,
+            )
+            checks.append(_check(name, cmp))
+
+    # (3) the hashed files
+    wrong, regenerated = [], []
+    model_prefix = paths["model_dir"] + "/"
+    for e in entries:
+        path = root / e["path"]
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            wrong.append(f"symlinked or escaping artifact path: {e['path']}")
+        elif not path.is_file():
+            wrong.append(f"missing file: {e['path']}")
+        elif e["path"] in telemetry and e["path"] in tracked:
+            try:
+                cmp = compare_values(
+                    strict_json_loads(git_blob(root, "HEAD", e["path"]).decode("utf-8")),
+                    strict_json_loads(path.read_text(encoding="utf-8")),
+                    drop=volatile,
+                    exact_keys=exact_keys,
+                    limit=limit,
+                )
+            except ValueError:
+                wrong.append(f"{e['path']}: not valid JSON")
+                continue
+            checks.append(_check(f"telemetry:{e['path']}", cmp))
+        elif sha256_file(path) != e["sha256"] or path.stat().st_size != e["bytes"]:
+            (regenerated if e["path"].startswith(model_prefix) else wrong).append(
+                f"sha256 mismatch: {e['path']}"
+            )
+    checks.append(_check("files", problems=wrong))
+    checks.append(
+        _check("model_files", problems=regenerated)
+    )  # byte-different models block portability
+
+    # (4) the published test evidence (journal COMPLETE, pointer, attempt hashes), read-only
+    checks.append(_check("published_evidence", problems=_evidence_problems(cfg, root, paths)))
+
+    failed = [c for c in checks if c["status"] == "fail"]
+    return {
+        "mode": "freeze-check",
+        "passed": not failed,
+        "numeric_only": all(c["numeric_only"] for c in failed),
+        "tolerance": {"rtol": 0.0, "atol": 0.0},
+        "manifest": paths["manifest"],
+        "head": head_commit(root),
+        "checks": checks,
+    }
