@@ -199,12 +199,23 @@ def tweedie_loglik(y, mu, phi: float, power: float, weight=None) -> float:
     return float(np.sum(tweedie_logpdf(y, mu, phi, power, weight)))
 
 
-def tweedie_mle_dispersion(
-    y, mu, power: float, weight=None, log_range: float = 3.0, xatol: float = 1e-3
-) -> float:
+def tweedie_mle_dispersion_fit(
+    y,
+    mu,
+    power: float,
+    weight=None,
+    log_range: float = 3.0,
+    xatol: float = 1e-3,
+    edge_rtol: float = 0.01,
+    max_expansions: int = 5,
+) -> tuple[float, int]:
     """Maximum-likelihood dispersion phi for fixed means: bounded 1-D search over log phi.
 
-    The search interval is the weighted Pearson estimate times exp(+-log_range)."""
+    The first bracket is the weighted Pearson estimate times exp(+-log_range). An optimum within
+    ``edge_rtol`` (relative to the half-width ``log_range``) of a bound is not trusted: the
+    bracket is extended by ``log_range`` on that side and the search repeated, up to
+    ``max_expansions`` times; if the optimum is still on a bound a ValueError is raised.
+    Returns (phi, number of expansions)."""
     y, mu, w = _prep(y, mu, weight)
     live = w > 0
     pearson = float(np.sum(w[live] * (y[live] - mu[live]) ** 2 / mu[live] ** power) / live.sum())
@@ -213,13 +224,26 @@ def tweedie_mle_dispersion(
     def neg(log_phi: float) -> float:
         return -tweedie_loglik(y, mu, float(np.exp(log_phi)), power, w)
 
-    res = minimize_scalar(
-        neg,
-        bounds=(centre - log_range, centre + log_range),
-        method="bounded",
-        options={"xatol": xatol},
+    lo, hi = centre - log_range, centre + log_range
+    margin = edge_rtol * log_range
+    for expansions in range(max_expansions + 1):
+        res = minimize_scalar(neg, bounds=(lo, hi), method="bounded", options={"xatol": xatol})
+        at_lo, at_hi = res.x - lo < margin, hi - res.x < margin
+        if not (at_lo or at_hi):
+            return float(np.exp(res.x)), expansions
+        if expansions == max_expansions:
+            break
+        lo -= log_range if at_lo else 0.0
+        hi += log_range if at_hi else 0.0
+    raise ValueError(
+        f"dispersion MLE (power {power}) is on the bracket bound after {max_expansions} "
+        f"expansions: log phi in [{lo:.3f}, {hi:.3f}], optimum {res.x:.3f}"
     )
-    return float(np.exp(res.x))
+
+
+def tweedie_mle_dispersion(y, mu, power: float, weight=None, **kwargs) -> float:
+    """Maximum-likelihood dispersion (see :func:`tweedie_mle_dispersion_fit`)."""
+    return tweedie_mle_dispersion_fit(y, mu, power, weight, **kwargs)[0]
 
 
 def deviance_explained(dev_model: float, dev_null: float) -> float:

@@ -167,6 +167,8 @@ def _fit(kind, X, y, weight, offset, family, power, solver=None) -> GLMModel:
 
 def _estimator(family, power, fit_intercept, solver=None) -> GeneralizedLinearRegressor:
     opts = {**DEFAULT_SOLVER, **(solver or {})}
+    # optional per-family overrides, e.g. {"tweedie": {"gradient_tol": 1e-5}}
+    opts.update((opts.get("by_family") or {}).get("tweedie" if power is not None else family, {}))
     if power is not None:
         family = TweedieDistribution(power)
     return GeneralizedLinearRegressor(

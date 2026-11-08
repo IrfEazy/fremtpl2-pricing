@@ -247,3 +247,129 @@ def test_weight_column_drives_rare_levels_and_reference():
     assert by_exposure["reference"] == "B1" and by_exposure["rare"] == ["B2", "B3"]
     by_claims = features.fit(df, cfg_with(1), weight_column="N", min_weight=10).levels["VehBrand"]
     assert by_claims["reference"] == "B2" and by_claims["rare"] == ["B1", "B3"]
+
+
+# ------------------------------------------------------------------ severity map (policy-derived)
+
+
+def sev_map(policies, min_claims=3, min_exposure=2, ordinal=("DrivAge", "VehAge", "VehPower")):
+    cfg = cfg_with(min_exposure)
+    pmap = features.fit(policies, cfg)
+    claims = policies[policies["N"] > 0]
+    return pmap, features.fit_severity(claims, cfg, pmap, min_claims, list(ordinal))
+
+
+def brand_frame(counts, zero_claim=()):
+    rows = [row(VehBrand=b, N=1) for b, n in counts.items() for _ in range(n)]
+    rows += [row(VehBrand=b, N=0) for b in zero_claim for _ in range(3)]
+    return frame(rows)
+
+
+def test_severity_level_with_zero_claims_maps_to_reference():
+    pol = brand_frame({"B1": 10, "B2": 5}, zero_claim=["B3"])
+    pmap, smap = sev_map(pol)
+    assert "B3" in pmap.levels["VehBrand"]["levels"]  # in the policy schema, no claims
+    info = smap.levels["VehBrand"]
+    assert info["merge"]["B3"] == "B1" and info["levels"] == ["B1", "B2"]
+    out = features.transform(frame([row(VehBrand="B3")]), smap)
+    assert out["VehBrand"].astype(str).tolist() == ["B1"]
+
+
+def test_severity_nominal_merge_into_other_or_reference():
+    # small levels together below the threshold -> reference
+    pol = brand_frame({"B1": 10, "B2": 4, "B3": 1, "B4": 1})
+    _, smap = sev_map(pol, min_claims=3, min_exposure=1)
+    info = smap.levels["VehBrand"]
+    assert info["merge"] == {"B1": "B1", "B2": "B2", "B3": "B1", "B4": "B1"}
+    assert "OTHER" not in info["levels"]
+    # together at least the threshold -> OTHER (new level, last)
+    pol = brand_frame({"B1": 10, "B2": 4, "B3": 2, "B4": 2})
+    _, smap = sev_map(pol, min_claims=3, min_exposure=1)
+    info = smap.levels["VehBrand"]
+    assert info["merge"]["B3"] == info["merge"]["B4"] == "OTHER"
+    assert info["levels"] == ["B1", "B2", "OTHER"] and info["reference"] == "B1"
+
+
+def test_severity_policy_other_level_below_threshold_joins_reference():
+    # B3 is rare for the policy map (exposure < 2) and becomes the policy OTHER level
+    pol = brand_frame({"B1": 10, "B2": 4})
+    pol = pd.concat([pol, frame([row(VehBrand="B3", Exposure=0.5, N=1)])], ignore_index=True)
+    pmap, smap = sev_map(pol, min_claims=3, min_exposure=2)
+    assert pmap.levels["VehBrand"]["levels"] == ["B1", "B2", "OTHER"]
+    info = smap.levels["VehBrand"]
+    assert info["merge"] == {"B1": "B1", "B2": "B2", "OTHER": "B1"}
+    out = features.transform(frame([row(VehBrand="B3"), row(VehBrand="B9")]), smap)
+    assert out["VehBrand"].astype(str).tolist() == ["B1", "B1"]  # unseen -> OTHER -> reference
+
+
+def test_severity_ordinal_merges_into_adjacent_level_with_more_claims():
+    ages = {20: 1, 23: 10, 28: 2, 35: 8}  # bands 18-20, 21-25, 26-30, 31-40
+    pol = frame([row(DrivAge=a, N=1) for a, n in ages.items() for _ in range(n)])
+    _, smap = sev_map(pol, min_claims=3, min_exposure=1)
+    m = smap.levels["DrivAge"]["merge"]
+    # smallest first: 18-20 -> only neighbour; then 26-30 -> the neighbour with more claims
+    assert m == {"18-20": "21-25", "21-25": "21-25", "26-30": "21-25", "31-40": "31-40"}
+    assert smap.levels["DrivAge"]["reference"] == "21-25"
+
+
+def test_severity_ordinal_tie_goes_toward_the_reference():
+    ages = {20: 20, 23: 6, 28: 1, 35: 6}  # 26-30 sits between two equal neighbours
+    pol = frame([row(DrivAge=a, N=1) for a, n in ages.items() for _ in range(n)])
+    _, smap = sev_map(pol, min_claims=3, min_exposure=1)
+    m = smap.levels["DrivAge"]["merge"]
+    assert smap.levels["DrivAge"]["reference"] == "18-20"
+    assert m["26-30"] == "21-25" and m["31-40"] == "31-40"  # toward the reference side
+
+
+def test_severity_value_outside_policy_schema_still_raises():
+    pol = brand_frame({"B1": 10, "B2": 5})
+    _, smap = sev_map(pol)
+    with pytest.raises(ValueError, match="VehGas"):
+        features.transform(frame([row(VehBrand="B1", VehGas="Electric")]), smap)
+    with pytest.raises(ValueError, match="DrivAge"):
+        features.transform(frame([row(DrivAge=90)]), smap)
+
+
+def test_severity_map_json_roundtrip_and_every_schema_level_predicts_finitely():
+    from fremtpl2_pricing import glm
+
+    pol = cleaned()
+    cfg = cfg_with(20)
+    pmap = features.fit(pol, cfg)
+    claims = pol[pol["N"] > 0]
+    smap = features.fit_severity(claims, cfg, pmap, 40, ["DrivAge", "VehAge", "VehPower"])
+    assert any(
+        len(smap.levels[f]["levels"]) < len(pmap.levels[f]["levels"]) for f in smap.levels
+    )  # the threshold actually merges something
+    assert features.FeatureMap.from_json(smap.to_json()).levels == smap.levels
+    cols = features.feature_names(cfg, "full")
+    Xc = features.transform(claims, smap)[cols]
+    avg = (claims["S_cap"] / claims["N"]).to_numpy()
+    model = glm.fit_severity(Xc, avg, claims["N"].to_numpy())  # no empty column
+    # every level of the policy schema gets a finite severity prediction
+    grid = []
+    for f in pmap.levels:
+        for lv in pmap.levels[f]["levels"]:
+            if lv != "OTHER" or lv in pmap.levels[f]["levels"]:
+                grid.append((f, lv))
+    base = pol.iloc[0:1]
+    for f, lv in grid:
+        r = base.copy()
+        raw = pmap.levels[f]["rare"][0] if lv == "OTHER" else lv
+        spec = cfg["definitions"][f]
+        if spec["kind"] == "band":
+            r[f] = int(lv.split("-")[0].rstrip("+"))
+        else:
+            r[f] = type(base[f].iloc[0])(raw) if spec.get("cap") is None else int(raw)
+        pred = model.predict_rate(features.transform(r, smap)[cols])
+        assert np.isfinite(pred).all() and (pred > 0).all(), (f, lv)
+
+
+def test_severity_ordinal_feature_with_group_rare_is_rejected_at_fit():
+    pol = brand_frame({"B1": 10, "B2": 4})
+    pol = pd.concat([pol, frame([row(VehBrand="B3", Exposure=0.5, N=1)])], ignore_index=True)
+    with pytest.raises(ValueError, match="VehBrand.*ordinal.*group_rare"):
+        sev_map(pol, min_claims=3, min_exposure=2, ordinal=("VehBrand", "DrivAge"))
+    # without a rare level grouped there is no OTHER level and the configuration fits
+    ok = brand_frame({"B1": 10, "B2": 4})
+    sev_map(ok, min_claims=3, min_exposure=2, ordinal=("VehBrand",))

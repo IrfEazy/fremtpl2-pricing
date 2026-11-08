@@ -8,6 +8,12 @@ import pytest
 import statsmodels.api as sm
 
 from fremtpl2_pricing import glm
+from synth import model_cfg
+
+# the tight library default and the solver settings of the pipeline (configs/default.yaml)
+SOLVERS = pytest.mark.parametrize(
+    "solver", [None, model_cfg()["models"]["glm"]["solver"]], ids=["default", "pipeline"]
+)
 
 
 def make_data(n=600, seed=0):
@@ -37,9 +43,10 @@ def params(m):
     return np.r_[m.intercept, m.coef]
 
 
-def test_poisson_matches_statsmodels():
+@SOLVERS
+def test_poisson_matches_statsmodels(solver):
     X, count, expo, *_ = make_data()
-    m = glm.fit_frequency(X, count, expo)
+    m = glm.fit_frequency(X, count, expo, solver)
     D = sm_design(X)
     ref = sm.GLM(count, D, family=sm.families.Poisson(), offset=np.log(expo)).fit()
     np.testing.assert_allclose(params(m), ref.params.to_numpy(), rtol=1e-5, atol=1e-6)
@@ -47,18 +54,20 @@ def test_poisson_matches_statsmodels():
     np.testing.assert_allclose(m.predict_count(X, expo), expected, rtol=1e-5)
 
 
-def test_gamma_matches_statsmodels():
+@SOLVERS
+def test_gamma_matches_statsmodels(solver):
     X, _, _, ncl, cost, _ = make_data()
-    m = glm.fit_severity(X, cost, ncl)
+    m = glm.fit_severity(X, cost, ncl, solver)
     fam = sm.families.Gamma(sm.families.links.Log())
     ref = sm.GLM(cost, sm_design(X), family=fam, var_weights=ncl).fit()
     np.testing.assert_allclose(params(m), ref.params.to_numpy(), rtol=1e-5, atol=1e-6)
     np.testing.assert_allclose(m.predict_rate(X), ref.predict(sm_design(X)), rtol=1e-5)
 
 
-def test_tweedie_matches_statsmodels():
+@SOLVERS
+def test_tweedie_matches_statsmodels(solver):
     X, _, expo, _, _, pp = make_data()
-    m = glm.fit_tweedie(X, pp, expo, 1.5)
+    m = glm.fit_tweedie(X, pp, expo, 1.5, solver)
     fam = sm.families.Tweedie(var_power=1.5, link=sm.families.links.Log())
     ref = sm.GLM(pp, sm_design(X), family=fam, var_weights=expo).fit()
     np.testing.assert_allclose(params(m), ref.params.to_numpy(), rtol=1e-4, atol=1e-5)
@@ -209,3 +218,15 @@ def test_convergence_flag_and_solver_override():
     assert ok.converged is True and ok.n_iter >= 1
     hard = glm.fit_frequency(X, y, np.ones(300), {"max_iter": 1, "gradient_tol": 1e-14})
     assert hard.converged is False and hard.n_iter == 1
+
+
+def test_solver_by_family_overrides_only_that_family():
+    solver = {
+        "max_iter": 50,
+        "gradient_tol": 1e-7,
+        "by_family": {"tweedie": {"gradient_tol": 1e-5}},
+    }
+    assert glm._estimator("tweedie", 1.5, True, solver).gradient_tol == 1e-5
+    assert glm._estimator("poisson", None, True, solver).gradient_tol == 1e-7
+    assert glm._estimator("gamma", None, True, solver).gradient_tol == 1e-7
+    assert glm._estimator("tweedie", 1.5, True, solver).max_iter == 50

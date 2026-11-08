@@ -259,3 +259,36 @@ def test_tweedie_mle_dispersion_recovers_known_phi():
     y = np.where(k > 0, rng.gamma(np.maximum(k, 1) * shape, scale), 0.0)
     est = m.tweedie_mle_dispersion(y, np.full(n, y.mean()), power)
     assert est == pytest.approx(phi, rel=0.05)
+
+
+def _tweedie_sample(mu, phi, power, n, seed=3):
+    rng = np.random.default_rng(seed)
+    lam = mu ** (2 - power) / (phi * (2 - power))
+    shape = (2 - power) / (power - 1)
+    scale = phi * (power - 1) * mu ** (power - 1)
+    k = rng.poisson(lam, n)
+    return np.where(k > 0, rng.gamma(np.maximum(k, 1) * shape, scale), 0.0)
+
+
+def test_tweedie_zero_mass_invariant_with_prior_weights():
+    mu, phi, power = np.array([0.5, 2.0, 7.0]), 3.0, 1.35
+    e = np.array([0.05, 0.4, 1.0])
+    ll = m.tweedie_logpdf(np.zeros(3), mu, phi, power, e)
+    np.testing.assert_allclose(np.exp(ll), np.exp(-e * mu ** (2 - power) / (phi * (2 - power))))
+    assert m.tweedie_loglik(np.zeros(3), mu, phi, power, e) == pytest.approx(ll.sum())
+
+
+def test_dispersion_expansion_succeeds_and_is_reported():
+    y = _tweedie_sample(4.0, 6.0, 1.5, 20000)
+    mu = np.full(len(y), 20.0)  # means far from the sample: the Pearson centre misses the optimum
+    wide, n0 = m.tweedie_mle_dispersion_fit(y, mu, 1.5, log_range=3.0)
+    assert n0 == 0
+    phi, n = m.tweedie_mle_dispersion_fit(y, mu, 1.5, log_range=0.3, max_expansions=10)
+    assert n >= 1 and phi == pytest.approx(wide, rel=0.01)
+
+
+def test_dispersion_unresolvable_bound_raises():
+    y = _tweedie_sample(4.0, 6.0, 1.5, 20000)
+    mu = np.full(len(y), 20.0)
+    with pytest.raises(ValueError, match="bracket bound"):
+        m.tweedie_mle_dispersion_fit(y, mu, 1.5, log_range=0.3, max_expansions=1)
