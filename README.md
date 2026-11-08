@@ -112,20 +112,20 @@ covered by the declared, post-hoc deviations. Three run-state fields remain unco
 the amended verdict are FAIL. Held-out metrics were not recomputed. The records are in [`results/reproduction/`](results/reproduction/).
 
 <!-- docs:reproduction:begin -->
-Latest reproduction (fresh clone of the tested commit): commit `483d8dd7`, 2026-11-08, verdict **FAIL** (with declared deviations: **FAIL**), 22.6 minutes in total; machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35 (x86_64, 8 CPUs), Python 3.12.15.
+Latest reproduction (fresh clone of the tested commit): commit `f9fedf11`, 2026-11-08, verdict **FAIL** (with declared deviations: **FAIL**), 23.3 minutes in total; machine Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35 (x86_64, 8 CPUs), Python 3.12.15.
 
 | Step | Minutes |
 | --- | --- |
 | setup | 0.0 |
 | download | 0.3 |
 | audit | 0.2 |
-| split | 1.7 |
-| train | 8.1 |
+| split | 1.6 |
+| train | 7.2 |
 | gbm | 9.2 |
-| sensitivities | 2.2 |
-| interpret | 0.8 |
+| sensitivities | 3.4 |
+| interpret | 1.2 |
 | freeze_check | 0.1 |
-| report | 0.0 |
+| report | 0.1 |
 
 Declared deviations of the verification policy (`configs/reproduce.yaml`):
 
