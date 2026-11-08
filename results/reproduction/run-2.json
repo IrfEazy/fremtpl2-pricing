@@ -1,0 +1,1664 @@
+{
+  "tested_commit": "483d8dd7b6b5224675ceb84c3010bb4d210a0355",
+  "clone_commit": "483d8dd7b6b5224675ceb84c3010bb4d210a0355",
+  "start_utc": "2026-11-08T18:13:13+00:00",
+  "end_utc": "2026-11-08T18:34:43+00:00",
+  "total_seconds": 1355.634,
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "cpu_count": 8,
+  "python": "3.12.15",
+  "tool_versions": {
+    "python": "3.12.15",
+    "uv": "uv 0.13.7 (x86_64-unknown-linux-gnu)",
+    "git": "git version 2.34.1"
+  },
+  "download_included": true,
+  "scope": "EXACT_PASS = exact reproduction of the declared recomputable artifacts plus verification of preserved published evidence; held-out metrics are not recomputed",
+  "preserved_evidence": {
+    "identity": {
+      "journal_sha256": "ac548a1b1b407e72d0d6a83c4ccd8e10f6cf3e07af44beaff5a0599308c76bd9",
+      "pointer_sha256": "5ea1387da39e052bc456f69286033803cab479aba0f055bf0dc1bbd3e64c9a89",
+      "manifest_sha256": "d4359feab2b44c2dd417095adecc7defc0a78af5d3de4940515f3716b68dc753",
+      "attempt_id": "881b07e171f54df79ad7d64781fa8290",
+      "attempt": 1
+    },
+    "paths": [
+      "reports/evaluation_protocol.md",
+      "results/freeze_manifest.json",
+      "results/metrics.json",
+      "results/test/attempt-1/bootstrap_replicates_group.csv",
+      "results/test/attempt-1/bootstrap_replicates_policy.csv",
+      "results/test/attempt-1/metrics.json",
+      "results/test/attempt-1/tables.json",
+      "results/test_access.json"
+    ]
+  },
+  "recomputable_inventory": {
+    "compared": [
+      "reports/data_audit.md",
+      "reports/figures/interp_dependence_frequency.png",
+      "reports/figures/interp_dependence_severity.png",
+      "reports/figures/interp_dependence_tweedie.png",
+      "reports/figures/interp_glm_comparison_frequency.png",
+      "reports/figures/interp_glm_comparison_severity.png",
+      "reports/figures/interp_glm_comparison_tweedie.png",
+      "reports/figures/interp_interaction_drivage_vehpower.png",
+      "reports/figures/interp_shap_summary.png",
+      "reports/figures/test_bootstrap_delta.png",
+      "reports/figures/test_bootstrap_delta_policy.png",
+      "reports/figures/test_calibration_decile.png",
+      "reports/figures/test_calibration_factor.png",
+      "reports/figures/test_double_lift.png",
+      "reports/figures/test_lift.png",
+      "reports/figures/test_lorenz.png",
+      "reports/gbm_cv.md",
+      "reports/glm_cv.md",
+      "reports/glm_sensitivities.md",
+      "reports/interpretation.md",
+      "reports/test_evaluation.md",
+      "results/audit.json",
+      "results/cv_gbm.json",
+      "results/cv_glm.json",
+      "results/cv_sensitivities.json",
+      "results/feature_map.json",
+      "results/gbm_models.json",
+      "results/glm_models.json",
+      "results/glm_relativities_frequency.csv",
+      "results/glm_relativities_severity.csv",
+      "results/glm_relativities_tweedie.csv",
+      "results/interpretation.json",
+      "results/orphan_ledger.csv",
+      "results/split_summary.json",
+      "results/targets_summary.json"
+    ],
+    "purged": [
+      "reports/data_audit.md",
+      "reports/figures/interp_dependence_frequency.png",
+      "reports/figures/interp_dependence_severity.png",
+      "reports/figures/interp_dependence_tweedie.png",
+      "reports/figures/interp_glm_comparison_frequency.png",
+      "reports/figures/interp_glm_comparison_severity.png",
+      "reports/figures/interp_glm_comparison_tweedie.png",
+      "reports/figures/interp_interaction_drivage_vehpower.png",
+      "reports/figures/interp_shap_summary.png",
+      "reports/figures/test_bootstrap_delta.png",
+      "reports/figures/test_bootstrap_delta_policy.png",
+      "reports/figures/test_calibration_decile.png",
+      "reports/figures/test_calibration_factor.png",
+      "reports/figures/test_double_lift.png",
+      "reports/figures/test_lift.png",
+      "reports/figures/test_lorenz.png",
+      "reports/gbm_cv.md",
+      "reports/glm_cv.md",
+      "reports/glm_sensitivities.md",
+      "reports/interpretation.md",
+      "reports/test_evaluation.md",
+      "results/audit.json",
+      "results/cv_gbm.json",
+      "results/cv_glm.json",
+      "results/cv_sensitivities.json",
+      "results/feature_map.json",
+      "results/gbm_models.json",
+      "results/glm_models.json",
+      "results/glm_relativities_frequency.csv",
+      "results/glm_relativities_severity.csv",
+      "results/glm_relativities_tweedie.csv",
+      "results/interpretation.json",
+      "results/orphan_ledger.csv",
+      "results/split_summary.json",
+      "results/targets_summary.json"
+    ]
+  },
+  "steps": [
+    {
+      "name": "setup",
+      "cmd": [
+        "uv",
+        "sync",
+        "--frozen"
+      ],
+      "exit_code": 0,
+      "seconds": 0.645
+    },
+    {
+      "name": "download",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "download",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 15.53
+    },
+    {
+      "name": "audit",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "audit",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 9.831
+    },
+    {
+      "name": "split",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "split",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 101.039
+    },
+    {
+      "name": "train",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "train",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 487.022
+    },
+    {
+      "name": "gbm",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "gbm",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 553.468
+    },
+    {
+      "name": "sensitivities",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "sensitivities",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 134.943
+    },
+    {
+      "name": "interpret",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "interpret",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 45.84
+    },
+    {
+      "name": "freeze_check",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "freeze",
+        "--check",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 1,
+      "seconds": 4.027
+    },
+    {
+      "name": "report",
+      "cmd": [
+        "uv",
+        "run",
+        "--frozen",
+        "fremtpl2",
+        "report",
+        "--config",
+        "configs/default.yaml"
+      ],
+      "exit_code": 0,
+      "seconds": 2.904
+    }
+  ],
+  "failure": null,
+  "strict_verdict": "FAIL",
+  "amended_verdict": "FAIL",
+  "verdict": "FAIL",
+  "decision_procedure": {
+    "original_policy_sha256": "d35439ce4deb892114161823d9f87bdb8cf5bc04707fc1f6d0df38fd85641bb6",
+    "amended_policy_sha256": "9dd7dc9411a8ecce239c04c8a962a326da960671eb364001c255b32e02f7ea65",
+    "policy_file": "configs/reproduce.yaml",
+    "verifier_sources_sha256": {
+      "src/fremtpl2_pricing/reproduce.py": "c66e29ee53ce04885b4e4c14eeff1bce9ceded3bb1d9cab6fd788b25ddbd14cf",
+      "src/fremtpl2_pricing/freeze.py": "8821ecaebc98dbb0a155d4d85cdc84e4d273e758f8eef5ac13628698500483fc"
+    },
+    "tested_commit": "483d8dd7b6b5224675ceb84c3010bb4d210a0355",
+    "rerun_command": [
+      "fremtpl2",
+      "reproduce",
+      "--config",
+      "configs/default.yaml",
+      "--reproduce-config",
+      "configs/reproduce.yaml",
+      "--force-clean"
+    ],
+    "operational_retry": "none"
+  },
+  "amendment": {
+    "id": "A1",
+    "date": "2026-11-08",
+    "post_hoc": true,
+    "revealed_by": "run-1",
+    "reason": "The first clean-clone run failed the original strict policy on two metadata/provenance differences and stopped at the structural failure, so its reports and figures were not compared. (1) The download metadata data/raw/manifest.json differs from the frozen file only in the day of the download (`retrieved`); the raw data files are byte-identical. (2) The GLM training output echoes the config section used at training time and its hash; that training ran before the gradient-boosting block, two bootstrap options and the Lorenz point count were added to the config, so regenerating under the current config gives identical computed numbers but a different echo and hash. The added keys are read only by gbm, freeze and evaluate/report (static evidence below), never by the GLM training modules. (3) The original policy declared the JSON telemetry keys volatile but not their markdown renderings: the timing values (seconds) rendered in the markdown reports, found from the renderer code.",
+    "original_policy_sha256": "d35439ce4deb892114161823d9f87bdb8cf5bc04707fc1f6d0df38fd85641bb6",
+    "amended_policy_sha256": "9dd7dc9411a8ecce239c04c8a962a326da960671eb364001c255b32e02f7ea65",
+    "applied_deviations": [
+      {
+        "id": "D1",
+        "kind": "download_metadata",
+        "applied": [
+          {
+            "place": "data/raw/manifest.json",
+            "path": "/datasets/0/retrieved",
+            "base": "2026-11-07",
+            "new": "2026-11-08"
+          },
+          {
+            "place": "data/raw/manifest.json",
+            "path": "/datasets/1/retrieved",
+            "base": "2026-11-07",
+            "new": "2026-11-08"
+          }
+        ]
+      },
+      {
+        "id": "D2",
+        "kind": "glm_config_echo",
+        "applied": [
+          {
+            "place": "results/cv_glm.json /config/config_sha256",
+            "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+            "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+          },
+          {
+            "place": "results/cv_glm.json /config/models/gbm",
+            "base": "<absent>",
+            "new": "sha256 cdf3274f491a43df507dea0f1bb09a7e2374b52041c1680fe01c6cc12768e228"
+          },
+          {
+            "place": "results/cv_glm.json /config/models/bootstrap/interval",
+            "base": "<absent>",
+            "new": "sha256 9bf373c47ef90d7cf9e998317cd5785a6a9187e0e6df64e7f1c33409f2f60c3f"
+          },
+          {
+            "place": "results/cv_glm.json /config/models/bootstrap/quantile_method",
+            "base": "<absent>",
+            "new": "sha256 4dd109ad15a2481c6cd88948a95b3116061fd1b966bef5c92481ec848e167829"
+          },
+          {
+            "place": "results/cv_glm.json /config/models/evaluation/lorenz_points",
+            "base": "<absent>",
+            "new": "sha256 16dc368a89b428b2485484313ba67a3912ca03f2b2b42429174a4f8b3dc84e44"
+          },
+          {
+            "place": "manifest /training_record/glm_config_sha256_at_training",
+            "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+            "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+          },
+          {
+            "place": "reports/glm_cv.md hash line",
+            "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+            "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+          }
+        ],
+        "static_evidence": {
+          "label": "informational grep listing (regex); not proof, not a pass/fail input",
+          "scanned": {
+            "models.gbm": [
+              "freeze",
+              "gbm"
+            ],
+            "models.bootstrap.interval": [
+              "freeze"
+            ],
+            "models.bootstrap.quantile_method": [
+              "evaluate",
+              "freeze",
+              "report"
+            ],
+            "models.evaluation.lorenz_points": [
+              "evaluate"
+            ]
+          },
+          "listing_at_amendment": {
+            "models.gbm": [
+              "freeze",
+              "gbm"
+            ],
+            "models.bootstrap.interval": [
+              "freeze"
+            ],
+            "models.bootstrap.quantile_method": [
+              "evaluate",
+              "freeze",
+              "report"
+            ],
+            "models.evaluation.lorenz_points": [
+              "evaluate"
+            ]
+          },
+          "listing_unchanged": true,
+          "glm_training_modules": [
+            "train",
+            "glm",
+            "features",
+            "selection",
+            "cv_report",
+            "metrics",
+            "sensitivities",
+            "clean",
+            "targets",
+            "split",
+            "groups",
+            "data"
+          ],
+          "glm_training_modules_matching": {
+            "models.gbm": [],
+            "models.bootstrap.interval": [],
+            "models.bootstrap.quantile_method": [],
+            "models.evaluation.lorenz_points": []
+          }
+        }
+      },
+      {
+        "id": "D3",
+        "kind": "markdown_telemetry",
+        "applied": [
+          {
+            "place": "reports/glm_cv.md:738",
+            "base": "| coverage_check | 17.626 |",
+            "new": "| coverage_check | 14.3 |"
+          },
+          {
+            "place": "reports/glm_cv.md:739",
+            "base": "| cv_fits | 286.15 |",
+            "new": "| cv_fits | 309.16 |"
+          },
+          {
+            "place": "reports/glm_cv.md:740",
+            "base": "| selection_ladder | 8.5063 |",
+            "new": "| selection_ladder | 9.2304 |"
+          },
+          {
+            "place": "reports/glm_cv.md:741",
+            "base": "| cv_metrics | 15.453 |",
+            "new": "| cv_metrics | 14.611 |"
+          },
+          {
+            "place": "reports/glm_cv.md:742",
+            "base": "| solver_check_cv | 130.09 |",
+            "new": "| solver_check_cv | 120.27 |"
+          },
+          {
+            "place": "reports/glm_cv.md:743",
+            "base": "| final_fit | 34.148 |",
+            "new": "| final_fit | 25.024 |"
+          },
+          {
+            "place": "reports/glm_cv.md:744",
+            "base": "| total | 486.93 |",
+            "new": "| total | 484.34 |"
+          },
+          {
+            "place": "reports/glm_cv.md:745",
+            "base": "| load_and_clean | 3.2667 |",
+            "new": "| load_and_clean | 0.87764 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:195",
+            "base": "| primary | 24.769 |",
+            "new": "| primary | 25.622 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:196",
+            "base": "| exclude_high_count | 12.699 |",
+            "new": "| exclude_high_count | 12.54 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:197",
+            "base": "| frequency_recorded_claim_nb | 13.108 |",
+            "new": "| frequency_recorded_claim_nb | 13.21 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:198",
+            "base": "| cap_50000 | 13.278 |",
+            "new": "| cap_50000 | 13.506 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:199",
+            "base": "| cap_200000 | 13.854 |",
+            "new": "| cap_200000 | 13.809 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:200",
+            "base": "| cap_uncapped | 14.576 |",
+            "new": "| cap_uncapped | 14.811 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:201",
+            "base": "| raw_exposure | 13.401 |",
+            "new": "| raw_exposure | 13.101 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:202",
+            "base": "| exclude_short_records_1day | 13.69 |",
+            "new": "| exclude_short_records_1day | 13.359 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:203",
+            "base": "| exclude_short_records_0_05 | 12.54 |",
+            "new": "| exclude_short_records_0_05 | 12.567 |"
+          },
+          {
+            "place": "reports/glm_sensitivities.md:204",
+            "base": "| total | 132.15 |",
+            "new": "| total | 132.77 |"
+          },
+          {
+            "place": "reports/gbm_cv.md:92",
+            "base": "- prepare_folds: 3.3 s",
+            "new": "- prepare_folds: 2.5 s"
+          },
+          {
+            "place": "reports/gbm_cv.md:93",
+            "base": "- tuning: 547.2 s",
+            "new": "- tuning: 471.2 s"
+          },
+          {
+            "place": "reports/gbm_cv.md:94",
+            "base": "- diagnostic_ablation: 58.2 s",
+            "new": "- diagnostic_ablation: 59.1 s"
+          },
+          {
+            "place": "reports/gbm_cv.md:95",
+            "base": "- final_refits: 24.1 s",
+            "new": "- final_refits: 16.7 s"
+          },
+          {
+            "place": "reports/gbm_cv.md:96",
+            "base": "- total: 633.9 s",
+            "new": "- total: 550.5 s"
+          },
+          {
+            "place": "reports/gbm_cv.md:97",
+            "base": "- load_and_clean: 1.2 s",
+            "new": "- load_and_clean: 0.9 s"
+          }
+        ]
+      }
+    ],
+    "deviations": [
+      {
+        "id": "D1",
+        "satisfied": true,
+        "problems": []
+      },
+      {
+        "id": "D2",
+        "satisfied": true,
+        "problems": []
+      },
+      {
+        "id": "D3",
+        "satisfied": true,
+        "problems": []
+      }
+    ],
+    "unmatched_differences": [
+      "reports/test_evaluation.md: fail",
+      "results/interpretation.json: fail",
+      "results/split_summary.json: fail"
+    ],
+    "inventory": {
+      "steps": {
+        "configured": [
+          "setup",
+          "download",
+          "audit",
+          "split",
+          "train",
+          "gbm",
+          "sensitivities",
+          "interpret",
+          "freeze_check",
+          "report"
+        ],
+        "ran": [
+          "setup",
+          "download",
+          "audit",
+          "split",
+          "train",
+          "gbm",
+          "sensitivities",
+          "interpret",
+          "freeze_check",
+          "report"
+        ]
+      },
+      "freeze_checks": [
+        {
+          "name": "original_bytes",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "selection",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "recipes",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "self_check",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "manifest_fields",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "name": "file_list",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "telemetry:results/cv_glm.json",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "name": "telemetry:results/cv_gbm.json",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "telemetry:results/gbm_models.json",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "files",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "name": "model_files",
+          "status": "pass",
+          "covered_by_deviation": false
+        },
+        {
+          "name": "published_evidence",
+          "status": "pass",
+          "covered_by_deviation": false
+        }
+      ],
+      "freeze_checks_failed": [
+        "manifest_fields",
+        "telemetry:results/cv_glm.json",
+        "files"
+      ],
+      "comparison_files": [
+        {
+          "path": "reports/data_audit.md",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_dependence_frequency.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_dependence_severity.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_dependence_tweedie.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_glm_comparison_frequency.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_glm_comparison_severity.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_glm_comparison_tweedie.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_interaction_drivage_vehpower.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/interp_shap_summary.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_bootstrap_delta.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_bootstrap_delta_policy.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_calibration_decile.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_calibration_factor.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_double_lift.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_lift.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/figures/test_lorenz.png",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/gbm_cv.md",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "path": "reports/glm_cv.md",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "path": "reports/glm_sensitivities.md",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "path": "reports/interpretation.md",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "reports/test_evaluation.md",
+          "status": "fail",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/audit.json",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/cv_gbm.json",
+          "status": "volatile_only",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/cv_glm.json",
+          "status": "fail",
+          "covered_by_deviation": true
+        },
+        {
+          "path": "results/cv_sensitivities.json",
+          "status": "volatile_only",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/feature_map.json",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/gbm_models.json",
+          "status": "volatile_only",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/glm_models.json",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/glm_relativities_frequency.csv",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/glm_relativities_severity.csv",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/glm_relativities_tweedie.csv",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/interpretation.json",
+          "status": "fail",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/orphan_ledger.csv",
+          "status": "exact",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/split_summary.json",
+          "status": "fail",
+          "covered_by_deviation": false
+        },
+        {
+          "path": "results/targets_summary.json",
+          "status": "exact",
+          "covered_by_deviation": false
+        }
+      ],
+      "n_expected_files": 35
+    }
+  },
+  "freeze_check": {
+    "mode": "freeze-check",
+    "passed": false,
+    "numeric_only": false,
+    "tolerance": {
+      "rtol": 0.0,
+      "atol": 0.0
+    },
+    "manifest": "results/freeze_manifest.json",
+    "head": "483d8dd7b6b5224675ceb84c3010bb4d210a0355",
+    "checks": [
+      {
+        "name": "original_bytes",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "selection",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "recipes",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "self_check",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "manifest_fields",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 1,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "/training_record/glm_config_sha256_at_training",
+            "kind": "structural",
+            "base": "'75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe'",
+            "new": "'cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793'"
+          }
+        ]
+      },
+      {
+        "name": "file_list",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "telemetry:results/cv_glm.json",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 4,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "/config/models/gbm",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "{'seed': 20260109, 'features': {'numeric': ['DrivAge', 'VehAge', 'VehPower', ..."
+          },
+          {
+            "path": "/config/models/bootstrap/interval",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "'two_sided'"
+          },
+          {
+            "path": "/config/models/bootstrap/quantile_method",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "'linear'"
+          },
+          {
+            "path": "/config/models/evaluation/lorenz_points",
+            "kind": "structural",
+            "base": "'<missing>'",
+            "new": "101"
+          }
+        ]
+      },
+      {
+        "name": "telemetry:results/cv_gbm.json",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "telemetry:results/gbm_models.json",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "files",
+        "status": "fail",
+        "ok": false,
+        "numeric_only": false,
+        "n_numeric": 0,
+        "n_structural": 1,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "sha256 mismatch: data/raw/manifest.json",
+            "kind": "structural"
+          }
+        ]
+      },
+      {
+        "name": "model_files",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      {
+        "name": "published_evidence",
+        "status": "pass",
+        "ok": true,
+        "numeric_only": true,
+        "n_numeric": 0,
+        "n_structural": 0,
+        "n_within_tolerance": 0,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      }
+    ],
+    "declared_deviations": {
+      "amendments": [
+        "A1"
+      ],
+      "deviations": [
+        {
+          "id": "D1",
+          "satisfied": true,
+          "problems": [],
+          "applied": [
+            {
+              "place": "data/raw/manifest.json",
+              "path": "/datasets/0/retrieved",
+              "base": "2026-11-07",
+              "new": "2026-11-08"
+            },
+            {
+              "place": "data/raw/manifest.json",
+              "path": "/datasets/1/retrieved",
+              "base": "2026-11-07",
+              "new": "2026-11-08"
+            }
+          ]
+        },
+        {
+          "id": "D2",
+          "satisfied": true,
+          "problems": [],
+          "applied": [
+            {
+              "place": "results/cv_glm.json /config/config_sha256",
+              "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+              "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+            },
+            {
+              "place": "results/cv_glm.json /config/models/gbm",
+              "base": "<absent>",
+              "new": "sha256 cdf3274f491a43df507dea0f1bb09a7e2374b52041c1680fe01c6cc12768e228"
+            },
+            {
+              "place": "results/cv_glm.json /config/models/bootstrap/interval",
+              "base": "<absent>",
+              "new": "sha256 9bf373c47ef90d7cf9e998317cd5785a6a9187e0e6df64e7f1c33409f2f60c3f"
+            },
+            {
+              "place": "results/cv_glm.json /config/models/bootstrap/quantile_method",
+              "base": "<absent>",
+              "new": "sha256 4dd109ad15a2481c6cd88948a95b3116061fd1b966bef5c92481ec848e167829"
+            },
+            {
+              "place": "results/cv_glm.json /config/models/evaluation/lorenz_points",
+              "base": "<absent>",
+              "new": "sha256 16dc368a89b428b2485484313ba67a3912ca03f2b2b42429174a4f8b3dc84e44"
+            },
+            {
+              "place": "manifest /training_record/glm_config_sha256_at_training",
+              "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+              "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+            },
+            {
+              "place": "reports/glm_cv.md hash line",
+              "base": "75d7109f4ca0325c26b1f54a8c62d5d46cde78c689825aadebfb634d9c5d05fe",
+              "new": "cd341a439ed871bdc03ed9c7cc1f34a469e1d0c46b648d027eddd2a1d6505793"
+            }
+          ]
+        },
+        {
+          "id": "D3",
+          "satisfied": true,
+          "problems": [],
+          "applied": [
+            {
+              "place": "reports/glm_cv.md:738",
+              "base": "| coverage_check | 17.626 |",
+              "new": "| coverage_check | 14.3 |"
+            },
+            {
+              "place": "reports/glm_cv.md:739",
+              "base": "| cv_fits | 286.15 |",
+              "new": "| cv_fits | 309.16 |"
+            },
+            {
+              "place": "reports/glm_cv.md:740",
+              "base": "| selection_ladder | 8.5063 |",
+              "new": "| selection_ladder | 9.2304 |"
+            },
+            {
+              "place": "reports/glm_cv.md:741",
+              "base": "| cv_metrics | 15.453 |",
+              "new": "| cv_metrics | 14.611 |"
+            },
+            {
+              "place": "reports/glm_cv.md:742",
+              "base": "| solver_check_cv | 130.09 |",
+              "new": "| solver_check_cv | 120.27 |"
+            },
+            {
+              "place": "reports/glm_cv.md:743",
+              "base": "| final_fit | 34.148 |",
+              "new": "| final_fit | 25.024 |"
+            },
+            {
+              "place": "reports/glm_cv.md:744",
+              "base": "| total | 486.93 |",
+              "new": "| total | 484.34 |"
+            },
+            {
+              "place": "reports/glm_cv.md:745",
+              "base": "| load_and_clean | 3.2667 |",
+              "new": "| load_and_clean | 0.87764 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:195",
+              "base": "| primary | 24.769 |",
+              "new": "| primary | 25.622 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:196",
+              "base": "| exclude_high_count | 12.699 |",
+              "new": "| exclude_high_count | 12.54 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:197",
+              "base": "| frequency_recorded_claim_nb | 13.108 |",
+              "new": "| frequency_recorded_claim_nb | 13.21 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:198",
+              "base": "| cap_50000 | 13.278 |",
+              "new": "| cap_50000 | 13.506 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:199",
+              "base": "| cap_200000 | 13.854 |",
+              "new": "| cap_200000 | 13.809 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:200",
+              "base": "| cap_uncapped | 14.576 |",
+              "new": "| cap_uncapped | 14.811 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:201",
+              "base": "| raw_exposure | 13.401 |",
+              "new": "| raw_exposure | 13.101 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:202",
+              "base": "| exclude_short_records_1day | 13.69 |",
+              "new": "| exclude_short_records_1day | 13.359 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:203",
+              "base": "| exclude_short_records_0_05 | 12.54 |",
+              "new": "| exclude_short_records_0_05 | 12.567 |"
+            },
+            {
+              "place": "reports/glm_sensitivities.md:204",
+              "base": "| total | 132.15 |",
+              "new": "| total | 132.77 |"
+            },
+            {
+              "place": "reports/gbm_cv.md:92",
+              "base": "- prepare_folds: 3.3 s",
+              "new": "- prepare_folds: 2.5 s"
+            },
+            {
+              "place": "reports/gbm_cv.md:93",
+              "base": "- tuning: 547.2 s",
+              "new": "- tuning: 471.2 s"
+            },
+            {
+              "place": "reports/gbm_cv.md:94",
+              "base": "- diagnostic_ablation: 58.2 s",
+              "new": "- diagnostic_ablation: 59.1 s"
+            },
+            {
+              "place": "reports/gbm_cv.md:95",
+              "base": "- final_refits: 24.1 s",
+              "new": "- final_refits: 16.7 s"
+            },
+            {
+              "place": "reports/gbm_cv.md:96",
+              "base": "- total: 633.9 s",
+              "new": "- total: 550.5 s"
+            },
+            {
+              "place": "reports/gbm_cv.md:97",
+              "base": "- load_and_clean: 1.2 s",
+              "new": "- load_and_clean: 0.9 s"
+            }
+          ]
+        }
+      ],
+      "covered_failures": [
+        "manifest_fields",
+        "telemetry:results/cv_glm.json",
+        "files"
+      ],
+      "uncovered_failures": [],
+      "all_failures_covered": true,
+      "deviations_used": [
+        "D1",
+        "D2"
+      ]
+    }
+  },
+  "comparison": {
+    "categories": {
+      "md": {
+        "files": 6,
+        "statuses": {
+          "exact": 2,
+          "fail": 4
+        },
+        "max_abs": 83.39999999999998,
+        "max_rel": 0.7313374353322926,
+        "mismatches": [
+          {
+            "path": "reports/gbm_cv.md",
+            "status": "fail",
+            "details": [
+              {
+                "path": "[197]",
+                "kind": "numeric",
+                "base": "3.3",
+                "new": "2.5"
+              },
+              {
+                "path": "[199]",
+                "kind": "numeric",
+                "base": "547.2",
+                "new": "471.2"
+              },
+              {
+                "path": "[201]",
+                "kind": "numeric",
+                "base": "58.2",
+                "new": "59.1"
+              },
+              {
+                "path": "[203]",
+                "kind": "numeric",
+                "base": "24.1",
+                "new": "16.7"
+              },
+              {
+                "path": "[205]",
+                "kind": "numeric",
+                "base": "633.9",
+                "new": "550.5"
+              },
+              {
+                "path": "[207]",
+                "kind": "numeric",
+                "base": "1.2",
+                "new": "0.9"
+              }
+            ]
+          },
+          {
+            "path": "reports/glm_cv.md",
+            "status": "fail",
+            "details": [
+              {
+                "path": "[24]",
+                "kind": "structural",
+                "base": "'] (models `tweedie_fixed_<p>`) enter the pure premium comparison; the common...",
+                "new": "'] (models `tweedie_fixed_<p>`) enter the pure premium comparison; the common..."
+              },
+              {
+                "path": "[3341]",
+                "kind": "numeric",
+                "base": "17.626",
+                "new": "14.3"
+              },
+              {
+                "path": "[3343]",
+                "kind": "numeric",
+                "base": "286.15",
+                "new": "309.16"
+              },
+              {
+                "path": "[3345]",
+                "kind": "numeric",
+                "base": "8.5063",
+                "new": "9.2304"
+              },
+              {
+                "path": "[3347]",
+                "kind": "numeric",
+                "base": "15.453",
+                "new": "14.611"
+              },
+              {
+                "path": "[3349]",
+                "kind": "numeric",
+                "base": "130.09",
+                "new": "120.27"
+              },
+              {
+                "path": "[3351]",
+                "kind": "numeric",
+                "base": "34.148",
+                "new": "25.024"
+              },
+              {
+                "path": "[3353]",
+                "kind": "numeric",
+                "base": "486.93",
+                "new": "484.34"
+              },
+              {
+                "path": "[3355]",
+                "kind": "numeric",
+                "base": "3.2667",
+                "new": "0.87764"
+              }
+            ]
+          },
+          {
+            "path": "reports/glm_sensitivities.md",
+            "status": "fail",
+            "details": [
+              {
+                "path": "[1121]",
+                "kind": "numeric",
+                "base": "24.769",
+                "new": "25.622"
+              },
+              {
+                "path": "[1123]",
+                "kind": "numeric",
+                "base": "12.699",
+                "new": "12.54"
+              },
+              {
+                "path": "[1125]",
+                "kind": "numeric",
+                "base": "13.108",
+                "new": "13.21"
+              },
+              {
+                "path": "[1127]",
+                "kind": "numeric",
+                "base": "13.278",
+                "new": "13.506"
+              },
+              {
+                "path": "[1129]",
+                "kind": "numeric",
+                "base": "13.854",
+                "new": "13.809"
+              },
+              {
+                "path": "[1131]",
+                "kind": "numeric",
+                "base": "14.576",
+                "new": "14.811"
+              },
+              {
+                "path": "[1133]",
+                "kind": "numeric",
+                "base": "13.401",
+                "new": "13.101"
+              },
+              {
+                "path": "[1135]",
+                "kind": "numeric",
+                "base": "13.69",
+                "new": "13.359"
+              },
+              {
+                "path": "[1137]",
+                "kind": "numeric",
+                "base": "12.54",
+                "new": "12.567"
+              },
+              {
+                "path": "[1139]",
+                "kind": "numeric",
+                "base": "132.15",
+                "new": "132.77"
+              }
+            ]
+          },
+          {
+            "path": "reports/test_evaluation.md",
+            "status": "fail",
+            "details": "bytes differ (renderer output of committed evidence)"
+          }
+        ]
+      },
+      "render": {
+        "files": 15,
+        "statuses": {
+          "exact": 15
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      },
+      "json": {
+        "files": 10,
+        "statuses": {
+          "exact": 4,
+          "volatile_only": 3,
+          "fail": 3
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": [
+          {
+            "path": "results/cv_glm.json",
+            "status": "fail",
+            "details": [
+              {
+                "path": "/config/models/gbm",
+                "kind": "structural",
+                "base": "'<missing>'",
+                "new": "{'seed': 20260109, 'features': {'numeric': ['DrivAge', 'VehAge', 'VehPower', ..."
+              },
+              {
+                "path": "/config/models/bootstrap/interval",
+                "kind": "structural",
+                "base": "'<missing>'",
+                "new": "'two_sided'"
+              },
+              {
+                "path": "/config/models/bootstrap/quantile_method",
+                "kind": "structural",
+                "base": "'<missing>'",
+                "new": "'linear'"
+              },
+              {
+                "path": "/config/models/evaluation/lorenz_points",
+                "kind": "structural",
+                "base": "'<missing>'",
+                "new": "101"
+              }
+            ]
+          },
+          {
+            "path": "results/interpretation.json",
+            "status": "fail",
+            "details": [
+              {
+                "path": "/sources/cv_gbm/sha256",
+                "kind": "structural",
+                "base": "'d44936830654b7ed3ac49ba840c92bd7c820a0d026be162c19013f76f20c1ffc'",
+                "new": "'69ef4e84b6b7f29b66a444ad94778b207d53614b5bac746f55dfc201489bcb47'"
+              },
+              {
+                "path": "/sources/cv_glm/sha256",
+                "kind": "structural",
+                "base": "'c04eb1e3aeeb0d9160583dc4cfb23697e9d831abd11bbdbf9be32cc366d73128'",
+                "new": "'f386bfc5b41c47983d325d17c3e12ac3530abb2e9ddd85340b52f7201fd580df'"
+              },
+              {
+                "path": "/sources/gbm_models/sha256",
+                "kind": "structural",
+                "base": "'aa04160d9d14ee593312bc43c00c9231d0a50aa4e7b5803189d88dcf1d5cd200'",
+                "new": "'325e5cbaadb3b756c7ba7a27f009c5141476009a462ca5b8d8ebd800ab66aecb'"
+              }
+            ]
+          },
+          {
+            "path": "results/split_summary.json",
+            "status": "fail",
+            "details": [
+              {
+                "path": "/frozen_split/status",
+                "kind": "structural",
+                "base": "'verified identical to the stored file (not overwritten)'",
+                "new": "'written (first run)'"
+              }
+            ]
+          }
+        ]
+      },
+      "csv": {
+        "files": 4,
+        "statuses": {
+          "exact": 4
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatches": []
+      }
+    },
+    "n_files": 35,
+    "files": [
+      {
+        "path": "reports/data_audit.md",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_dependence_frequency.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_dependence_severity.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_dependence_tweedie.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_glm_comparison_frequency.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_glm_comparison_severity.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_glm_comparison_tweedie.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_interaction_drivage_vehpower.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/interp_shap_summary.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_bootstrap_delta.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_bootstrap_delta_policy.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_calibration_decile.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_calibration_factor.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_double_lift.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_lift.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/figures/test_lorenz.png",
+        "status": "exact"
+      },
+      {
+        "path": "reports/gbm_cv.md",
+        "status": "fail"
+      },
+      {
+        "path": "reports/glm_cv.md",
+        "status": "fail"
+      },
+      {
+        "path": "reports/glm_sensitivities.md",
+        "status": "fail"
+      },
+      {
+        "path": "reports/interpretation.md",
+        "status": "exact"
+      },
+      {
+        "path": "reports/test_evaluation.md",
+        "status": "fail"
+      },
+      {
+        "path": "results/audit.json",
+        "status": "exact"
+      },
+      {
+        "path": "results/cv_gbm.json",
+        "status": "volatile_only"
+      },
+      {
+        "path": "results/cv_glm.json",
+        "status": "fail"
+      },
+      {
+        "path": "results/cv_sensitivities.json",
+        "status": "volatile_only"
+      },
+      {
+        "path": "results/feature_map.json",
+        "status": "exact"
+      },
+      {
+        "path": "results/gbm_models.json",
+        "status": "volatile_only"
+      },
+      {
+        "path": "results/glm_models.json",
+        "status": "exact"
+      },
+      {
+        "path": "results/glm_relativities_frequency.csv",
+        "status": "exact"
+      },
+      {
+        "path": "results/glm_relativities_severity.csv",
+        "status": "exact"
+      },
+      {
+        "path": "results/glm_relativities_tweedie.csv",
+        "status": "exact"
+      },
+      {
+        "path": "results/interpretation.json",
+        "status": "fail"
+      },
+      {
+        "path": "results/orphan_ledger.csv",
+        "status": "exact"
+      },
+      {
+        "path": "results/split_summary.json",
+        "status": "fail"
+      },
+      {
+        "path": "results/targets_summary.json",
+        "status": "exact"
+      }
+    ],
+    "source_changed": [],
+    "untracked_new": [],
+    "untracked_source": [],
+    "untracked_undeclared": [],
+    "exact_ok": false,
+    "portable_ok": false
+  },
+  "tolerances": {
+    "rtol": 1e-06,
+    "atol": 1e-09,
+    "formula": "|a - b| <= atol + rtol * |a|, a = committed value"
+  },
+  "run": 2
+}
