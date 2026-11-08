@@ -197,18 +197,61 @@ def test_duplicate_idpol_error():
         clean(pd.concat([freq, freq.head(1)]), sev, rules)
 
 
-def test_clean_identical_regardless_of_set():
-    cfg = make_cfg()
-    s = assign_split(freq, cfg)
-    full = clean(freq, sev, rules)
-    test_ids = set(s.loc[s["primary_set"] == "test", "IDpol"])
-    sub_f = freq[freq["IDpol"].isin(test_ids)]
-    sub_s = sev[sev["IDpol"].isin(test_ids)]
-    alone = clean(sub_f, sub_s, rules)
-    restricted = full.freq[full.freq["IDpol"].isin(test_ids)].reset_index(drop=True)
+def _with_quarantine_cases(split):
+    """Copies of freq/sev with bad amounts and exposures injected in both parts."""
+    f, sv = freq.copy(), sev.copy()
+    extra = []
+    for part in ("train", "test"):
+        ids = split.loc[split["primary_set"] == part, "IDpol"].to_numpy()
+        zero, neg = ids[0], ids[1]
+        f.loc[f["IDpol"] == zero, "Exposure"] = 0.0
+        f.loc[f["IDpol"] == neg, "Exposure"] = -0.5
+        ok = ids[2:6]
+        amounts = [np.nan, np.inf, 0.0, -3.0]
+        extra.append(pd.DataFrame({"IDpol": ok, "ClaimAmount": amounts}))
+    return f, pd.concat([sv, *extra], ignore_index=True)
+
+
+@pytest.mark.parametrize("part", ["train", "test"])
+def test_clean_identical_regardless_of_set(part):
+    s = assign_split(freq, make_cfg())
+    dirty_freq, dirty_sev = _with_quarantine_cases(s)
+    full = clean(dirty_freq, dirty_sev, rules)
+    ids = set(s.loc[s["primary_set"] == part, "IDpol"])
+    assert ids and ids < set(freq["IDpol"])
+    alone = clean(
+        dirty_freq[dirty_freq["IDpol"].isin(ids)],
+        dirty_sev[dirty_sev["IDpol"].isin(ids)],
+        rules,
+    )
+    # quarantine really happened inside this part (the comparison is not vacuous)
+    assert alone.report["sev_quarantine"]["rows"] >= 4
+    assert alone.report["exposure_quarantine"]["policies"] >= 2
+    assert not (
+        set(alone.freq["IDpol"]) & set(dirty_freq.loc[dirty_freq["Exposure"] <= 0, "IDpol"])
+    )
+    restricted = full.freq[full.freq["IDpol"].isin(ids)].reset_index(drop=True)
     pd.testing.assert_frame_equal(restricted, alone.freq)
-    rs = full.sev[full.sev["IDpol"].isin(test_ids)].reset_index(drop=True)
+    rs = full.sev[full.sev["IDpol"].isin(ids)].reset_index(drop=True)
     pd.testing.assert_frame_equal(rs, alone.sev)
+    # rule-derived columns (targets, caps, status flags) exist and come from the same rule
+    derived = ["N", "S", "S_cap", "excess", "ClaimNb_raw", "sev_status"]
+    assert set(derived) <= set(alone.freq.columns)
+    assert "ClaimAmount_capped" in alone.sev.columns
+    assert len(alone.freq) == len(ids) - alone.report["exposure_quarantine"]["policies"]
+    assert (alone.sev["ClaimAmount_capped"] <= rules["large_loss"]["cap"]).all()
+    assert np.allclose(alone.freq["S_cap"] + alone.freq["excess"], alone.freq["S"])
+
+
+def test_clean_train_and_test_partition_full():
+    s = assign_split(freq, make_cfg())
+    full = clean(freq, sev, rules)
+    parts = []
+    for part in ("train", "test"):
+        ids = set(s.loc[s["primary_set"] == part, "IDpol"])
+        parts.append(clean(freq[freq["IDpol"].isin(ids)], sev[sev["IDpol"].isin(ids)], rules))
+    both = pd.concat([p.freq for p in parts]).sort_values("IDpol").reset_index(drop=True)
+    pd.testing.assert_frame_equal(full.freq.sort_values("IDpol").reset_index(drop=True), both)
 
 
 def test_sev_status_categories():
