@@ -187,3 +187,77 @@ models:
     report: glm_cv.md
     staging_dir: glm_staging       # under paths.processed: artifacts are written here and promoted to results/reports only if every gate passes
     failure_diagnostic: glm_train_FAILED.json  # under paths.processed (git-ignored): written instead of the artifacts when a gate fails
+
+  # Milestone 3a: LightGBM candidates (fremtpl2_pricing.gbm, `fremtpl2 gbm`), tuned on the registered
+  # grouped CV folds of the TRAIN set only (protocol section 5). Declared before the first tuning run.
+  gbm:
+    seed: 20260109                 # LightGBM `seed` (all sub-seeds derive from it); one seed, no averaging
+    features:                      # final feature order = numeric then categorical; Exposure is never a feature
+      numeric: [DrivAge, VehAge, VehPower, BonusMalus, Density]   # raw numeric (trees are invariant to monotone transforms; BonusMalus is numeric so that it can be constrained)
+      categorical: [Area, VehGas, VehBrand, Region]               # integer codes of the levels of the fitting part, passed as LightGBM categoricals
+    unseen_level: missing          # missing (NaN: LightGBM missing branch) | error; a level absent from the fitting part
+    deterministic:                 # identical reruns: one thread per fit, parallelism is across fits (models.parallel.n_jobs)
+      deterministic: true
+      force_row_wise: true
+      num_threads: 1
+    base_params:                   # LightGBM parameters shared by all components
+      verbosity: -1
+      max_bin: 255
+      feature_fraction: 1.0
+      bagging_fraction: 1.0
+      lambda_l2: 1.0
+      cat_smooth: 20.0
+      min_data_per_group: 200
+      monotone_constraints_method: basic
+    early_stopping:
+      round_cap: 1200              # maximum boosting rounds per fit
+      patience: 50                 # rounds without improvement on the validation fold
+      min_improvement: 0.0         # smallest improvement of the monitored metric that resets the patience
+      round_rounding: nearest      # final rounds = mean of the per-fold best iterations rounded to the nearest integer
+      at_cap: record_use_cap       # a fit that never stops early is recorded (cap_reached) and the cap is used
+    components:                    # objective, monitored metric, monotone constraints (frozen, by name), fixed params, grid
+      frequency:                   # Poisson on counts with init_score log(Exposure), no weight
+        objective: poisson
+        metric: poisson
+        monotone: {BonusMalus: 1}
+        # no max_delta_step here: LightGBM's poisson_max_delta_step default already guards Poisson
+        params: {}
+        grid:
+          num_leaves: [8, 16]
+          min_child_samples: [500, 2000]
+          learning_rate: [0.05, 0.025]
+      severity:                    # Gamma on S_cap / N, weight N, claims only; unconstrained
+        objective: gamma
+        metric: gamma_deviance
+        monotone: {}
+        params: {}
+        grid:
+          num_leaves: [4, 8]
+          min_child_samples: [100, 400]
+          learning_rate: [0.05, 0.02]
+      tweedie:                     # Tweedie on S_cap / Exposure, weight Exposure, power = final.power_cv.power of outputs.cv_json
+        objective: tweedie
+        metric: tweedie
+        monotone: {BonusMalus: 1}
+        params: {}
+        grid:
+          num_leaves: [8, 16]
+          min_child_samples: [500, 2000]
+          learning_rate: [0.05, 0.025]
+    diagnostic:                    # CV-only monotonicity diagnostic (never a candidate, never feeds a selection)
+      enabled: true
+      components: [frequency, tweedie]   # unconstrained twins tuned with the identical grid, folds, seed and budget
+      ablation: true               # chosen hyperparameters and rounds with the constraint toggled
+    checks:
+      reload_rows: 2000            # train rows used for the saved-model prediction equivalence
+      reload_tolerance: 1.0e-9     # max |raw score difference| between the fitted and the reloaded model
+      sweep_rows: 200              # rows of the BonusMalus monotone sweep
+      sweep_points: 25             # quantile points of the sweep
+      monotone_tolerance: 1.0e-12  # allowed decrease of the raw score along the sweep
+    outputs:                       # file names under paths.results / paths.reports / paths.processed
+      cv_json: cv_gbm.json
+      models_json: gbm_models.json
+      report: gbm_cv.md
+      model_dir: models            # under paths.processed (git-ignored): one LightGBM text file per component
+      staging_dir: gbm_staging     # under paths.processed: artifacts are promoted only if every check passes
+      failure_diagnostic: gbm_FAILED.json  # under paths.processed (git-ignored)

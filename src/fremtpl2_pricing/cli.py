@@ -10,6 +10,7 @@ from .audit import run_audit
 from .config import DEFAULT_CONFIG, ConfigError, load_config
 from .data import DataError
 from .download import DownloadError, run_download
+from .gbm import run_gbm
 from .sensitivities import run_sensitivities
 from .split import run_split
 from .train import run_train
@@ -20,7 +21,7 @@ STUBS = ("evaluate", "report")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fremtpl2", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("download", "audit", "split", "train", "sensitivities", *STUBS):
+    for name in ("download", "audit", "split", "train", "sensitivities", "gbm", *STUBS):
         p = sub.add_parser(name, help=f"{name} step")
         p.add_argument(
             "--config", default=DEFAULT_CONFIG, help="YAML config (default: %(default)s)"
@@ -47,6 +48,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_split(cfg)
         elif args.command == "train":
             run_train(cfg)
+        elif args.command == "gbm":
+            run_gbm(cfg)
         elif args.command == "sensitivities":
             run_sensitivities(cfg)
         else:

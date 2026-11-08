@@ -1,4 +1,4 @@
-.PHONY: setup lint test download audit split train sensitivities all
+.PHONY: setup lint test download audit split train sensitivities gbm all
 
 setup:
 	uv sync
@@ -25,4 +25,7 @@ train:
 sensitivities:
 	uv run fremtpl2 sensitivities
 
-all: download audit split train sensitivities
+gbm:
+	uv run fremtpl2 gbm
+
+all: download audit split train gbm sensitivities
